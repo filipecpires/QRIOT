@@ -1,11 +1,11 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react'; // Added useEffect, useState
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { AlertTriangle, Info, Image as ImageIcon, Link as LinkIcon, MapPin, UserCircle, Calendar } from 'lucide-react';
+import { AlertTriangle, Info, Image as ImageIcon, Link as LinkIcon, MapPin, UserCircle, Calendar } from 'lucide-react'; // Corrected Link icon import
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 
@@ -136,7 +136,10 @@ export default function PublicAssetPage() {
                     if (data) {
                          // Log access - Get IP/UserAgent server-side if possible, or approximate client-side
                          // For now, log client-side (less reliable for IP)
-                         logAccess(tag, 'N/A (Client)', navigator.userAgent);
+                         // Ensure navigator is available (client-side)
+                         if (typeof navigator !== 'undefined') {
+                            logAccess(tag, 'N/A (Client)', navigator.userAgent);
+                         }
                     } else {
                          setError('Ativo não encontrado ou não disponível publicamente.');
                     }

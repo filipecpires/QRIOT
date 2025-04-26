@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils'; // Import cn utility function
+import { QrCodeModal } from '@/components/feature/qr-code-modal'; // Import the QR Code modal
 
 
 const assetSchema = z.object({
@@ -113,6 +114,7 @@ export default function EditAssetPage() {
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [characteristics, setCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
   const [assetData, setAssetData] = useState<AssetFormData | null>(null);
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
   const form = useForm<AssetFormData>({
     resolver: zodResolver(assetSchema),
@@ -263,6 +265,9 @@ export default function EditAssetPage() {
             );
     }
 
+    // Construct the public URL based on the asset tag
+    const publicUrl = `${window.location.origin}/public/asset/${assetData.tag}`;
+
 
   return (
     <div className="container mx-auto py-10">
@@ -274,11 +279,11 @@ export default function EditAssetPage() {
           </Button>
           <div className="flex gap-2">
               <Button variant="outline" size="sm" asChild>
-                <Link href={`/public/asset/${assetData.tag}`} target="_blank">
+                <Link href={publicUrl} target="_blank">
                     <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
                 </Link>
               </Button>
-               <Button variant="outline" size="sm" disabled> {/* Add QR Code modal later */}
+               <Button variant="outline" size="sm" onClick={() => setIsQrModalOpen(true)}>
                 <QrCode className="mr-2 h-4 w-4" /> Ver QR Code
               </Button>
           </div>
@@ -507,6 +512,16 @@ export default function EditAssetPage() {
           </form>
         </Form>
       </Card>
+
+       {assetData && (
+           <QrCodeModal
+             isOpen={isQrModalOpen}
+             onClose={() => setIsQrModalOpen(false)}
+             qrValue={publicUrl}
+             assetName={assetData.name}
+             assetTag={assetData.tag}
+           />
+        )}
     </div>
   );
 }

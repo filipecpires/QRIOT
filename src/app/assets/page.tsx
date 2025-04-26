@@ -1,10 +1,14 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, AlertTriangle } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, QrCode } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { QrCodeModal } from '@/components/feature/qr-code-modal'; // Import the QR Code modal
 
 // Mock data - replace with actual data fetching later
 const assets = [
@@ -14,7 +18,31 @@ const assets = [
   { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'TI-PROJ-002', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive' }, // Example inactive
 ];
 
+type Asset = typeof assets[0];
+
 export default function AssetsPage() {
+   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+   const openQrModal = (asset: Asset) => {
+        setSelectedAsset(asset);
+        setIsQrModalOpen(true);
+   };
+
+   const closeQrModal = () => {
+        setSelectedAsset(null);
+        setIsQrModalOpen(false);
+   };
+
+   // Construct the public URL based on the asset tag
+    const getPublicUrl = (tag: string) => {
+        // Ensure this runs only on the client-side where window is available
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}/public/asset/${tag}`;
+        }
+        return ''; // Return empty string or a placeholder during SSR/build
+    };
+
   return (
     <div className="container mx-auto py-10">
       <div className="flex justify-between items-center mb-6">
@@ -68,6 +96,9 @@ export default function AssetsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
+                     <Button variant="ghost" size="icon" onClick={() => openQrModal(asset)} title="Ver QR Code">
+                        <QrCode className="h-4 w-4" />
+                      </Button>
                     <Button variant="ghost" size="icon" asChild>
                        <Link href={`/assets/${asset.id}/edit`} title="Editar">
                         <Edit className="h-4 w-4" />
@@ -76,7 +107,6 @@ export default function AssetsPage() {
                     <Button variant="ghost" size="icon" title="Excluir"> {/* Add confirmation dialog later */}
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
-                     {/* Add QR Code view/print button here later */}
                   </TableCell>
                 </TableRow>
               ))}
@@ -92,6 +122,16 @@ export default function AssetsPage() {
            {/* Add Pagination Controls Here Later */}
         </CardContent>
       </Card>
+
+      {selectedAsset && (
+           <QrCodeModal
+             isOpen={isQrModalOpen}
+             onClose={closeQrModal}
+             qrValue={getPublicUrl(selectedAsset.tag)}
+             assetName={selectedAsset.name}
+             assetTag={selectedAsset.tag}
+           />
+        )}
     </div>
   );
 }
