@@ -1,11 +1,13 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback, ChangeEvent, DragEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Image from 'next/image';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -15,8 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/utils';
 
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
@@ -30,8 +33,7 @@ const assetSchema = z.object({
       isPublic: z.boolean().default(false),
   })).optional(),
   description: z.string().optional(),
-  // photos: // Handle file uploads separately
-  // attachments: // Handle links separately
+  // photos will be handled by component state and uploaded separately
 });
 
 type AssetFormData = z.infer<typeof assetSchema>;
@@ -57,6 +59,8 @@ export default function NewAssetPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [characteristics, setCharacteristics] = useState<{ key: string; value: string; isPublic: boolean }[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
 
   const form = useForm<AssetFormData>({
     resolver: zodResolver(assetSchema),
@@ -93,20 +97,61 @@ export default function NewAssetPage() {
       form.setValue('characteristics', updatedCharacteristics);
    };
 
+  // --- File Upload Handlers ---
+   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+     if (event.target.files) {
+       const files = Array.from(event.target.files);
+       // Basic validation (e.g., check file type, size) can be added here
+       setSelectedFiles(prev => [...prev, ...files.filter(file => file.type.startsWith('image/'))]); // Only accept images
+     }
+   };
+
+   const handleDragOver = (event: DragEvent<HTMLDivElement>) => {
+     event.preventDefault();
+     setIsDragging(true);
+   };
+
+   const handleDragLeave = (event: DragEvent<HTMLDivElement>) => {
+     event.preventDefault();
+     setIsDragging(false);
+   };
+
+   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
+     event.preventDefault();
+     setIsDragging(false);
+     if (event.dataTransfer.files) {
+       const files = Array.from(event.dataTransfer.files);
+       setSelectedFiles(prev => [...prev, ...files.filter(file => file.type.startsWith('image/'))]);
+     }
+   };
+
+   const removeFile = (index: number) => {
+     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+   };
+  // --- End File Upload Handlers ---
+
 
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
     console.log('Submitting asset data:', data);
+    console.log('Selected files:', selectedFiles);
+
+    // TODO: Implement file upload logic here (e.g., upload to Firebase Storage)
+    // 1. Upload each file in `selectedFiles`
+    // 2. Get the download URLs
+    // 3. Add the URLs to the asset data before saving to Firestore
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Replace with actual API call to save the asset
+    // Replace with actual API call to save the asset (including photo URLs)
     // try {
+    //   const photoUrls = await uploadFiles(selectedFiles); // Your upload function
+    //   const dataToSave = { ...data, photoUrls };
     //   const response = await fetch('/api/assets', {
     //     method: 'POST',
     //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(data),
+    //     body: JSON.stringify(dataToSave),
     //   });
     //   if (!response.ok) throw new Error('Failed to save asset');
     //   const result = await response.json();
@@ -143,6 +188,7 @@ export default function NewAssetPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
+              {/* Basic Info Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                   control={form.control}
@@ -333,14 +379,63 @@ export default function NewAssetPage() {
                  </Button>
               </div>
 
-              {/* Photo Upload Section - Placeholder */}
+              {/* Photo Upload Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-2">Fotos do Ativo</h3>
-                <div className="border-2 border-dashed border-border rounded-md p-6 text-center">
-                    <p className="text-muted-foreground">Arraste e solte as fotos aqui ou clique para selecionar.</p>
-                    <Input type="file" multiple className="mt-2 opacity-0 absolute w-full h-full top-0 left-0 cursor-pointer" /> {/* Basic file input, needs better implementation */}
+                <div
+                  className={cn(
+                    "relative border-2 border-dashed border-border rounded-md p-6 text-center transition-colors duration-200 ease-in-out",
+                    isDragging ? 'border-primary bg-accent/10' : 'bg-muted/20'
+                  )}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
+                  <UploadCloud className="mx-auto h-10 w-10 text-muted-foreground mb-2"/>
+                  <p className="text-muted-foreground text-sm mb-1">
+                    Arraste e solte as fotos aqui ou
+                  </p>
+                  <Label htmlFor="file-upload" className="text-primary font-medium cursor-pointer hover:underline">
+                    clique para selecionar
+                  </Label>
+                  <Input
+                    id="file-upload"
+                    type="file"
+                    multiple
+                    accept="image/*" // Only accept image files
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    onChange={handleFileChange}
+                  />
+                  <p className="text-xs text-muted-foreground mt-2">Apenas imagens são permitidas.</p>
                 </div>
-                 {/* Display uploaded image previews here */}
+
+                 {/* Display uploaded image previews */}
+                 {selectedFiles.length > 0 && (
+                   <div className="mt-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                     {selectedFiles.map((file, index) => (
+                       <div key={index} className="relative group border rounded-md overflow-hidden aspect-square">
+                         <Image
+                           src={URL.createObjectURL(file)}
+                           alt={`Preview ${index + 1}`}
+                           fill
+                           style={{ objectFit: 'cover' }}
+                           sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+                           onLoad={() => URL.revokeObjectURL(URL.createObjectURL(file))} // Clean up object URL
+                         />
+                         <Button
+                           type="button"
+                           variant="destructive"
+                           size="icon"
+                           className="absolute top-1 right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity p-0"
+                           onClick={() => removeFile(index)}
+                           title="Remover Imagem"
+                         >
+                           <X className="h-3 w-3" />
+                         </Button>
+                       </div>
+                     ))}
+                   </div>
+                 )}
               </div>
 
                {/* Attachments Section - Placeholder */}
