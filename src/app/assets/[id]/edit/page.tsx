@@ -6,6 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Image from 'next/image'; // Import Image from next/image
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -15,12 +16,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle, Link as LinkIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { cn } from '@/lib/utils'; // Import cn utility function
 
 
 const assetSchema = z.object({
@@ -456,7 +458,7 @@ export default function EditAssetPage() {
                      {/* Example existing attachment */}
                     <div className="flex items-center justify-between border p-2 rounded-md bg-muted/50">
                         <a href="https://example.com/manual.pdf" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline flex items-center gap-1">
-                             <Link className="h-4 w-4" /> Manual do Usuário
+                             <LinkIcon className="h-4 w-4" /> Manual do Usuário
                         </a>
                         <Button variant="ghost" size="icon" className="text-destructive h-6 w-6">
                             <Trash2 className="h-4 w-4" />
