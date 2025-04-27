@@ -92,7 +92,7 @@ export default function SettingsPage() {
            </CardFooter>
         </Card>
 
-        {/* User Management Settings - Placeholder for future role/permission details */}
+        {/* User Management Settings */}
          <Card>
           <CardHeader>
             <CardTitle>Gerenciamento de Usuários</CardTitle>
@@ -104,6 +104,7 @@ export default function SettingsPage() {
              </p>
             {/* Add settings like password policies, session duration etc. */}
           </CardContent>
+           {/* No footer needed for placeholder */}
            {/* <CardFooter className="flex justify-end">
                 <Button disabled>
                     <Save className="mr-2 h-4 w-4" /> Salvar Config. Usuários
