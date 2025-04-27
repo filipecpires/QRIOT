@@ -3,11 +3,34 @@
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft } from 'lucide-react'; // Added PanelLeft for trigger
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown } from 'lucide-react'; // Added PanelLeft, UserCircle, ChevronDown
 import Link from 'next/link';
 import { Button } from '@/components/ui/button'; // Import Button for the trigger
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
+
+// Mock function to get initials (replace with actual logic if needed)
+function getInitials(name: string): string {
+    if (!name) return '?';
+    const names = name.split(' ');
+    const firstInitial = names[0]?.[0] ?? '';
+    const lastInitial = names.length > 1 ? names[names.length - 1]?.[0] ?? '' : '';
+    return `${firstInitial}${lastInitial}`.toUpperCase();
+}
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
+    // Mock user data - replace with actual auth context later
+    const userName = "João Silva";
+    const userEmail = "joao.silva@example.com";
+    const userAvatar = `https://i.pravatar.cc/40?u=${userEmail}`; // Placeholder avatar
+
   return (
     <SidebarProvider defaultOpen={true}>
       {/* The actual sidebar component */}
@@ -139,19 +162,59 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       {/* Main content area that adjusts based on sidebar state */}
       <SidebarInset>
         {/* Header within the main content area */}
-        <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
+        <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30"> {/* Added sticky */}
           {/* Sidebar Trigger Button - Visible on all screen sizes */}
           <SidebarTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
+              <Button variant="ghost" size="icon" className="h-8 w-8"> {/* Adjusted size */}
                 <PanelLeft />
                 <span className="sr-only">Toggle Sidebar</span>
               </Button>
           </SidebarTrigger>
 
-          {/* Placeholder for user avatar/menu or other header content */}
+          {/* User Profile Dropdown */}
           <div className="flex items-center gap-4">
-             {/* Add User Avatar/Menu Here later */}
-             <span className="font-semibold hidden md:inline"></span> {/* Title removed, more space for user menu */}
+            <DropdownMenu>
+               <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-auto px-2 flex items-center gap-2">
+                     <Avatar className="h-6 w-6">
+                        <AvatarImage src={userAvatar} alt={userName} />
+                        <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                     </Avatar>
+                     <span className="hidden md:inline text-sm font-medium">{userName}</span>
+                     <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:inline" />
+                  </Button>
+               </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end" forceMount>
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{userName}</p>
+                    <p className="text-xs leading-none text-muted-foreground">
+                      {userEmail}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                 <DropdownMenuItem asChild>
+                  <Link href="/profile">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Meu Perfil</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/settings">
+                     <Settings className="mr-2 h-4 w-4" />
+                    <span>Configurações</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                   <Link href="/logout">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Sair</span>
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
            </div>
         </header>
         {/* The actual page content rendered here */}
