@@ -107,28 +107,21 @@ export default function AssetsPage() {
             <TableHeader>
               <TableRow>
                 {/* Hidden on mobile */}
-                <TableHead className="hidden md:table-cell">Tag Única</TableHead>
-                <TableHead>Nome</TableHead>
-                 <TableHead className="hidden lg:table-cell">Categoria</TableHead> {/* Hidden on mobile/tablet */}
-                <TableHead>Local</TableHead>
-                 <TableHead className="hidden md:table-cell">Responsável</TableHead> {/* Hidden on mobile */}
-                 <TableHead className="hidden md:table-cell">Propriedade</TableHead> {/* Hidden on mobile */}
-                <TableHead>Status</TableHead>
-                 <TableHead className="text-right w-[50px]">Ações</TableHead> {/* Actions column removed, replaced by dropdown trigger */}
+                <TableHead className="hidden md:table-cell">Tag Única</TableHead><TableHead>Nome</TableHead><TableHead className="hidden lg:table-cell">Categoria</TableHead><TableHead>Local</TableHead><TableHead className="hidden md:table-cell">Responsável</TableHead><TableHead className="hidden md:table-cell">Propriedade</TableHead><TableHead>Status</TableHead><TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {assets.map((asset) => (
                 <TableRow key={asset.id}>
-                   <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell>{/* Hidden on mobile */}
+                   <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell>
                   <TableCell>
                      <div className="font-medium">{asset.name}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">{asset.tag}</div> {/* Show tag below name on mobile */}
+                     <div className="text-xs text-muted-foreground md:hidden">{asset.tag}</div>
                   </TableCell>
-                   <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>{/* Hidden on mobile/tablet */}
+                   <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>
                   <TableCell>{asset.location}</TableCell>
-                   <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>{/* Hidden on mobile */}
-                   <TableCell className="hidden md:table-cell">{/* Ownership Cell - Hidden on mobile */}
+                   <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>
+                   <TableCell className="hidden md:table-cell">
                      {asset.ownership === 'rented' ? (
                        <div className="flex items-center gap-1 text-orange-600" title="Alugado">
                          <Building className="h-4 w-4" />

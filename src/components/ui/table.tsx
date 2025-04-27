@@ -1,3 +1,4 @@
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -63,9 +64,7 @@ const TableRow = React.forwardRef<
         className
       )}
       {...props}
-    >
-      {children}
-    </tr>
+    >{children}</tr> // Removed whitespace/newline here
   );
 });
 TableRow.displayName = "TableRow";
