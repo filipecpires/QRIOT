@@ -8,7 +8,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
     Building, MapPin, Package, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Folder, FolderOpen, File, Home, CheckCircle, XCircle, MinusCircle,
-    MoreVertical, // For dropdown trigger
+    MoreVertical, // Keep for reference if needed, but button will be removed
     Edit, Eye, Printer, Trash2 // Icons for dropdown actions
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -149,18 +149,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
         return <File className="h-4 w-4 text-gray-500 flex-shrink-0" />; // Default icon
     };
 
-    // Determines text color based on status, now mainly for inactive effect
-    const getStatusTextColorClass = () => {
-        if (node.type === 'asset') {
-            switch ((node as AssetNodeData).status) {
-                case 'inactive': return 'text-muted-foreground italic opacity-70';
-                // Other statuses handled by icon color
-                default: return 'text-card-foreground';
-            }
-        }
-        return 'text-card-foreground';
-    };
-
      // Returns the appropriate status icon and tooltip
     const getStatusIndicator = () => {
         if (node.type !== 'asset') return null;
@@ -211,64 +199,64 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
     };
 
 
+    // Main container div acts as trigger for assets
+    const NodeContainer = node.type === 'asset' ? DropdownMenuTrigger : 'div';
+    const nodeContainerProps = node.type === 'asset'
+        ? { asChild: true }
+        : { onClick: () => hasChildren && onToggleExpand(node.id) }; // Keep expand/collapse for non-assets
+
+
     return (
         <li className="relative">
           <DropdownMenu>
-             <div
-                 className={cn(
-                     "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer group", // Added group for hover effects on indicators
-                     getStatusTextColorClass()
-                 )}
-                 style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
-                 // Removed onClick for expand/collapse from here, handled by button or trigger below
-                 // onClick={() => hasChildren && onToggleExpand(node.id)}
-             >
-                  {/* Toggle Button */}
-                 <div className="w-4 flex-shrink-0">
-                     {hasChildren && (
-                         <Button
-                             variant="ghost"
-                             size="icon"
-                             className="h-5 w-5 p-0"
-                             onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }} // Keep expand/collapse on button click
-                             aria-label={isExpanded ? 'Recolher' : 'Expandir'}
-                         >
-                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                         </Button>
-                      )}
-                  </div>
+             <NodeContainer {...nodeContainerProps}>
+                 <div
+                     className={cn(
+                         "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer group",
+                         // Removed text color class - handled by icons
+                     )}
+                     style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
+                 >
+                      {/* Toggle Button */}
+                     <div className="w-4 flex-shrink-0">
+                         {hasChildren && (
+                             <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 className="h-5 w-5 p-0"
+                                 // Prevent dropdown from triggering when clicking expand/collapse
+                                 onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
+                                 aria-label={isExpanded ? 'Recolher' : 'Expandir'}
+                             >
+                                 {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                             </Button>
+                          )}
+                      </div>
 
-                 {/* Node Icon */}
-                  {getNodeIcon()}
+                     {/* Node Icon */}
+                      {getNodeIcon()}
 
-                 {/* Label and Details - wrapped in DropdownMenuTrigger ONLY for assets */}
-                 {node.type === 'asset' ? (
-                    <DropdownMenuTrigger asChild>
-                        <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5 cursor-pointer">
-                            {/* Content inside trigger */}
-                            <span className="font-medium truncate" title={node.label}>{node.label}</span>
-                             {(node as AssetNodeData).tag && (
-                                <span className="text-xs text-muted-foreground">({(node as AssetNodeData).tag})</span>
-                            )}
-                             {getOwnershipIndicator()}
-                             {(node as AssetNodeData).responsibleUserName && (
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <User className="h-3 w-3"/> {(node as AssetNodeData).responsibleUserName}
-                                         </span>
-                                    </TooltipTrigger>
-                                     <TooltipContent>
-                                        <p>Responsável: {(node as AssetNodeData).responsibleUserName}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                              )}
-                        </div>
-                    </DropdownMenuTrigger>
-                  ) : (
-                     <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5 cursor-pointer" onClick={() => hasChildren && onToggleExpand(node.id)}>
-                         {/* Content for non-assets (locations/company) */}
-                         <span className="font-medium truncate" title={node.label}>{node.label}</span>
+                     {/* Label and Details */}
+                     <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5">
+                        <span className="font-medium truncate" title={node.label}>{node.label}</span>
+                         {node.type === 'asset' && (node as AssetNodeData).tag && (
+                            <span className="text-xs text-muted-foreground">({(node as AssetNodeData).tag})</span>
+                        )}
+                        {/* Ownership and Responsible for Assets */}
+                        {node.type === 'asset' && getOwnershipIndicator()}
+                         {node.type === 'asset' && (node as AssetNodeData).responsibleUserName && (
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                     <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <User className="h-3 w-3"/> {(node as AssetNodeData).responsibleUserName}
+                                     </span>
+                                </TooltipTrigger>
+                                 <TooltipContent>
+                                    <p>Responsável: {(node as AssetNodeData).responsibleUserName}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* GPS for Locations */}
                          {node.type === 'location' && (node as LocationNodeData).gps && (
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -280,25 +268,26 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                                 </Tooltip>
                             )}
                      </div>
-                  )}
 
 
-                  {/* Status Indicator (Icon) - aligned to the right */}
-                   <div className="ml-auto pl-2 flex-shrink-0">
-                      {node.type === 'asset' && getStatusIndicator()}
-                   </div>
+                      {/* Status Indicator (Icon) - aligned to the right */}
+                       <div className="ml-auto pl-2 flex-shrink-0">
+                          {node.type === 'asset' && getStatusIndicator()}
+                       </div>
 
-                   {/* Dropdown Menu Trigger (only for assets, using MoreVertical) */}
-                    {node.type === 'asset' && (
-                         <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-5 w-5 p-0 ml-1 flex-shrink-0 opacity-50 group-hover:opacity-100">
-                                <MoreVertical className="h-4 w-4" />
-                                <span className="sr-only">Ações</span>
-                             </Button>
-                         </DropdownMenuTrigger>
-                    )}
+                       {/* Removed the explicit dropdown trigger button */}
+                       {/* {node.type === 'asset' && (
+                             <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0 ml-1 flex-shrink-0 opacity-50 group-hover:opacity-100">
+                                    <MoreVertical className="h-4 w-4" />
+                                    <span className="sr-only">Ações</span>
+                                 </Button>
+                             </DropdownMenuTrigger>
+                        )} */}
 
-             </div>
+                 </div>
+              </NodeContainer>
+
 
              {/* Dropdown Content (only for assets) */}
              {node.type === 'asset' && (
@@ -315,11 +304,12 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                          <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
                        </Link>
                      </DropdownMenuItem>
-                     <DropdownMenuItem asChild>
-                        <Link href={`/labels/print?assetId=${node.id}`}> {/* Example: Pass asset ID for printing */}
+                      {/* Removed "Imprimir Etiqueta" */}
+                     {/* <DropdownMenuItem asChild>
+                        <Link href={`/labels/print?assetId=${node.id}`}>
                          <Printer className="mr-2 h-4 w-4" /> Imprimir Etiqueta
                        </Link>
-                     </DropdownMenuItem>
+                     </DropdownMenuItem> */}
                      <DropdownMenuSeparator />
                      <DropdownMenuItem
                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -449,8 +439,17 @@ export default function AssetTreePage() {
             setRootData(fetchedRootData);
             // Initially expand the root node and its direct children
             const initialExpanded = new Set([fetchedRootData.id]);
+            // Automatically expand first level of locations
             if (fetchedRootData.rawChildren) {
-                 fetchedRootData.rawChildren.forEach(child => initialExpanded.add(child.id));
+                 fetchedRootData.rawChildren.forEach(child => {
+                     if (child.type === 'location') {
+                        initialExpanded.add(child.id);
+                        // Optionally expand one more level if needed
+                        // if (child.rawChildren) {
+                        //     child.rawChildren.forEach(grandChild => initialExpanded.add(grandChild.id));
+                        // }
+                     }
+                 });
             }
             setExpandedNodes(initialExpanded);
         }
@@ -517,3 +516,4 @@ export default function AssetTreePage() {
      </TooltipProvider>
   );
 }
+
