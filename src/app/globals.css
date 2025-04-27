@@ -1,3 +1,5 @@
+@import 'reactflow/dist/style.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -109,4 +111,31 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* React Flow Customizations */
+.react-flow__node {
+    @apply bg-card text-card-foreground border border-border rounded-md shadow-md p-3 text-xs cursor-pointer;
+    min-width: 150px;
+}
+
+.react-flow__node.selected {
+    @apply border-primary ring-2 ring-ring ring-offset-2;
+}
+
+.react-flow__edge-path {
+    @apply stroke-primary;
+    stroke-width: 1.5;
+}
+
+.react-flow__controls-button {
+    @apply bg-card text-card-foreground border border-border shadow-sm hover:bg-muted;
+}
+
+.react-flow__minimap {
+    @apply bg-card border border-border rounded-md shadow-sm;
+}
+
+.react-flow__background {
+    @apply bg-background;
 }
