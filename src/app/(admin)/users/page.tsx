@@ -69,8 +69,8 @@ export default function UsersPage() {
   const { toast } = useToast();
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('__all__'); // Default to __all__
+  const [statusFilter, setStatusFilter] = useState('__all__'); // Default to __all__
   // Add pagination state later
   // const [currentPage, setCurrentPage] = useState(1);
   // const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -79,8 +79,8 @@ export default function UsersPage() {
     const searchMatch = searchTerm === '' ||
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const roleMatch = roleFilter === '' || user.role === roleFilter;
-    const statusMatch = statusFilter === '' || user.status === statusFilter;
+    const roleMatch = roleFilter === '__all__' || user.role === roleFilter; // Check against __all__
+    const statusMatch = statusFilter === '__all__' || user.status === statusFilter; // Check against __all__
     return searchMatch && roleMatch && statusMatch;
   });
 
@@ -184,7 +184,7 @@ export default function UsersPage() {
                 <SelectValue placeholder="Filtrar por Perfil" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos Perfis</SelectItem>
+                <SelectItem value="__all__">Todos Perfis</SelectItem> {/* Changed value */}
                 {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -193,7 +193,7 @@ export default function UsersPage() {
                 <SelectValue placeholder="Filtrar por Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Todos Status</SelectItem>
+                <SelectItem value="__all__">Todos Status</SelectItem> {/* Changed value */}
                 <SelectItem value="active">Ativo</SelectItem>
                 <SelectItem value="inactive">Inativo</SelectItem>
               </SelectContent>
