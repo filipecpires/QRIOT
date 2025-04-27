@@ -40,17 +40,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
             <QrCode className="h-6 w-6 text-sidebar-primary" />
+             {/* Apply group class to hide text when icon-only */}
             <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu>
+        <SidebarContent> {/* Removed padding here, applied to SidebarMenu */}
+          <SidebarMenu className="group-data-[collapsible=icon]:p-0"> {/* Remove padding when collapsed */}
             {/* Dashboard */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Dashboard">
                 <Link href="/dashboard">
                   <LayoutDashboard />
-                  <span>Dashboard</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -59,7 +60,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Ativos">
                 <Link href="/assets">
                   <QrCode />
-                  <span>Ativos</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -68,7 +69,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Árvore Hierárquica">
                 <Link href="/assets/tree">
                   <GitMerge />
-                  <span>Árvore Hierárquica</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Árvore Hierárquica</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -77,7 +78,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Inventário (Scan)">
                 <Link href="/inventory/scan">
                   <ScanLine />
-                  <span>Inventário (Scan)</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -86,7 +87,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Registrar Caract. (Scan)">
                 <Link href="/characteristics/scan">
                   <Tag />
-                  <span>Reg. Caract. (Scan)</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -95,7 +96,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Locais">
                 <Link href="/locations">
                   <MapPin />
-                  <span>Locais</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Locais</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -104,7 +105,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Usuários">
                 <Link href="/users">
                   <Users />
-                  <span>Usuários</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Usuários</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -113,7 +114,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
                 <Link href="/labels/print">
                   <Printer />
-                  <span>Imprimir Etiquetas</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -122,20 +123,20 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Log de Auditoria">
                 <Link href="/audit-log">
                   <History />
-                  <span>Log de Auditoria</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
-        {/* Footer is removed as per user request */}
-        {/* <SidebarFooter>
-          <SidebarMenu>
+        {/* Footer section removed and links moved to top user dropdown */}
+         {/* <SidebarFooter>
+           <SidebarMenu className="group-data-[collapsible=icon]:p-0">
              <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Licença">
                 <Link href="/licensing">
                   <FileText />
-                  <span>Licença</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Licença</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -143,7 +144,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Configurações">
                 <Link href="/settings">
                   <Settings />
-                  <span>Configurações</span>
+                   <span className="group-data-[collapsible=icon]:hidden">Configurações</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -151,7 +152,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <SidebarMenuButton asChild tooltip="Sair">
                 <Link href="/logout">
                   <LogOut />
-                  <span>Sair</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Sair</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
