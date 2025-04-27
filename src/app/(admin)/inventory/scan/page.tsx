@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils'; // Import cn
 
 interface ScannedAssetInfo {
     tag: string;
@@ -58,8 +59,8 @@ export default function InventoryScanPage() {
     const [scannedAssets, setScannedAssets] = useState<ScannedAssetInfo[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingAsset, setIsLoadingAsset] = useState(false); // Loading state for individual asset processing
-    const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    // const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display // Replaced by isScanning
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); // null = checking, true = granted, false = denied
     const videoRef = useRef<HTMLVideoElement>(null);
     // QR Scanner library state would go here
     const scannedTagsThisSession = useRef<Set<string>>(new Set()); // Track tags scanned in this session to avoid duplicates
@@ -67,24 +68,22 @@ export default function InventoryScanPage() {
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const currentInventoryYear = new Date().getFullYear();
 
-    // Camera Permission Effect
+    // Camera Permission Effect - Triggered by isScanning state
      useEffect(() => {
-        const getCameraPermission = async () => {
-            if (!showCameraFeed) {
-                if (videoRef.current?.srcObject) {
-                    const stream = videoRef.current.srcObject as MediaStream;
-                    stream.getTracks().forEach(track => track.stop());
-                    videoRef.current.srcObject = null;
-                }
-                setHasCameraPermission(null);
-                return;
-            }
+        let stream: MediaStream | null = null;
 
+        const getCameraPermission = async () => {
+            console.log("Attempting to get camera permission...");
+            setHasCameraPermission(null); // Start in checking state
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); // Prefer back camera
+                console.log("Camera permission granted.");
                 setHasCameraPermission(true);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(playErr => console.error("Video play error:", playErr)); // Attempt to play
+                } else {
+                    console.warn("videoRef not available when stream was ready.");
                 }
             } catch (error) {
                 console.error('Error accessing camera:', error);
@@ -93,20 +92,34 @@ export default function InventoryScanPage() {
                     variant: 'destructive',
                     title: 'Acesso à Câmera Negado',
                     description: 'Permita o acesso à câmera nas configurações do navegador para escanear.',
+                    duration: 5000,
                 });
-                setShowCameraFeed(false);
+                setIsScanning(false); // Stop scanning if permission denied
             }
         };
 
-        getCameraPermission();
-
-        return () => {
+        if (isScanning) {
+            getCameraPermission();
+        } else {
+            // Stop camera stream if scanning stops or component unmounts
             if (videoRef.current?.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                stream.getTracks().forEach(track => track.stop());
+                const currentStream = videoRef.current.srcObject as MediaStream;
+                currentStream.getTracks().forEach(track => track.stop());
+                videoRef.current.srcObject = null;
+            }
+            setHasCameraPermission(null); // Reset permission status when not scanning
+        }
+
+        // Cleanup function
+        return () => {
+            console.log("Cleaning up camera effect");
+            if (videoRef.current?.srcObject) {
+                const currentStream = videoRef.current.srcObject as MediaStream;
+                currentStream.getTracks().forEach(track => track.stop());
+                 videoRef.current.srcObject = null;
             }
         };
-    }, [showCameraFeed, toast]);
+    }, [isScanning, toast]); // Rerun when isScanning changes
 
 
     const startScanSession = () => {
@@ -115,15 +128,16 @@ export default function InventoryScanPage() {
         lastScannedTag.current = null; // Reset last scanned tag
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); // Clear any pending timeout
         setIsScanning(true);
-        setShowCameraFeed(true); // Show camera when scanning starts
+        // setShowCameraFeed(true); // Camera feed is now controlled by isScanning
         // Initialize QR Scanner library here
         console.log("Starting inventory scan session for year:", currentInventoryYear);
          // TODO: Add QR scanner initialization logic
+         // Request camera permission if not already granted (handled by useEffect)
     };
 
     const stopScanSession = () => {
         setIsScanning(false);
-        setShowCameraFeed(false); // Hide camera when scanning stops
+        // setShowCameraFeed(false); // Camera feed is now controlled by isScanning
         // Deinitialize QR Scanner library here
         console.log("Stopping inventory scan session");
          // TODO: Add QR scanner deinitialization logic
@@ -141,11 +155,11 @@ export default function InventoryScanPage() {
 
     // --- MOCK QR CODE SCANNING ---
     // Replace this with your actual QR code scanning library integration
-    const simulateScan = (tag: string) => {
-        if (!isScanning) return;
-        console.log("Simulating inventory scan:", tag);
-        handleQrCodeResult(tag);
-    };
+    // const simulateScan = (tag: string) => {
+    //     if (!isScanning) return;
+    //     console.log("Simulating inventory scan:", tag);
+    //     handleQrCodeResult(tag);
+    // };
     // --- END MOCK QR CODE SCANNING ---
 
 
@@ -259,8 +273,8 @@ export default function InventoryScanPage() {
                         </div>
                     </div>
 
-                    {/* Camera Feed Area */}
-                    {isScanning && (
+                    {/* Video element is always rendered but visibility controlled by CSS */}
+                    <div className={cn(!isScanning && 'hidden')}> {/* Hide container when not scanning */}
                         <Card className="mt-4 border-primary border-2">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg flex items-center gap-2">
@@ -268,7 +282,20 @@ export default function InventoryScanPage() {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <video ref={videoRef} className={`w-full aspect-video rounded-md bg-muted ${hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
+                                {/* Video element itself */}
+                                <video
+                                    ref={videoRef}
+                                    className={cn(
+                                        "w-full aspect-video rounded-md bg-muted",
+                                        hasCameraPermission === false && "hidden", // Hide video if permission denied
+                                        hasCameraPermission === null && "hidden" // Hide video while checking permission
+                                    )}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                />
+
+                                {/* Permission States */}
                                 {hasCameraPermission === null && (
                                     <div className="flex items-center justify-center h-40">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -279,23 +306,13 @@ export default function InventoryScanPage() {
                                     <Alert variant="destructive">
                                         <AlertTitle>Acesso à Câmera Negado</AlertTitle>
                                         <AlertDescription>
-                                            Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner.
+                                            Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner. A página pode precisar ser recarregada.
                                         </AlertDescription>
                                     </Alert>
                                 )}
-                                {/* MOCK SCAN BUTTONS - REMOVED */}
-                                {/*
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('TI-NB-001')}>Scan Notebook</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('MOB-CAD-012')}>Scan Cadeira</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('TI-NB-001')}>Scan Notebook (Dup)</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('INVALID-TAG')}>Scan Inválido</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('ALM-PAL-001')}>Scan Paleteira</Button>
-                                </div>
-                                */}
                             </CardContent>
                         </Card>
-                    )}
+                    </div>
                 </CardContent>
             </Card>
 
@@ -339,3 +356,5 @@ export default function InventoryScanPage() {
         </div>
     );
 }
+
+    

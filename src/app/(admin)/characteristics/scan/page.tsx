@@ -19,6 +19,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'; // Import Dialog components
+import { cn } from '@/lib/utils'; // Import cn for conditional classes
 
 // Define structure for a characteristic to be applied
 interface AppliedCharacteristic {
@@ -106,8 +107,8 @@ export default function CharacteristicScanPage() {
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
     const [isLoadingAsset, setIsLoadingAsset] = useState(false);
-    const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    // const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display // Replaced by isScanning
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); // null = checking, true = granted, false = denied
     const [showConfirmationModal, setShowConfirmationModal] = useState(false); // For confirmation popup
     const [lastScannedDataForModal, setLastScannedDataForModal] = useState<{tag: string, name: string, characteristics: AppliedCharacteristic[]} | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -129,26 +130,22 @@ export default function CharacteristicScanPage() {
         loadTemplates();
     }, [toast]);
 
-    // Camera Permission Effect
+    // Camera Permission Effect - Triggered by isScanning state
     useEffect(() => {
-        const getCameraPermission = async () => {
-            if (!showCameraFeed) {
-                // If camera feed is hidden, stop any existing stream
-                if (videoRef.current?.srcObject) {
-                    const stream = videoRef.current.srcObject as MediaStream;
-                    stream.getTracks().forEach(track => track.stop());
-                    videoRef.current.srcObject = null;
-                }
-                setHasCameraPermission(null); // Reset permission status
-                return;
-            }
+        let stream: MediaStream | null = null;
 
-            // Only request permission if showing camera feed
+        const getCameraPermission = async () => {
+            console.log("Attempting to get camera permission...");
+            setHasCameraPermission(null); // Start in checking state
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); // Prefer back camera
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); // Prefer back camera
+                console.log("Camera permission granted.");
                 setHasCameraPermission(true);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
+                    videoRef.current.play().catch(playErr => console.error("Video play error:", playErr)); // Attempt to play
+                } else {
+                    console.warn("videoRef not available when stream was ready.");
                 }
             } catch (error) {
                 console.error('Error accessing camera:', error);
@@ -157,21 +154,34 @@ export default function CharacteristicScanPage() {
                     variant: 'destructive',
                     title: 'Acesso à Câmera Negado',
                     description: 'Permita o acesso à câmera nas configurações do navegador para escanear.',
+                    duration: 5000,
                 });
-                setShowCameraFeed(false); // Hide camera feed if permission denied
+                setIsScanning(false); // Stop scanning if permission denied
             }
         };
 
-        getCameraPermission();
-
-        // Cleanup function to stop camera when component unmounts or showCameraFeed becomes false
-        return () => {
+        if (isScanning) {
+            getCameraPermission();
+        } else {
+            // Stop camera stream if scanning stops or component unmounts
             if (videoRef.current?.srcObject) {
-                const stream = videoRef.current.srcObject as MediaStream;
-                stream.getTracks().forEach(track => track.stop());
+                const currentStream = videoRef.current.srcObject as MediaStream;
+                currentStream.getTracks().forEach(track => track.stop());
+                videoRef.current.srcObject = null;
+            }
+             setHasCameraPermission(null); // Reset permission status when not scanning
+        }
+
+        // Cleanup function
+        return () => {
+            console.log("Cleaning up camera effect");
+            if (videoRef.current?.srcObject) {
+                const currentStream = videoRef.current.srcObject as MediaStream;
+                currentStream.getTracks().forEach(track => track.stop());
+                 videoRef.current.srcObject = null;
             }
         };
-    }, [showCameraFeed, toast]);
+    }, [isScanning, toast]); // Rerun when isScanning changes
 
 
     const handleTemplateSelection = (template: CharacteristicTemplate) => {
@@ -224,16 +234,17 @@ export default function CharacteristicScanPage() {
         }
         setScannedAssets([]); // Clear previous session
         setIsScanning(true);
-        setShowCameraFeed(true); // Show camera when scanning starts
+        // setShowCameraFeed(true); // Camera feed is now controlled by isScanning
         // Initialize QR Scanner library here
         console.log("Starting scan session with existing characteristics:", selectedTemplates.map(t => ({ key: t.key, value: characteristicValues[t.id] })));
         console.log("Starting scan session with NEW characteristics:", newCategories);
          // TODO: Add QR scanner initialization logic
+         // Request camera permission if not already granted (handled by useEffect)
     };
 
     const stopScanSession = () => {
         setIsScanning(false);
-        setShowCameraFeed(false); // Hide camera when scanning stops
+        // setShowCameraFeed(false); // Camera feed is now controlled by isScanning
         lastScannedTag.current = null; // Reset last scanned tag
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); // Clear any pending timeout
         // Deinitialize QR Scanner library here
@@ -243,11 +254,11 @@ export default function CharacteristicScanPage() {
 
     // --- MOCK QR CODE SCANNING ---
     // Replace this with your actual QR code scanning library integration
-    const simulateScan = (tag: string) => {
-        if (!isScanning) return;
-        console.log("Simulating scan:", tag);
-        handleQrCodeResult(tag);
-    };
+    // const simulateScan = (tag: string) => {
+    //     if (!isScanning) return;
+    //     console.log("Simulating scan:", tag);
+    //     handleQrCodeResult(tag);
+    // };
     // --- END MOCK QR CODE SCANNING ---
 
     const handleQrCodeResult = useCallback(async (tag: string) => {
@@ -550,25 +561,36 @@ export default function CharacteristicScanPage() {
                                     </>
                                 )}
                              </Button>
-                             {isScanning && !isLoadingAsset && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+                             {isScanning && !isLoadingAsset && hasCameraPermission && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
                              {isLoadingAsset && <span className="text-sm text-muted-foreground">Processando...</span>}
                          </div>
                     </div>
 
-                     {/* Camera Feed Area */}
-                     {isScanning && (
+                    {/* Video element is always rendered but visibility controlled by CSS */}
+                    <div className={cn(!isScanning && 'hidden')}> {/* Hide container when not scanning */}
                         <Card className="mt-4 border-primary border-2">
-                             <CardHeader className="pb-2">
-                                 <CardTitle className="text-lg flex items-center gap-2">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-lg flex items-center gap-2">
                                     <ScanLine className="h-5 w-5 text-primary"/> Câmera Ativa
-                                 </CardTitle>
-                             </CardHeader>
+                                </CardTitle>
+                            </CardHeader>
                             <CardContent>
-                                {/* Always render video tag, but hide if no permission */}
-                                <video ref={videoRef} className={`w-full aspect-video rounded-md bg-muted ${hasCameraPermission === false ? 'hidden' : ''}`} autoPlay muted playsInline />
+                                {/* Video element itself */}
+                                <video
+                                    ref={videoRef}
+                                    className={cn(
+                                        "w-full aspect-video rounded-md bg-muted",
+                                        hasCameraPermission === false && "hidden", // Hide video if permission denied
+                                        hasCameraPermission === null && "hidden" // Hide video while checking permission
+                                     )}
+                                    autoPlay
+                                    muted
+                                    playsInline
+                                />
 
+                                {/* Permission States */}
                                 {hasCameraPermission === null && (
-                                     <div className="flex items-center justify-center h-40">
+                                    <div className="flex items-center justify-center h-40">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                                         <p className="ml-2 text-muted-foreground">Aguardando permissão da câmera...</p>
                                     </div>
@@ -577,24 +599,13 @@ export default function CharacteristicScanPage() {
                                     <Alert variant="destructive">
                                         <AlertTitle>Acesso à Câmera Negado</AlertTitle>
                                         <AlertDescription>
-                                            Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner.
+                                            Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner. A página pode precisar ser recarregada.
                                         </AlertDescription>
                                     </Alert>
                                 )}
-                                  {/* MOCK SCAN BUTTONS - REMOVED */}
-                                {/*
-                                <div className="mt-4 flex flex-wrap gap-2">
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('TI-NB-001')}>Scan Notebook</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('MOB-CAD-012')}>Scan Cadeira</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('INVALID-TAG')}>Scan Inválido</Button>
-                                    <Button size="sm" variant="outline" onClick={() => simulateScan('ALM-PAL-001')}>Scan Paleteira</Button>
-                                </div>
-                                */}
                             </CardContent>
                         </Card>
-                    )}
-
-
+                    </div>
                 </CardContent>
             </Card>
 
@@ -648,7 +659,6 @@ export default function CharacteristicScanPage() {
                             <li key={i}>
                                 <span className="font-medium">{char.key}:</span>{' '}
                                 <span className="text-muted-foreground">{String(char.value)}</span>
-                                {/* Add description if available for new categories */}
                             </li>
                          ))}
                         </ul>
@@ -666,3 +676,5 @@ export default function CharacteristicScanPage() {
         </div>
     );
 }
+
+    
