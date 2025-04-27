@@ -8,11 +8,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { QrCode, CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit } from 'lucide-react';
+import { QrCode, CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit, CalendarDays } from 'lucide-react'; // Added CalendarDays
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // Import Popover components
+import { Calendar } from '@/components/ui/calendar'; // Import Calendar
+import { format } from 'date-fns'; // Import date-fns format
+import { ptBR } from 'date-fns/locale'; // Import ptBR locale
 
 // Mock data (replace with actual data fetching)
 interface CharacteristicTemplate {
@@ -20,7 +25,7 @@ interface CharacteristicTemplate {
     key: string; // Name of the characteristic (e.g., 'Voltagem', 'Localização Prateleira')
     valueType: 'text' | 'number' | 'boolean' | 'date' | 'predefined'; // Type of value expected
     predefinedValues?: string[]; // Options if valueType is 'predefined'
-    defaultValue?: string | number | boolean;
+    defaultValue?: string | number | boolean | Date; // Updated to include Date
 }
 
 interface ScannedAssetInfo {
@@ -156,7 +161,9 @@ export default function CharacteristicScanPage() {
     };
 
     const handleValueChange = (templateId: string, value: any) => {
-        setCharacteristicValues(prev => ({ ...prev, [templateId]: value }));
+        // Convert date to ISO string if it's a Date object for consistent storage/handling
+        const processedValue = value instanceof Date ? value.toISOString() : value;
+        setCharacteristicValues(prev => ({ ...prev, [templateId]: processedValue }));
     };
 
     const startScanSession = () => {
@@ -224,8 +231,10 @@ export default function CharacteristicScanPage() {
         // Prepare characteristics to apply based on current form values
         const characteristicsToApply = selectedTemplates.map(template => ({
             key: template.key,
-            value: characteristicValues[template.id] ?? template.defaultValue ?? (template.valueType === 'boolean' ? false : ''), // Ensure a value is set
+            // Use the processed value (could be ISO date string or other types)
+            value: characteristicValues[template.id] ?? template.defaultValue ?? (template.valueType === 'boolean' ? false : ''),
         }));
+
 
         const newAssetInfo: ScannedAssetInfo = { tag, name: assetName, status: 'pending', appliedCharacteristics: characteristicsToApply };
         setScannedAssets(prev => [newAssetInfo, ...prev]); // Add to top with pending status
@@ -326,13 +335,18 @@ export default function CharacteristicScanPage() {
                                          {template.valueType === 'date' && (
                                              <Popover>
                                                 <PopoverTrigger asChild>
-                                                    <Button variant="outline" className="w-full justify-start font-normal">
+                                                    <Button variant="outline" className="w-full justify-start text-left font-normal">
                                                         <CalendarDays className="mr-2 h-4 w-4" />
-                                                        {characteristicValues[template.id] ? format(new Date(characteristicValues[template.id]), 'PPP', { locale: ptBR }) : <span>Selecione data</span>}
+                                                         {characteristicValues[template.id] ? format(new Date(characteristicValues[template.id]), 'PPP', { locale: ptBR }) : <span>Selecione data</span>}
                                                     </Button>
                                                 </PopoverTrigger>
                                                 <PopoverContent className="w-auto p-0">
-                                                    <Calendar mode="single" selected={characteristicValues[template.id] ? new Date(characteristicValues[template.id]) : undefined} onSelect={(date) => handleValueChange(template.id, date)} initialFocus locale={ptBR}/>
+                                                    <Calendar
+                                                        mode="single"
+                                                        selected={characteristicValues[template.id] ? new Date(characteristicValues[template.id]) : undefined}
+                                                        onSelect={(date) => handleValueChange(template.id, date)} // Pass Date object directly
+                                                        initialFocus
+                                                        locale={ptBR}/>
                                                 </PopoverContent>
                                             </Popover>
                                         )}
@@ -460,3 +474,6 @@ export default function CharacteristicScanPage() {
         </div>
     );
 }
+
+
+    
