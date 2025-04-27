@@ -283,7 +283,8 @@ export default function InventoryScanPage() {
                                         </AlertDescription>
                                     </Alert>
                                 )}
-                                {/* MOCK SCAN BUTTONS - REMOVE IN PRODUCTION */}
+                                {/* MOCK SCAN BUTTONS - REMOVED */}
+                                {/*
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('TI-NB-001')}>Scan Notebook</Button>
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('MOB-CAD-012')}>Scan Cadeira</Button>
@@ -291,7 +292,7 @@ export default function InventoryScanPage() {
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('INVALID-TAG')}>Scan Inválido</Button>
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('ALM-PAL-001')}>Scan Paleteira</Button>
                                 </div>
-                                {/* END MOCK SCAN BUTTONS */}
+                                */}
                             </CardContent>
                         </Card>
                     )}

@@ -31,7 +31,6 @@ interface AppliedCharacteristic {
 interface NewCharacteristicCategory {
     id: string; // Temporary ID for state management
     key: string; // The name of the new characteristic category
-    // description?: string; // REMOVED: Optional description
     defaultValue?: string | number | boolean | Date; // Optional default value
     valueType: 'text' | 'number' | 'boolean' | 'date'; // Type for potential default value input
 }
@@ -197,7 +196,7 @@ export default function CharacteristicScanPage() {
     const addNewCategory = () => {
         setNewCategories(prev => [
             ...prev,
-            { id: `new-${Date.now()}`, key: '', valueType: 'text', defaultValue: '' } // Removed description
+            { id: `new-${Date.now()}`, key: '', valueType: 'text', defaultValue: '' }
         ]);
     };
 
@@ -582,14 +581,15 @@ export default function CharacteristicScanPage() {
                                         </AlertDescription>
                                     </Alert>
                                 )}
-                                  {/* MOCK SCAN BUTTONS - REMOVE IN PRODUCTION */}
+                                  {/* MOCK SCAN BUTTONS - REMOVED */}
+                                {/*
                                 <div className="mt-4 flex flex-wrap gap-2">
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('TI-NB-001')}>Scan Notebook</Button>
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('MOB-CAD-012')}>Scan Cadeira</Button>
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('INVALID-TAG')}>Scan Inválido</Button>
                                     <Button size="sm" variant="outline" onClick={() => simulateScan('ALM-PAL-001')}>Scan Paleteira</Button>
                                 </div>
-                                {/* END MOCK SCAN BUTTONS */}
+                                */}
                             </CardContent>
                         </Card>
                     )}
