@@ -120,15 +120,15 @@ export default function AssetsPage() {
             <TableBody>
               {assets.map((asset) => (
                 <TableRow key={asset.id}>
-                   <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell> {/* Hidden on mobile */}
+                   <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell>{/* Hidden on mobile */}
                   <TableCell>
                      <div className="font-medium">{asset.name}</div>
                      <div className="text-xs text-muted-foreground md:hidden">{asset.tag}</div> {/* Show tag below name on mobile */}
                   </TableCell>
-                   <TableCell className="hidden lg:table-cell">{asset.category}</TableCell> {/* Hidden on mobile/tablet */}
+                   <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>{/* Hidden on mobile/tablet */}
                   <TableCell>{asset.location}</TableCell>
-                   <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell> {/* Hidden on mobile */}
-                   <TableCell className="hidden md:table-cell"> {/* Ownership Cell - Hidden on mobile */}
+                   <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>{/* Hidden on mobile */}
+                   <TableCell className="hidden md:table-cell">{/* Ownership Cell - Hidden on mobile */}
                      {asset.ownership === 'rented' ? (
                        <div className="flex items-center gap-1 text-orange-600" title="Alugado">
                          <Building className="h-4 w-4" />
@@ -226,5 +226,3 @@ export default function AssetsPage() {
     </div>
   );
 }
-
-    
