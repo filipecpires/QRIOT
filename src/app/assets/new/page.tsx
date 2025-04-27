@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, ChangeEvent, DragEvent, useEffect } from 'react'; // Added useEffect
+import { useState, useCallback, ChangeEvent, DragEvent, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -17,25 +17,54 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale'; // Import Brazilian Portuguese locale
 
+// Updated schema with rental fields
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
   tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
-  parentId: z.string().optional(), // Add parentId field
+  parentId: z.string().optional(),
+  ownershipType: z.enum(['own', 'rented'], { required_error: 'Selecione o tipo de propriedade.' }).default('own'),
+  rentalCompany: z.string().optional(),
+  rentalStartDate: z.date().optional(),
+  rentalEndDate: z.date().optional(),
+  rentalCost: z.number().optional(),
   characteristics: z.array(z.object({
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
       isPublic: z.boolean().default(false),
   })).optional(),
   description: z.string().optional(),
-  // photos will be handled by component state and uploaded separately
+}).refine(data => {
+    // If rented, require rental company and dates
+    if (data.ownershipType === 'rented') {
+        return !!data.rentalCompany && !!data.rentalStartDate && !!data.rentalEndDate;
+    }
+    return true;
+}, {
+    message: 'Empresa locadora, data de início e término são obrigatórios para ativos alugados.',
+    path: ['rentalCompany'], // Show error near the group of fields
+}).refine(data => {
+    // Ensure end date is after start date
+    if (data.ownershipType === 'rented' && data.rentalStartDate && data.rentalEndDate) {
+        return data.rentalEndDate >= data.rentalStartDate;
+    }
+    return true;
+}, {
+    message: 'Data de término deve ser igual ou posterior à data de início.',
+    path: ['rentalEndDate'],
 });
+
 
 type AssetFormData = z.infer<typeof assetSchema>;
 
@@ -85,7 +114,12 @@ export default function NewAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
-      parentId: '__none__', // Default to none
+      parentId: '__none__',
+      ownershipType: 'own', // Default to own
+      rentalCompany: '',
+      rentalStartDate: undefined,
+      rentalEndDate: undefined,
+      rentalCost: undefined,
       characteristics: [],
       description: '',
     },
@@ -107,6 +141,7 @@ export default function NewAssetPage() {
     loadParentAssets();
    }, [toast]);
 
+   const ownershipType = form.watch('ownershipType'); // Watch the ownership type field
 
    const addCharacteristic = () => {
     setCharacteristics([...characteristics, { key: '', value: '', isPublic: false }]);
@@ -134,7 +169,6 @@ export default function NewAssetPage() {
    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
      if (event.target.files) {
        const files = Array.from(event.target.files);
-       // Basic validation (e.g., check file type, size) can be added here
        setSelectedFiles(prev => [...prev, ...files.filter(file => file.type.startsWith('image/'))]); // Only accept images
      }
    };
@@ -166,13 +200,17 @@ export default function NewAssetPage() {
 
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
-    console.log('Submitting asset data:', data);
-    console.log('Selected files:', selectedFiles);
+
+    // Clean up rental data if ownership is 'own'
+    const cleanedData = data.ownershipType === 'own'
+        ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
+        : { ...data };
+
 
     // Ensure parentId is either a valid ID or undefined if '__none__' is selected
     const dataToSave = {
-        ...data,
-        parentId: data.parentId === '__none__' ? undefined : data.parentId,
+        ...cleanedData,
+        parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
     };
     console.log('Data prepared for saving:', dataToSave);
 
@@ -277,7 +315,6 @@ export default function NewAssetPage() {
                           {categories.map((cat) => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
-                           {/* Add option to create new category? */}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -359,6 +396,170 @@ export default function NewAssetPage() {
                     </FormItem>
                   )}
                 />
+
+               {/* Ownership Type */}
+                 <FormField
+                   control={form.control}
+                   name="ownershipType"
+                   render={({ field }) => (
+                     <FormItem className="space-y-3">
+                       <FormLabel>Tipo de Propriedade</FormLabel>
+                       <FormControl>
+                         <RadioGroup
+                           onValueChange={field.onChange}
+                           defaultValue={field.value}
+                           className="flex space-x-4"
+                         >
+                           <FormItem className="flex items-center space-x-2 space-y-0">
+                             <FormControl>
+                               <RadioGroupItem value="own" />
+                             </FormControl>
+                             <FormLabel className="font-normal">Próprio</FormLabel>
+                           </FormItem>
+                           <FormItem className="flex items-center space-x-2 space-y-0">
+                             <FormControl>
+                               <RadioGroupItem value="rented" />
+                             </FormControl>
+                             <FormLabel className="font-normal">Alugado</FormLabel>
+                           </FormItem>
+                         </RadioGroup>
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+
+                 {/* Rental Information (Conditional) */}
+                 {ownershipType === 'rented' && (
+                    <Card className="p-4 bg-muted/30 border-dashed">
+                      <CardDescription className="mb-4">Informações da Locação</CardDescription>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="rentalCompany"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Empresa Locadora</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Nome da empresa" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <FormField
+                             control={form.control}
+                             name="rentalStartDate"
+                             render={({ field }) => (
+                               <FormItem className="flex flex-col">
+                                 <FormLabel>Data Início Locação</FormLabel>
+                                 <Popover>
+                                   <PopoverTrigger asChild>
+                                     <FormControl>
+                                       <Button
+                                         variant={"outline"}
+                                         className={cn(
+                                           "w-full pl-3 text-left font-normal",
+                                           !field.value && "text-muted-foreground"
+                                         )}
+                                       >
+                                         {field.value ? (
+                                           format(field.value, "PPP", { locale: ptBR })
+                                         ) : (
+                                           <span>Selecione a data</span>
+                                         )}
+                                         <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                                       </Button>
+                                     </FormControl>
+                                   </PopoverTrigger>
+                                   <PopoverContent className="w-auto p-0" align="start">
+                                     <Calendar
+                                       mode="single"
+                                       selected={field.value}
+                                       onSelect={field.onChange}
+                                       disabled={(date) => date < new Date("1900-01-01")}
+                                       initialFocus
+                                       locale={ptBR}
+                                     />
+                                   </PopoverContent>
+                                 </Popover>
+                                 <FormMessage />
+                               </FormItem>
+                             )}
+                           />
+                            <FormField
+                             control={form.control}
+                             name="rentalEndDate"
+                             render={({ field }) => (
+                               <FormItem className="flex flex-col">
+                                 <FormLabel>Data Fim Locação</FormLabel>
+                                 <Popover>
+                                   <PopoverTrigger asChild>
+                                     <FormControl>
+                                       <Button
+                                         variant={"outline"}
+                                         className={cn(
+                                           "w-full pl-3 text-left font-normal",
+                                           !field.value && "text-muted-foreground"
+                                         )}
+                                       >
+                                         {field.value ? (
+                                           format(field.value, "PPP", { locale: ptBR })
+                                         ) : (
+                                           <span>Selecione a data</span>
+                                         )}
+                                         <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                                       </Button>
+                                     </FormControl>
+                                   </PopoverTrigger>
+                                   <PopoverContent className="w-auto p-0" align="start">
+                                     <Calendar
+                                       mode="single"
+                                       selected={field.value}
+                                       onSelect={field.onChange}
+                                       disabled={(date) =>
+                                           date < (form.getValues('rentalStartDate') || new Date("1900-01-01"))
+                                       }
+                                       initialFocus
+                                       locale={ptBR}
+                                     />
+                                   </PopoverContent>
+                                 </Popover>
+                                 <FormMessage />
+                               </FormItem>
+                             )}
+                           />
+                        </div>
+                         <FormField
+                          control={form.control}
+                          name="rentalCost"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Valor do Aluguel (Mensal, Opcional)</FormLabel>
+                               <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="150.00"
+                                        className="pl-8"
+                                        {...field}
+                                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} // Handle parsing
+                                    />
+                                </FormControl>
+                               </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormMessage>{form.formState.errors.rentalCompany?.message}</FormMessage>
+                      <FormMessage>{form.formState.errors.rentalEndDate?.message}</FormMessage>
+                    </Card>
+                 )}
+
 
                <FormField
                 control={form.control}

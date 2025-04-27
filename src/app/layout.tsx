@@ -1,11 +1,12 @@
 
+
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Toaster } from "@/components/ui/toaster";
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge } from 'lucide-react'; // Added GitMerge for tree icon
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag } from 'lucide-react'; // Added icons
 import Link from 'next/link';
 
 const geistSans = Geist({
@@ -58,10 +59,26 @@ export default function RootLayout({
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
-                   <SidebarMenuButton asChild tooltip="Árvore de Ativos">
+                   <SidebarMenuButton asChild tooltip="Árvore Hierárquica">
                     <Link href="/assets/tree">
-                      <GitMerge /> {/* Using GitMerge as a tree icon */}
-                      <span>Árvore de Ativos</span>
+                      <GitMerge />
+                      <span>Árvore Hierárquica</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild tooltip="Inventário (Scan)">
+                    <Link href="/inventory/scan">
+                      <ScanLine />
+                      <span>Inventário (Scan)</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild tooltip="Registrar Caract. (Scan)">
+                    <Link href="/characteristics/scan">
+                      <Tag />
+                      <span>Reg. Caract. (Scan)</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -81,10 +98,34 @@ export default function RootLayout({
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
+                    <Link href="/labels/print">
+                      <Printer />
+                      <span>Imprimir Etiquetas</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Log de Auditoria">
+                    <Link href="/audit-log">
+                      <History />
+                      <span>Log de Auditoria</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarContent>
             <SidebarFooter>
               <SidebarMenu>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild tooltip="Licença">
+                    <Link href="/licensing">
+                      <FileText />
+                      <span>Licença</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                    <SidebarMenuButton asChild tooltip="Configurações">
                     <Link href="/settings">

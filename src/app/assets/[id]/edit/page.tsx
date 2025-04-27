@@ -8,6 +8,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Image from 'next/image';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
@@ -17,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle, Link as LinkIcon, UploadCloud, X } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle, Link as LinkIcon, UploadCloud, X, Building, CalendarDays, DollarSign } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
@@ -25,36 +27,62 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { QrCodeModal } from '@/components/feature/qr-code-modal';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 
-// Define structure for existing photos (assuming they have an ID and URL)
+
+// Define structure for existing photos
 interface ExistingPhoto {
     id: string;
     url: string;
-    name?: string; // Optional filename
+    name?: string;
 }
 
+// Updated schema with rental fields
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
   tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
-  parentId: z.string().optional(), // Add parentId field
+  parentId: z.string().optional(),
+  ownershipType: z.enum(['own', 'rented'], { required_error: 'Selecione o tipo de propriedade.' }).default('own'),
+  rentalCompany: z.string().optional(),
+  rentalStartDate: z.date().optional(),
+  rentalEndDate: z.date().optional(),
+  rentalCost: z.number().optional(),
   characteristics: z.array(z.object({
-      id: z.string().optional(), // Keep track of existing characteristics for updates/logical delete
+      id: z.string().optional(),
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
       isPublic: z.boolean().default(false),
-      isActive: z.boolean().default(true), // For logical deletion
+      isActive: z.boolean().default(true),
   })).optional(),
   description: z.string().optional(),
-  status: z.enum(['active', 'lost', 'inactive']).default('active'), // Add status field
-  // attachments: // Handle links separately
+  status: z.enum(['active', 'lost', 'inactive']).default('active'),
+}).refine(data => {
+    if (data.ownershipType === 'rented') {
+        return !!data.rentalCompany && !!data.rentalStartDate && !!data.rentalEndDate;
+    }
+    return true;
+}, {
+    message: 'Empresa locadora, data de início e término são obrigatórios para ativos alugados.',
+    path: ['rentalCompany'],
+}).refine(data => {
+    if (data.ownershipType === 'rented' && data.rentalStartDate && data.rentalEndDate) {
+        return data.rentalEndDate >= data.rentalStartDate;
+    }
+    return true;
+}, {
+    message: 'Data de término deve ser igual ou posterior à data de início.',
+    path: ['rentalEndDate'],
 });
+
 
 type AssetFormData = z.infer<typeof assetSchema>;
 
-// Mock data - replace with actual data fetching later
+// Mock data
 const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
 const locations = [
   { id: 'loc1', name: 'Escritório 1' },
@@ -79,19 +107,21 @@ async function fetchAssetsForParent(excludeId?: string): Promise<{ id: string; n
     { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'MOB-CAD-012' },
     { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'TI-PROJ-002' },
   ];
-  return allAssets.filter(asset => asset.id !== excludeId); // Exclude the current asset
+  return allAssets.filter(asset => asset.id !== excludeId);
 }
 
-// Mock data with existing photos
-interface AssetDataWithPhotos extends AssetFormData {
+// Mock data with existing photos and rental info
+interface AssetDataWithPhotosAndRental extends Omit<AssetFormData, 'rentalStartDate' | 'rentalEndDate'> {
     photos?: ExistingPhoto[];
+    rentalStartDate?: string; // Dates as strings for initial fetch
+    rentalEndDate?: string;
 }
 
 
 // Mock function to fetch asset data by ID
-async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
+async function fetchAssetData(id: string): Promise<AssetDataWithPhotosAndRental | null> {
      console.log(`Fetching asset with ID: ${id}`);
-     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
+     await new Promise(resolve => setTimeout(resolve, 1000));
     if (id === 'ASSET001') {
          return {
             name: 'Notebook Dell Latitude 7400',
@@ -99,7 +129,8 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
             tag: 'TI-NB-001',
             locationId: 'loc1',
             responsibleUserId: 'user1',
-            parentId: undefined, // Example: No parent
+            parentId: undefined,
+            ownershipType: 'own',
             characteristics: [
                 { id: 'char1', key: 'Processador', value: 'Intel Core i7', isPublic: true, isActive: true },
                 { id: 'char2', key: 'Memória RAM', value: '16GB', isPublic: true, isActive: true },
@@ -107,7 +138,7 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
                 { id: 'char4', key: 'Número de Série', value: 'ABC123XYZ', isPublic: false, isActive: true },
                 { id: 'char5', key: 'Voltagem', value: 'Bivolt', isPublic: true, isActive: true },
                 { id: 'char6', key: 'Ano Fabricação', value: '2022', isPublic: true, isActive: true},
-                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false }, // Example inactive characteristic
+                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false },
             ],
             description: 'Notebook corporativo para desenvolvimento.',
             status: 'active',
@@ -123,7 +154,12 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
             tag: 'MOB-CAD-012',
             locationId: 'loc3',
             responsibleUserId: 'user3',
-            parentId: 'ASSET001', // Example: Linked to the notebook
+            parentId: 'ASSET001',
+            ownershipType: 'rented', // Example rented asset
+            rentalCompany: 'LocaTudo Móveis',
+            rentalStartDate: '2024-01-15', // ISO string format
+            rentalEndDate: '2025-01-14', // ISO string format
+            rentalCost: 50.00,
              characteristics: [
                  { id: 'char8', key: 'Cor', value: 'Preta', isPublic: true, isActive: true },
                  { id: 'char9', key: 'Material', value: 'Tecido', isPublic: true, isActive: true },
@@ -133,7 +169,7 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
             photos: [ { id: 'photo3', url: 'https://picsum.photos/seed/asset003/200/150', name: 'cadeira.jpg' } ]
          };
     }
-     return null; // Not found
+     return null;
 }
 
 
@@ -145,11 +181,11 @@ export default function EditAssetPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [characteristics, setCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
-  const [assetData, setAssetData] = useState<AssetDataWithPhotos | null>(null);
+  const [assetData, setAssetData] = useState<AssetDataWithPhotosAndRental | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([]);
-  const [newPhotos, setNewPhotos] = useState<File[]>([]); // Files to be uploaded
-  const [photosToRemove, setPhotosToRemove] = useState<string[]>([]); // IDs of photos to remove
+  const [newPhotos, setNewPhotos] = useState<File[]>([]);
+  const [photosToRemove, setPhotosToRemove] = useState<string[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [parentAssets, setParentAssets] = useState<{ id: string; name: string; tag: string }[]>([]);
   const [isLoadingParents, setIsLoadingParents] = useState(true);
@@ -163,7 +199,12 @@ export default function EditAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
-      parentId: '__none__', // Default to none
+      parentId: '__none__',
+      ownershipType: 'own',
+      rentalCompany: '',
+      rentalStartDate: undefined,
+      rentalEndDate: undefined,
+      rentalCost: undefined,
       characteristics: [],
       description: '',
       status: 'active',
@@ -174,20 +215,25 @@ export default function EditAssetPage() {
         if (assetId) {
             const loadData = async () => {
                 setIsDataLoading(true);
-                setIsLoadingParents(true); // Start loading parents
+                setIsLoadingParents(true);
                 const data = await fetchAssetData(assetId);
                  if (data) {
                      setAssetData(data);
-                     form.reset({ // Reset form with fetched data
-                       ...data,
-                       parentId: data.parentId || '__none__', // Ensure parentId is string or '__none__'
-                     });
+
+                      // Convert date strings to Date objects for the form
+                     const formData = {
+                        ...data,
+                        parentId: data.parentId || '__none__',
+                        rentalStartDate: data.rentalStartDate ? new Date(data.rentalStartDate) : undefined,
+                        rentalEndDate: data.rentalEndDate ? new Date(data.rentalEndDate) : undefined,
+                     };
+
+                     form.reset(formData);
                      setCharacteristics(data.characteristics || []);
                      setExistingPhotos(data.photos || []);
                      setNewPhotos([]);
                      setPhotosToRemove([]);
 
-                     // Fetch parent assets excluding the current one
                      try {
                          const assets = await fetchAssetsForParent(assetId);
                          setParentAssets(assets);
@@ -200,8 +246,8 @@ export default function EditAssetPage() {
 
                  } else {
                      toast({ title: "Erro", description: "Ativo não encontrado.", variant: "destructive" });
-                     router.replace('/assets'); // Redirect if not found
-                     setIsLoadingParents(false); // Stop parent loading if asset not found
+                     router.replace('/assets');
+                     setIsLoadingParents(false);
                  }
                 setIsDataLoading(false);
             };
@@ -209,6 +255,7 @@ export default function EditAssetPage() {
         }
    }, [assetId, form, router, toast]);
 
+   const ownershipType = form.watch('ownershipType');
 
    const addCharacteristic = () => {
        const newChar = { key: '', value: '', isPublic: false, isActive: true };
@@ -217,7 +264,6 @@ export default function EditAssetPage() {
         form.setValue('characteristics', updatedCharacteristics);
    };
 
-   // Function to handle logical deletion/reactivation
    const toggleCharacteristicActive = (index: number) => {
        const updatedCharacteristics = [...characteristics];
        updatedCharacteristics[index].isActive = !updatedCharacteristics[index].isActive;
@@ -268,31 +314,31 @@ export default function EditAssetPage() {
    };
 
     const markExistingPhotoForRemoval = (photoId: string) => {
-        setExistingPhotos(prev => prev.filter(p => p.id !== photoId)); // Remove visually
-        setPhotosToRemove(prev => [...prev, photoId]); // Add to removal list
+        setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
+        setPhotosToRemove(prev => [...prev, photoId]);
     };
   // --- End File Upload Handlers ---
 
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
-    console.log('Updating asset data:', data);
-    console.log('New photos to upload:', newPhotos);
-    console.log('Existing photos to remove:', photosToRemove);
 
-    // Ensure characteristics have the correct structure for saving
     const characteristicsToSave = characteristics.map(char => ({
-         id: char.id, // Include ID for existing ones
+         id: char.id,
          key: char.key,
          value: char.value,
          isPublic: char.isPublic,
          isActive: char.isActive,
      }));
 
-     // Ensure parentId is either a valid ID or undefined if '__none__' is selected
+     // Clean up rental data if ownership is 'own'
+    const cleanedData = data.ownershipType === 'own'
+        ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
+        : { ...data };
+
     const dataToSave = {
-         ...data,
+         ...cleanedData,
          characteristics: characteristicsToSave,
-         parentId: data.parentId === '__none__' ? undefined : data.parentId,
+         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
      };
      console.log('Data prepared for saving:', dataToSave);
 
@@ -305,41 +351,14 @@ export default function EditAssetPage() {
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Replace with actual API call to update the asset
-    // try {
-    //   // Handle photo uploads/deletions
-    //   const newPhotoUrls = await uploadFiles(newPhotos); // Your upload function
-    //   await deleteFiles(photosToRemove); // Your delete function
-
-    //   // Prepare final data for Firestore update
-    //   const finalData = {
-    //       ...dataToSave,
-    //       // Logic to merge existing photo URLs (minus removed ones) with newPhotoUrls
-    //   };
-
-    //   const response = await fetch(`/api/assets/${assetId}`, { // Use assetId in URL
-    //     method: 'PUT', // or PATCH
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(finalData),
-    //   });
-    //   if (!response.ok) throw new Error('Failed to update asset');
-    //   const result = await response.json();
+    // Replace with actual API call
        toast({
          title: 'Sucesso!',
          description: `Ativo "${data.name}" atualizado com sucesso.`,
          variant: 'default',
        });
-       router.push('/assets'); // Redirect to assets list
-    // } catch (error) {
-    //   console.error('Error updating asset:', error);
-    //   toast({
-    //     title: 'Erro ao Atualizar',
-    //     description: 'Não foi possível atualizar o ativo. Tente novamente.',
-    //     variant: 'destructive',
-    //   });
-    // } finally {
+       router.push('/assets');
        setIsLoading(false);
-    // }
   }
 
     if (isDataLoading) {
@@ -361,10 +380,11 @@ export default function EditAssetPage() {
                              <Skeleton className="h-10 w-full" />
                              <Skeleton className="h-10 w-full" />
                          </div>
-                          <Skeleton className="h-10 w-full" /> {/* Parent Asset Skeleton */}
-                         <Skeleton className="h-20 w-full" />
-                          <Skeleton className="h-10 w-1/3" />
-                         <Skeleton className="h-24 w-full" />
+                          <Skeleton className="h-10 w-full" />
+                          <Skeleton className="h-10 w-1/3 mb-4"/> {/* Ownership Type */}
+                          <Skeleton className="h-20 w-full" />
+                          <Skeleton className="h-10 w-1/3" /> {/* Status */}
+                         <Skeleton className="h-24 w-full" /> {/* Characteristics */}
                           <Skeleton className="h-10 w-1/3" />
                            {/* Photo skeleton */}
                           <div>
@@ -392,8 +412,6 @@ export default function EditAssetPage() {
     }
 
      if (!assetData) {
-        // This case should ideally be handled by the redirect in useEffect,
-        // but added as a fallback.
         return (
              <div className="container mx-auto py-10 flex justify-center">
                 <p className="text-destructive">Erro ao carregar dados do ativo.</p>
@@ -401,7 +419,6 @@ export default function EditAssetPage() {
             );
     }
 
-    // Construct the public URL based on the asset tag
     const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${assetData.tag}` : '';
 
 
@@ -492,6 +509,169 @@ export default function EditAssetPage() {
                     </FormItem>
                   )}
                 />
+
+               {/* Ownership Type */}
+                 <FormField
+                   control={form.control}
+                   name="ownershipType"
+                   render={({ field }) => (
+                     <FormItem className="space-y-3">
+                       <FormLabel>Tipo de Propriedade</FormLabel>
+                       <FormControl>
+                         <RadioGroup
+                           onValueChange={field.onChange}
+                           defaultValue={field.value}
+                           className="flex space-x-4"
+                         >
+                           <FormItem className="flex items-center space-x-2 space-y-0">
+                             <FormControl>
+                               <RadioGroupItem value="own" />
+                             </FormControl>
+                             <FormLabel className="font-normal">Próprio</FormLabel>
+                           </FormItem>
+                           <FormItem className="flex items-center space-x-2 space-y-0">
+                             <FormControl>
+                               <RadioGroupItem value="rented" />
+                             </FormControl>
+                             <FormLabel className="font-normal">Alugado</FormLabel>
+                           </FormItem>
+                         </RadioGroup>
+                       </FormControl>
+                       <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+
+                 {/* Rental Information (Conditional) */}
+                 {ownershipType === 'rented' && (
+                    <Card className="p-4 bg-muted/30 border-dashed">
+                      <CardDescription className="mb-4">Informações da Locação</CardDescription>
+                      <div className="space-y-4">
+                        <FormField
+                          control={form.control}
+                          name="rentalCompany"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Empresa Locadora</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Nome da empresa" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <FormField
+                             control={form.control}
+                             name="rentalStartDate"
+                             render={({ field }) => (
+                               <FormItem className="flex flex-col">
+                                 <FormLabel>Data Início Locação</FormLabel>
+                                 <Popover>
+                                   <PopoverTrigger asChild>
+                                     <FormControl>
+                                       <Button
+                                         variant={"outline"}
+                                         className={cn(
+                                           "w-full pl-3 text-left font-normal",
+                                           !field.value && "text-muted-foreground"
+                                         )}
+                                       >
+                                         {field.value ? (
+                                           format(field.value, "PPP", { locale: ptBR })
+                                         ) : (
+                                           <span>Selecione a data</span>
+                                         )}
+                                         <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                                       </Button>
+                                     </FormControl>
+                                   </PopoverTrigger>
+                                   <PopoverContent className="w-auto p-0" align="start">
+                                     <Calendar
+                                       mode="single"
+                                       selected={field.value}
+                                       onSelect={field.onChange}
+                                       disabled={(date) => date < new Date("1900-01-01")}
+                                       initialFocus
+                                       locale={ptBR}
+                                     />
+                                   </PopoverContent>
+                                 </Popover>
+                                 <FormMessage />
+                               </FormItem>
+                             )}
+                           />
+                            <FormField
+                             control={form.control}
+                             name="rentalEndDate"
+                             render={({ field }) => (
+                               <FormItem className="flex flex-col">
+                                 <FormLabel>Data Fim Locação</FormLabel>
+                                 <Popover>
+                                   <PopoverTrigger asChild>
+                                     <FormControl>
+                                       <Button
+                                         variant={"outline"}
+                                         className={cn(
+                                           "w-full pl-3 text-left font-normal",
+                                           !field.value && "text-muted-foreground"
+                                         )}
+                                       >
+                                         {field.value ? (
+                                           format(field.value, "PPP", { locale: ptBR })
+                                         ) : (
+                                           <span>Selecione a data</span>
+                                         )}
+                                         <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
+                                       </Button>
+                                     </FormControl>
+                                   </PopoverTrigger>
+                                   <PopoverContent className="w-auto p-0" align="start">
+                                     <Calendar
+                                       mode="single"
+                                       selected={field.value}
+                                       onSelect={field.onChange}
+                                       disabled={(date) =>
+                                           date < (form.getValues('rentalStartDate') || new Date("1900-01-01"))
+                                       }
+                                       initialFocus
+                                       locale={ptBR}
+                                     />
+                                   </PopoverContent>
+                                 </Popover>
+                                 <FormMessage />
+                               </FormItem>
+                             )}
+                           />
+                        </div>
+                         <FormField
+                          control={form.control}
+                          name="rentalCost"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Valor do Aluguel (Mensal, Opcional)</FormLabel>
+                               <div className="relative">
+                                <DollarSign className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                <FormControl>
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        placeholder="150.00"
+                                        className="pl-8"
+                                        {...field}
+                                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} // Handle parsing
+                                    />
+                                </FormControl>
+                               </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormMessage>{form.formState.errors.rentalCompany?.message}</FormMessage>
+                      <FormMessage>{form.formState.errors.rentalEndDate?.message}</FormMessage>
+                    </Card>
+                 )}
 
 
               <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
