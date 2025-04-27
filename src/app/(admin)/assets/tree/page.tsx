@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card'; // Removed CardHeader, CardTitle, CardDescription
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { Building, MapPin, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Folder, FolderOpen, File } from 'lucide-react';
@@ -105,7 +105,8 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
              return hasChildren ? (isExpanded ? <FolderOpen className="h-4 w-4 text-yellow-600 flex-shrink-0"/> : <Folder className="h-4 w-4 text-yellow-600 flex-shrink-0"/>) : <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />;
         }
         if (node.type === 'asset') {
-            return hasChildren ? (isExpanded ? <FolderOpen className="h-4 w-4 text-orange-500 flex-shrink-0"/> : <Folder className="h-4 w-4 text-orange-500 flex-shrink-0"/>) : <AssetIcon className="h-4 w-4 text-orange-600 flex-shrink-0" />; // Or File icon
+            // Use Folder icons if it has children, otherwise AssetIcon
+            return hasChildren ? (isExpanded ? <FolderOpen className="h-4 w-4 text-orange-500 flex-shrink-0"/> : <Folder className="h-4 w-4 text-orange-500 flex-shrink-0"/>) : <AssetIcon className="h-4 w-4 text-orange-600 flex-shrink-0" />;
         }
         return <File className="h-4 w-4 text-gray-500 flex-shrink-0" />; // Default icon
     };
@@ -243,19 +244,12 @@ export default function AssetTreePage() {
 
 
   return (
-    <div className="space-y-6 h-full flex flex-col"> {/* Ensure full height and flex column */}
+    <div className="space-y-6 h-full flex flex-col">
       <h1 className="text-3xl font-bold mb-6 flex-shrink-0">Árvore Hierárquica</h1>
 
-      <Card className="flex-grow flex flex-col"> {/* Make card grow and contain */}
-        <CardHeader className="flex-shrink-0">
-          <CardTitle>Visualização Estrutural</CardTitle>
-          <CardDescription>
-            Explore a estrutura da empresa, locais e ativos. Clique nos ícones de pasta/seta para expandir ou recolher.
-            <span className="ml-4 block sm:inline mt-1 sm:mt-0">Legenda: <Building className="inline h-4 w-4 text-blue-600" /> Empresa <Folder className="inline h-4 w-4 text-yellow-600"/> Local/Ativo Pai <MapPin className="inline h-4 w-4 text-green-600" /> Local Final <AssetIcon className="inline h-4 w-4 text-orange-600"/> Ativo Final</span>
-             <span className="ml-4 block sm:inline mt-1 sm:mt-0">Status: <span className="text-green-700">Verde</span>=Ativo <span className="text-destructive font-semibold">Vermelho</span>=Perdido <span className="text-muted-foreground italic">Cinza</span>=Inativo</span>
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow p-2 border-t rounded-b-lg overflow-auto"> {/* Ensure content grows and scrolls */}
+      <Card className="flex-grow flex flex-col">
+        {/* CardHeader Removed */}
+        <CardContent className="flex-grow p-2 border rounded-lg overflow-auto"> {/* Added rounded-lg */}
           {loading && <Skeleton className="h-64 w-full" />}
           {error && (
             <div className="flex items-center justify-center h-full text-destructive p-4">
@@ -280,6 +274,17 @@ export default function AssetTreePage() {
            )}
         </CardContent>
       </Card>
+
+       {/* Legend moved to the bottom */}
+       <div className="text-xs text-muted-foreground mt-4 flex flex-wrap gap-x-4 gap-y-1 justify-center">
+          <span className="flex items-center gap-1"><Building className="inline h-3 w-3 text-blue-600" /> Empresa</span>
+          <span className="flex items-center gap-1"><Folder className="inline h-3 w-3 text-yellow-600"/> Local/Ativo Pai</span>
+          <span className="flex items-center gap-1"><MapPin className="inline h-3 w-3 text-green-600" /> Local Final</span>
+          <span className="flex items-center gap-1"><AssetIcon className="inline h-3 w-3 text-orange-600"/> Ativo Final</span>
+          <span className="ml-4 flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-green-700 inline-block"></span>Ativo</span>
+          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-destructive inline-block"></span>Perdido</span>
+          <span className="flex items-center gap-1"><span className="h-3 w-3 rounded-full bg-muted inline-block border"></span>Inativo</span>
+       </div>
     </div>
   );
 }
