@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
+import { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo and useCallback
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -286,7 +286,7 @@ export default function DashboardPage() {
     const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
     const [pieActiveIndex, setPieActiveIndex] = useState(0); // State for active pie segment
 
-     const loadData = async (showLoading = true) => {
+     const loadData = useCallback(async (showLoading = true) => { // Wrap loadData in useCallback
             if (showLoading) setLoading(true);
             setError(null);
             try {
@@ -299,11 +299,11 @@ export default function DashboardPage() {
             } finally {
                  if (showLoading) setLoading(false);
             }
-        };
+        }, []); // Empty dependency array means this function is created once
 
     useEffect(() => {
         loadData();
-    }, []);
+    }, [loadData]); // Add loadData to dependency array
 
     // Effect for relative time update
     useEffect(() => {
@@ -369,6 +369,10 @@ export default function DashboardPage() {
                     <Skeleton className="h-[400px]" />
                     <Skeleton className="h-[400px]" />
                     <Skeleton className="h-[400px]" />
+                </div>
+                 {/* Placeholder for the activity row */}
+                 <div className="grid gap-6">
+                    <Skeleton className="h-[300px]" />
                 </div>
             </div>
         );
@@ -581,44 +585,10 @@ export default function DashboardPage() {
                  </Card>
             </div>
 
-            {/* Activity, Rentals, Lost Assets - Row */}
-             <div className="grid gap-6 lg:grid-cols-3">
-                {/* Recent Activity */}
-                <Card className="lg:col-span-1 flex flex-col h-full">
-                   <CardHeader>
-                       <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
-                       <CardDescription>Últimas 5 ações realizadas.</CardDescription>
-                   </CardHeader>
-                   <CardContent className="flex-grow space-y-4">
-                      {recentActivity.length > 0 ? (
-                        recentActivity.slice(0, 5).map(log => {
-                             const actionInfo = getActionDetails(log);
-                             return (
-                                <div key={log.id} className="flex items-start gap-3 text-sm">
-                                     <actionInfo.icon className={`mt-1 h-4 w-4 flex-shrink-0 ${actionInfo.color}`} />
-                                    <div className="flex-1">
-                                        <span className="font-medium">{log.userName}</span>{' '}
-                                        <span className="text-muted-foreground">{actionInfo.text}</span>
-                                        <p className="text-xs text-muted-foreground" title={format(log.timestamp, "Pp", { locale: ptBR })}>
-                                            {formatDistanceToNow(log.timestamp, { addSuffix: true, locale: ptBR })}
-                                        </p>
-                                    </div>
-                                </div>
-                             )
-                          })
-                      ) : (
-                          <p className="text-muted-foreground text-center py-4">Nenhuma atividade recente.</p>
-                      )}
-                   </CardContent>
-                    <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
-                        </Button>
-                    </CardFooter>
-                </Card>
-
-                {/* Expiring Rentals */}
-                 <Card className="lg:col-span-1 flex flex-col h-full">
+            {/* Rentals & Lost Assets - Row */}
+            <div className="grid gap-6 lg:grid-cols-2"> {/* Changed to lg:grid-cols-2 */}
+                 {/* Expiring Rentals */}
+                 <Card className="lg:col-span-1 flex flex-col h-full"> {/* Ensure takes full height */}
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo</CardTitle>
                        <CardDescription>Contratos terminando nos próximos 30 dias.</CardDescription>
@@ -656,14 +626,14 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter>
-                         <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
                             <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
 
                 {/* Lost Assets */}
-                 <Card className="border-destructive lg:col-span-1 flex flex-col h-full">
+                 <Card className="border-destructive lg:col-span-1 flex flex-col h-full"> {/* Ensure takes full height */}
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Perdidos</CardTitle>
                        <CardDescription>Ativos marcados como perdidos.</CardDescription>
@@ -696,6 +666,42 @@ export default function DashboardPage() {
                     </CardFooter>
                 </Card>
             </div>
+
+             {/* Recent Activity - Full Width Row */}
+             <div className="grid gap-6">
+                 <Card className="flex flex-col h-full"> {/* Ensure takes full height */}
+                   <CardHeader>
+                       <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
+                       <CardDescription>Últimas 5 ações realizadas no sistema.</CardDescription>
+                   </CardHeader>
+                   <CardContent className="flex-grow space-y-4">
+                      {recentActivity.length > 0 ? (
+                        recentActivity.slice(0, 5).map(log => {
+                             const actionInfo = getActionDetails(log);
+                             return (
+                                <div key={log.id} className="flex items-start gap-3 text-sm">
+                                     <actionInfo.icon className={`mt-1 h-4 w-4 flex-shrink-0 ${actionInfo.color}`} />
+                                    <div className="flex-1">
+                                        <span className="font-medium">{log.userName}</span>{' '}
+                                        <span className="text-muted-foreground">{actionInfo.text}</span>
+                                        <p className="text-xs text-muted-foreground" title={format(log.timestamp, "Pp", { locale: ptBR })}>
+                                            {formatDistanceToNow(log.timestamp, { addSuffix: true, locale: ptBR })}
+                                        </p>
+                                    </div>
+                                </div>
+                             )
+                          })
+                      ) : (
+                          <p className="text-muted-foreground text-center py-4">Nenhuma atividade recente.</p>
+                      )}
+                   </CardContent>
+                    <CardFooter>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                            <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                        </Button>
+                    </CardFooter>
+                </Card>
+             </div>
 
         </div>
     );
