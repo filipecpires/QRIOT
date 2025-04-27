@@ -2,12 +2,36 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link'; // Import Link
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import { Building, MapPin, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Folder, FolderOpen, File, Package, Home, CheckCircle, XCircle, MinusCircle } from 'lucide-react';
+import {
+    Building, MapPin, Package, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Folder, FolderOpen, File, Home, CheckCircle, XCircle, MinusCircle,
+    MoreVertical, // For dropdown trigger
+    Edit, Eye, Printer, Trash2 // Icons for dropdown actions
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"; // Import Tooltip
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
+import { useToast } from '@/hooks/use-toast'; // Import useToast for delete action feedback
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog" // Import AlertDialog
 
 // Define Node Types
 type NodeType = 'company' | 'location' | 'asset';
@@ -85,6 +109,15 @@ async function fetchHierarchicalData(): Promise<TreeNode> {
 
   return nodeMap[company.id];
 }
+
+// Mock Delete Function
+async function deleteAsset(assetId: string): Promise<{ success: boolean }> {
+    console.log(`Attempting to delete asset ${assetId}`);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
+    // In a real app, perform the deletion in Firestore and handle errors
+    return { success: true };
+}
+
 // --- End Mock Data Fetching ---
 
 
@@ -94,21 +127,23 @@ interface TreeViewNodeProps {
     level: number;
     expandedNodes: Set<string>;
     onToggleExpand: (nodeId: string) => void;
+    onDeleteNode: (nodeId: string, nodeType: NodeType) => void; // Callback to update state after deletion
     isLast: boolean; // Flag to help with line drawing (optional)
 }
 
-const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes, onToggleExpand, isLast }) => {
+const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes, onToggleExpand, onDeleteNode, isLast }) => {
+    const { toast } = useToast();
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = !!node.rawChildren && node.rawChildren.length > 0;
 
     const getNodeIcon = () => {
         if (node.type === 'company') return <Building className="h-4 w-4 text-blue-600 flex-shrink-0" />;
         if (node.type === 'location') {
-             // Use Folder icons if it has children, otherwise MapPin
              return hasChildren ? (isExpanded ? <FolderOpen className="h-4 w-4 text-yellow-600 flex-shrink-0"/> : <Folder className="h-4 w-4 text-yellow-600 flex-shrink-0"/>) : <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />;
         }
         if (node.type === 'asset') {
-            // Use Package icon if it has children (parent asset), otherwise QrCode (final asset)
+            // Use Package for assets with children, AssetIcon for final assets
             return hasChildren ? <Package className="h-4 w-4 text-indigo-600 flex-shrink-0"/> : <AssetIcon className="h-4 w-4 text-orange-600 flex-shrink-0" />;
         }
         return <File className="h-4 w-4 text-gray-500 flex-shrink-0" />; // Default icon
@@ -155,63 +190,149 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
         }
     };
 
+    // Construct the public URL based on the asset tag
+    const getPublicUrl = (tag: string) => {
+        if (typeof window !== 'undefined') {
+            return `${window.location.origin}/public/asset/${tag}`;
+        }
+        return '#'; // Fallback URL if window is not defined (SSR/build time)
+    };
+
+    const handleDeleteConfirm = async () => {
+        if (node.type !== 'asset') return; // Only allow deleting assets for now
+        const result = await deleteAsset(node.id);
+        if (result.success) {
+            toast({ title: "Sucesso", description: `Ativo ${node.label} excluído.` });
+            onDeleteNode(node.id, node.type); // Notify parent to remove node from state
+        } else {
+            toast({ title: "Erro", description: "Falha ao excluir o ativo.", variant: "destructive" });
+        }
+        setIsDeleteDialogOpen(false);
+    };
+
+
     return (
         <li className="relative">
-            <div
-                className={cn(
-                    "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer group", // Added group for hover effects on indicators
-                    getStatusTextColorClass()
-                )}
-                style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
-                onClick={() => hasChildren && onToggleExpand(node.id)} // Toggle on click if it has children
-            >
-                 {/* Toggle Button */}
-                <div className="w-4 flex-shrink-0">
-                    {hasChildren && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-5 w-5 p-0"
-                            onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
-                            aria-label={isExpanded ? 'Recolher' : 'Expandir'}
-                        >
-                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                        </Button>
-                     )}
-                 </div>
-
-                 {/* Node Icon */}
-                 {getNodeIcon()}
-
-                 {/* Label and Details */}
-                 <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5">
-                     <span className="font-medium truncate" title={node.label}>{node.label}</span>
-                     {node.type === 'asset' && (node as AssetNodeData).tag && (
-                         <span className="text-xs text-muted-foreground">({(node as AssetNodeData).tag})</span>
-                     )}
-                      {/* Ownership Indicator */}
-                     {node.type === 'asset' && getOwnershipIndicator()}
-                      {(node as AssetNodeData).responsibleUserName && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                 <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                    <User className="h-3 w-3"/> {(node as AssetNodeData).responsibleUserName}
-                                 </span>
-                            </TooltipTrigger>
-                             <TooltipContent>
-                                <p>Responsável: {(node as AssetNodeData).responsibleUserName}</p>
-                            </TooltipContent>
-                        </Tooltip>
+          <DropdownMenu>
+             <div
+                 className={cn(
+                     "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer group", // Added group for hover effects on indicators
+                     getStatusTextColorClass()
+                 )}
+                 style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
+                 // Removed onClick for expand/collapse from here, handled by button or trigger below
+                 // onClick={() => hasChildren && onToggleExpand(node.id)}
+             >
+                  {/* Toggle Button */}
+                 <div className="w-4 flex-shrink-0">
+                     {hasChildren && (
+                         <Button
+                             variant="ghost"
+                             size="icon"
+                             className="h-5 w-5 p-0"
+                             onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }} // Keep expand/collapse on button click
+                             aria-label={isExpanded ? 'Recolher' : 'Expandir'}
+                         >
+                             {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                         </Button>
                       )}
-                 </div>
-
-                 {/* Status Indicator (Icon) - aligned to the right */}
-                  <div className="ml-auto pl-2 flex-shrink-0">
-                     {node.type === 'asset' && getStatusIndicator()}
                   </div>
 
+                 {/* Node Icon */}
+                  {getNodeIcon()}
 
-            </div>
+                 {/* Label and Details - wrapped in DropdownMenuTrigger ONLY for assets */}
+                 {node.type === 'asset' ? (
+                    <DropdownMenuTrigger asChild>
+                        <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5 cursor-pointer">
+                            {/* Content inside trigger */}
+                            <span className="font-medium truncate" title={node.label}>{node.label}</span>
+                             {(node as AssetNodeData).tag && (
+                                <span className="text-xs text-muted-foreground">({(node as AssetNodeData).tag})</span>
+                            )}
+                             {getOwnershipIndicator()}
+                             {(node as AssetNodeData).responsibleUserName && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                         <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <User className="h-3 w-3"/> {(node as AssetNodeData).responsibleUserName}
+                                         </span>
+                                    </TooltipTrigger>
+                                     <TooltipContent>
+                                        <p>Responsável: {(node as AssetNodeData).responsibleUserName}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                              )}
+                        </div>
+                    </DropdownMenuTrigger>
+                  ) : (
+                     <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5 cursor-pointer" onClick={() => hasChildren && onToggleExpand(node.id)}>
+                         {/* Content for non-assets (locations/company) */}
+                         <span className="font-medium truncate" title={node.label}>{node.label}</span>
+                         {node.type === 'location' && (node as LocationNodeData).gps && (
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <MapPin className="h-3 w-3 text-muted-foreground flex-shrink-0"/>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>GPS: {(node as LocationNodeData).gps?.lat.toFixed(4)}, {(node as LocationNodeData).gps?.lng.toFixed(4)}</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            )}
+                     </div>
+                  )}
+
+
+                  {/* Status Indicator (Icon) - aligned to the right */}
+                   <div className="ml-auto pl-2 flex-shrink-0">
+                      {node.type === 'asset' && getStatusIndicator()}
+                   </div>
+
+                   {/* Dropdown Menu Trigger (only for assets, using MoreVertical) */}
+                    {node.type === 'asset' && (
+                         <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-5 w-5 p-0 ml-1 flex-shrink-0 opacity-50 group-hover:opacity-100">
+                                <MoreVertical className="h-4 w-4" />
+                                <span className="sr-only">Ações</span>
+                             </Button>
+                         </DropdownMenuTrigger>
+                    )}
+
+             </div>
+
+             {/* Dropdown Content (only for assets) */}
+             {node.type === 'asset' && (
+                <DropdownMenuContent align="start">
+                     <DropdownMenuLabel>{node.label}</DropdownMenuLabel>
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem asChild>
+                       <Link href={`/assets/${node.id}/edit`}>
+                         <Edit className="mr-2 h-4 w-4" /> Editar
+                       </Link>
+                     </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
+                       <Link href={getPublicUrl((node as AssetNodeData).tag)} target="_blank">
+                         <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
+                       </Link>
+                     </DropdownMenuItem>
+                     <DropdownMenuItem asChild>
+                        <Link href={`/labels/print?assetId=${node.id}`}> {/* Example: Pass asset ID for printing */}
+                         <Printer className="mr-2 h-4 w-4" /> Imprimir Etiqueta
+                       </Link>
+                     </DropdownMenuItem>
+                     <DropdownMenuSeparator />
+                     <DropdownMenuItem
+                         className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                         onSelect={(e) => {
+                            e.preventDefault(); // Prevent closing menu
+                            setIsDeleteDialogOpen(true); // Open confirmation dialog
+                         }}
+                      >
+                       <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                     </DropdownMenuItem>
+                </DropdownMenuContent>
+              )}
+            </DropdownMenu>
 
              {/* Children Nodes */}
             {isExpanded && hasChildren && node.rawChildren && (
@@ -223,11 +344,33 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                             level={level + 1}
                             expandedNodes={expandedNodes}
                             onToggleExpand={onToggleExpand}
+                            onDeleteNode={onDeleteNode}
                             isLast={index === node.rawChildren!.length - 1}
                         />
                     ))}
                 </ul>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                 <AlertDialogContent>
+                     <AlertDialogHeader>
+                       <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                       <AlertDialogDescription>
+                         Tem certeza que deseja excluir o ativo "{node.label}" ({ (node as AssetNodeData).tag })? Esta ação não pode ser desfeita.
+                       </AlertDialogDescription>
+                     </AlertDialogHeader>
+                     <AlertDialogFooter>
+                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                       <AlertDialogAction
+                         onClick={handleDeleteConfirm}
+                         className="bg-destructive hover:bg-destructive/90"
+                       >
+                         Confirmar Exclusão
+                       </AlertDialogAction>
+                     </AlertDialogFooter>
+                 </AlertDialogContent>
+            </AlertDialog>
         </li>
     );
 };
@@ -253,6 +396,43 @@ export default function AssetTreePage() {
         }
         return newSet;
         });
+    }, []);
+
+   // Function to remove a node from the tree state
+    const handleDeleteNode = useCallback((nodeId: string, nodeType: NodeType) => {
+        // This function needs to recursively find and remove the node from the rootData state.
+        // This is a complex operation depending on how your data is structured.
+        // For simplicity, we'll just refetch the data for now.
+        // A more optimized approach would be to update the state directly.
+        console.log(`Node ${nodeId} deleted, refetching data...`);
+        // Refetch data to reflect the deletion
+        const loadData = async () => {
+            setLoading(true);
+            setError(null);
+            try {
+                const fetchedRootData = await fetchHierarchicalData();
+                 if (!fetchedRootData) {
+                   setError("Nenhum dado encontrado para a árvore.");
+                   setRootData(null);
+                 } else {
+                     setRootData(fetchedRootData);
+                     // Keep existing expanded state or reset it
+                      // const initialExpanded = new Set([fetchedRootData.id]);
+                      // if (fetchedRootData.rawChildren) {
+                      //     fetchedRootData.rawChildren.forEach(child => initialExpanded.add(child.id));
+                      // }
+                      // setExpandedNodes(initialExpanded);
+                 }
+            } catch (err) {
+                 console.error("Error refetching hierarchical data:", err);
+                 setError("Falha ao recarregar a árvore hierárquica.");
+                 setRootData(null);
+             } finally {
+                 setLoading(false);
+             }
+         };
+         loadData();
+
     }, []);
 
 
@@ -306,6 +486,7 @@ export default function AssetTreePage() {
                     level={0}
                     expandedNodes={expandedNodes}
                     onToggleExpand={handleToggleExpand}
+                    onDeleteNode={handleDeleteNode}
                     isLast={true}
                   />
                 </ul>
@@ -336,5 +517,3 @@ export default function AssetTreePage() {
      </TooltipProvider>
   );
 }
-    
-
