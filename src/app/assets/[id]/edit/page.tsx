@@ -163,7 +163,7 @@ export default function EditAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
-      parentId: '',
+      parentId: '__none__', // Default to none
       characteristics: [],
       description: '',
       status: 'active',
@@ -180,7 +180,7 @@ export default function EditAssetPage() {
                      setAssetData(data);
                      form.reset({ // Reset form with fetched data
                        ...data,
-                       parentId: data.parentId || '', // Ensure parentId is string or empty string
+                       parentId: data.parentId || '__none__', // Ensure parentId is string or '__none__'
                      });
                      setCharacteristics(data.characteristics || []);
                      setExistingPhotos(data.photos || []);
@@ -288,11 +288,11 @@ export default function EditAssetPage() {
          isActive: char.isActive,
      }));
 
-     // Ensure parentId is either a valid ID or null/undefined if 'Nenhum' is selected
+     // Ensure parentId is either a valid ID or undefined if '__none__' is selected
     const dataToSave = {
          ...data,
          characteristics: characteristicsToSave,
-         parentId: data.parentId === '' ? undefined : data.parentId,
+         parentId: data.parentId === '__none__' ? undefined : data.parentId,
      };
      console.log('Data prepared for saving:', dataToSave);
 
@@ -472,14 +472,14 @@ export default function EditAssetPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ativo Pai (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingParents}>
+                      <Select onValueChange={field.onChange} value={field.value || '__none__'} disabled={isLoadingParents}>
                         <FormControl>
                           <SelectTrigger>
                              <SelectValue placeholder={isLoadingParents ? "Carregando ativos..." : "Selecione um ativo pai (se aplicável)"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
                           {parentAssets.map((asset) => (
                             <SelectItem key={asset.id} value={asset.id}>
                                 {asset.name} ({asset.tag})

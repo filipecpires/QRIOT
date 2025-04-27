@@ -85,7 +85,7 @@ export default function NewAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
-      parentId: '',
+      parentId: '__none__', // Default to none
       characteristics: [],
       description: '',
     },
@@ -169,10 +169,10 @@ export default function NewAssetPage() {
     console.log('Submitting asset data:', data);
     console.log('Selected files:', selectedFiles);
 
-    // Ensure parentId is either a valid ID or null/undefined if 'Nenhum' is selected
+    // Ensure parentId is either a valid ID or undefined if '__none__' is selected
     const dataToSave = {
         ...data,
-        parentId: data.parentId === '' ? undefined : data.parentId,
+        parentId: data.parentId === '__none__' ? undefined : data.parentId,
     };
     console.log('Data prepared for saving:', dataToSave);
 
@@ -339,14 +339,14 @@ export default function NewAssetPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ativo Pai (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingParents}>
+                      <Select onValueChange={field.onChange} value={field.value || '__none__'} disabled={isLoadingParents}>
                         <FormControl>
                           <SelectTrigger>
                              <SelectValue placeholder={isLoadingParents ? "Carregando ativos..." : "Selecione um ativo pai (se aplicável)"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="">Nenhum</SelectItem>
+                          <SelectItem value="__none__">Nenhum</SelectItem>
                           {parentAssets.map((asset) => (
                             <SelectItem key={asset.id} value={asset.id}>
                                 {asset.name} ({asset.tag})

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -46,7 +47,7 @@ export default function NewUserPage() {
       name: '',
       email: '',
       role: '',
-      managerId: '',
+      managerId: '__none__', // Default to none
       password: '',
       isActive: true,
     },
@@ -56,13 +57,19 @@ export default function NewUserPage() {
     setIsLoading(true);
     console.log('Submitting user data:', data);
 
+    // Prepare data: map '__none__' to undefined for managerId
+    const dataToSave = {
+        ...data,
+        managerId: data.managerId === '__none__' ? undefined : data.managerId,
+    };
+
     // Simulate API call (Firebase Auth + Firestore)
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Replace with actual API call to create user (Auth) and save user data (Firestore)
     // try {
     //   // 1. Create user in Firebase Auth
-    //   // 2. Save user details (including role, managerId, status) in Firestore
+    //   // 2. Save user details (including role, managerId, status) in Firestore (using dataToSave)
     //   toast({
     //     title: 'Sucesso!',
     //     description: `Usuário "${data.name}" cadastrado com sucesso.`,
@@ -181,14 +188,14 @@ export default function NewUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gerente Direto (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                       <Select onValueChange={field.onChange} value={field.value || '__none__'}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o gerente (se aplicável)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           <SelectItem value="">Nenhum</SelectItem>
+                           <SelectItem value="__none__">Nenhum</SelectItem>
                           {managers.map((manager) => (
                             <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
                           ))}

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -85,7 +86,7 @@ export default function EditUserPage() {
       name: '',
       email: '',
       role: '',
-      managerId: '',
+      managerId: '__none__', // Default to none
       password: '', // Keep password empty initially
       isActive: true,
     },
@@ -102,7 +103,7 @@ export default function EditUserPage() {
                          name: data.name,
                          email: data.email,
                          role: data.role,
-                         managerId: data.managerId,
+                         managerId: data.managerId || '__none__', // Ensure managerId is string or '__none__'
                          isActive: data.isActive,
                          password: '', // Ensure password is empty
                      });
@@ -121,18 +122,21 @@ export default function EditUserPage() {
     setIsLoading(true);
     console.log('Updating user data:', data);
 
-    // Prepare data: Remove empty password if not provided
+    // Prepare data: Remove empty password if not provided, map '__none__' to undefined
     const dataToSave = { ...data };
     if (!dataToSave.password) {
       delete dataToSave.password;
     }
+     if (dataToSave.managerId === '__none__') {
+         dataToSave.managerId = undefined;
+     }
 
     // Simulate API call (Firebase Auth update + Firestore update)
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // Replace with actual API call to update user data (Firestore) and potentially password (Auth)
     // try {
-    //   // 1. Update user details in Firestore
+    //   // 1. Update user details in Firestore (using dataToSave)
     //   // 2. If password provided, update in Firebase Auth (requires re-authentication or admin SDK)
     //   toast({
     //     title: 'Sucesso!',
@@ -302,14 +306,14 @@ export default function EditUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gerente Direto (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value || ''}>
+                      <Select onValueChange={field.onChange} value={field.value || '__none__'}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o gerente (se aplicável)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                           <SelectItem value="">Nenhum</SelectItem>
+                           <SelectItem value="__none__">Nenhum</SelectItem>
                            {/* Filter out the current user from the managers list */}
                           {managers.filter(m => m.id !== userId).map((manager) => (
                             <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
