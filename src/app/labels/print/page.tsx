@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Printer, Search, AlertTriangle, Settings, Check, QrCode, Tag, X } from 'lucide-react';
+import { Printer, Search, AlertTriangle, Settings, Check, QrCode, Tag, X, Loader2 } from 'lucide-react'; // Added Loader2
 import { Skeleton } from '@/components/ui/skeleton';
 import QRCodeStyling from 'qrcode.react'; // Using qrcode.react for consistency
 import { jsPDF } from "jspdf";
@@ -49,8 +49,10 @@ async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForL
         if (filters.search && !(asset.name.toLowerCase().includes(filters.search.toLowerCase()) || asset.tag.toLowerCase().includes(filters.search.toLowerCase()))) {
             match = false;
         }
+        // Check if category filter is active (not empty string which represents 'all')
         if (filters.category && asset.category !== filters.category) match = false;
-        if (filters.location && asset.location !== filters.location) match = false; // Assuming location is fetched/matched by name for simplicity
+         // Check if location filter is active (not empty string which represents 'all')
+        if (filters.location && asset.location !== filters.location) match = false;
         return match;
     });
 
@@ -84,8 +86,8 @@ export default function PrintLabelsPage() {
     const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         search: '',
-        category: '',
-        location: '', // Add location filter
+        category: '', // Empty string means 'all'
+        location: '', // Empty string means 'all'
         page: 1,
         limit: 10,
     });
@@ -121,7 +123,9 @@ export default function PrintLabelsPage() {
     }, [filters]);
 
     const handleFilterChange = (key: keyof typeof filters, value: any) => {
-        setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
+        // If the value is '__all__', treat it as an empty string for filtering state
+        const actualValue = value === '__all__' ? '' : value;
+        setFilters(prev => ({ ...prev, [key]: actualValue, page: 1 }));
     };
 
     const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -316,21 +320,25 @@ export default function PrintLabelsPage() {
                             onChange={(e) => handleFilterChange('search', e.target.value)}
                             className="max-w-sm"
                         />
-                         <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
+                         {/* Use filters.category or '__all__' for Select value */}
+                         <Select value={filters.category || '__all__'} onValueChange={(v) => handleFilterChange('category', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todas</SelectItem>
+                                {/* Use a non-empty value for the "All" option */}
+                                <SelectItem value="__all__">Todas</SelectItem>
                                 {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                         <Select value={filters.location} onValueChange={(v) => handleFilterChange('location', v)}>
+                         {/* Use filters.location or '__all__' for Select value */}
+                         <Select value={filters.location || '__all__'} onValueChange={(v) => handleFilterChange('location', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Localização" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="">Todas</SelectItem>
+                                {/* Use a non-empty value for the "All" option */}
+                                <SelectItem value="__all__">Todas</SelectItem>
                                 {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                             </SelectContent>
                         </Select>
