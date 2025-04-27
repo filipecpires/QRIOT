@@ -47,6 +47,7 @@ import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns
 import { ptBR } from 'date-fns/locale';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'; // Import Chart components
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Import Alert components
+import { cn } from '@/lib/utils'; // Import cn
 
 // --- Mock Data Structures ---
 interface AssetSummary {
@@ -325,7 +326,7 @@ export default function DashboardPage() {
                   {assetTrend.toLocaleString()} nos últimos 30 dias
                 </p>
                  <div className="text-xs text-muted-foreground mt-2 space-x-2">
-                    <Badge variant="default" className="bg-green-500">{summary.active} Ativos</Badge>
+                    <Badge variant="default" className={cn("bg-green-500 hover:bg-green-600")}>{summary.active} Ativos</Badge>
                     <Badge variant="destructive">{summary.lost} Perdidos</Badge>
                     <Badge variant="secondary">{summary.inactive} Inativos</Badge>
                  </div>
@@ -520,7 +521,10 @@ export default function DashboardPage() {
                                               </Link>
                                               <span className="text-xs text-muted-foreground flex items-center gap-1"><Building className="h-3 w-3"/>{rental.rentalCompany}</span>
                                           </TableCell>
-                                          <TableCell className={`p-2 text-xs text-right font-medium ${isVeryUrgent ? 'text-red-700 font-bold' : isUrgent ? 'text-orange-600' : ''}`}>
+                                          <TableCell className={cn(
+                                              "p-2 text-xs text-right font-medium",
+                                              isVeryUrgent ? 'text-red-700 font-bold' : isUrgent ? 'text-orange-600' : ''
+                                          )}>
                                              {format(rental.rentalEndDate, "dd/MM/yy", { locale: ptBR })} ({daysLeft}d)
                                          </TableCell>
                                         </TableRow>
@@ -619,8 +623,7 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
                  <CardFooter className="pt-4">
-                    <Button variant="outline" size="sm" className="w-full">
-                       {/* Removed asChild because Button cannot have Link as direct child */}
+                    <Button variant="outline" size="sm" className="w-full" asChild>
                        <Link href="/inventory/scan">Ver Relatório Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* Link to inventory report page eventually */}
                      </Button>
                 </CardFooter>
