@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, ChangeEvent, DragEvent } from 'react';
@@ -1005,8 +1006,9 @@ export default function EditAssetPage() {
                              onChange={(e) => setNewAttachmentUrl(e.target.value)}
                          />
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
-                       <Plus className="mr-2 h-4 w-4" /> Adicionar Anexo
+                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
+                         <LinkIcon className="mr-2 h-4 w-4" /> {/* Added icon */}
+                         Adicionar Anexo
                     </Button>
                  </div>
                  <FormDescription>Adicione links para manuais, notas fiscais, etc. e defina a visibilidade pública.</FormDescription>

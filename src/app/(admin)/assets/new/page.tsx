@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useCallback, ChangeEvent, DragEvent, useEffect } from 'react';
@@ -833,8 +834,9 @@ export default function NewAssetPage() {
                              onChange={(e) => setNewAttachmentUrl(e.target.value)}
                          />
                     </div>
-                    <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
-                       <Plus className="mr-2 h-4 w-4" /> Adicionar Anexo
+                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
+                         <LinkIcon className="mr-2 h-4 w-4" /> {/* Added icon */}
+                         Adicionar Anexo
                     </Button>
                  </div>
                   <FormDescription>Adicione links para manuais, notas fiscais, etc.</FormDescription>
@@ -867,3 +869,4 @@ export default function NewAssetPage() {
     </div>
   );
 }
+
