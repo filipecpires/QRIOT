@@ -7,9 +7,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import {
-    Building, MapPin, Package, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Folder, FolderOpen, File, Home, CheckCircle, XCircle, MinusCircle,
-    MoreVertical, // Keep for reference if needed, but button will be removed
-    Edit, Eye, Printer, Trash2 // Icons for dropdown actions
+    Building, MapPin, Package, QrCode as AssetIcon, User, AlertTriangle, ChevronRight, ChevronDown, Network, File, Home, CheckCircle, XCircle, MinusCircle,
+    Edit, Eye, Trash2, MoreHorizontal // Icons for dropdown actions
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -136,17 +135,19 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = !!node.rawChildren && node.rawChildren.length > 0;
+    const iconClasses = "h-4 w-4 text-muted-foreground/80 flex-shrink-0"; // Slightly lighter than text
 
     const getNodeIcon = () => {
-        if (node.type === 'company') return <Building className="h-4 w-4 text-blue-600 flex-shrink-0" />;
+        if (node.type === 'company') return <Building className={iconClasses} />;
         if (node.type === 'location') {
-             return hasChildren ? (isExpanded ? <FolderOpen className="h-4 w-4 text-yellow-600 flex-shrink-0"/> : <Folder className="h-4 w-4 text-yellow-600 flex-shrink-0"/>) : <MapPin className="h-4 w-4 text-green-600 flex-shrink-0" />;
+             // Use Network icon if it has children, otherwise MapPin
+             return hasChildren ? <Network className={iconClasses} /> : <MapPin className={iconClasses} />;
         }
         if (node.type === 'asset') {
             // Use Package for assets with children, AssetIcon for final assets
-            return hasChildren ? <Package className="h-4 w-4 text-indigo-600 flex-shrink-0"/> : <AssetIcon className="h-4 w-4 text-orange-600 flex-shrink-0" />;
+            return hasChildren ? <Package className={iconClasses} /> : <AssetIcon className={iconClasses} />;
         }
-        return <File className="h-4 w-4 text-gray-500 flex-shrink-0" />; // Default icon
+        return <File className={iconClasses} />; // Default icon
     };
 
      // Returns the appropriate status icon and tooltip
@@ -200,10 +201,11 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
 
 
     // Main container div acts as trigger for assets
+    // Click anywhere on the node container to trigger the dropdown if it's an asset
     const NodeContainer = node.type === 'asset' ? DropdownMenuTrigger : 'div';
     const nodeContainerProps = node.type === 'asset'
-        ? { asChild: true }
-        : { onClick: () => hasChildren && onToggleExpand(node.id) }; // Keep expand/collapse for non-assets
+        ? { asChild: true, className: "cursor-pointer" } // Use asChild and add pointer cursor for assets
+        : { onClick: () => hasChildren && onToggleExpand(node.id), className: hasChildren ? "cursor-pointer" : "" }; // Keep expand/collapse for non-assets
 
 
     return (
@@ -212,10 +214,12 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
              <NodeContainer {...nodeContainerProps}>
                  <div
                      className={cn(
-                         "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 cursor-pointer group",
+                         "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 group",
                          // Removed text color class - handled by icons
                      )}
                      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
+                     // If it's not an asset but has children, allow click to expand/collapse
+                     onClick={node.type !== 'asset' && hasChildren ? () => onToggleExpand(node.id) : undefined}
                  >
                       {/* Toggle Button */}
                      <div className="w-4 flex-shrink-0">
@@ -223,8 +227,8 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                              <Button
                                  variant="ghost"
                                  size="icon"
-                                 className="h-5 w-5 p-0"
-                                 // Prevent dropdown from triggering when clicking expand/collapse
+                                 className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground" // Icon inherits text color
+                                 // Prevent dropdown from triggering when clicking expand/collapse icon itself
                                  onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
                                  aria-label={isExpanded ? 'Recolher' : 'Expandir'}
                              >
@@ -238,7 +242,7 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
 
                      {/* Label and Details */}
                      <div className="flex-grow overflow-hidden text-sm flex items-center gap-1.5">
-                        <span className="font-medium truncate" title={node.label}>{node.label}</span>
+                        <span className="font-medium truncate text-foreground/90" title={node.label}>{node.label}</span>
                          {node.type === 'asset' && (node as AssetNodeData).tag && (
                             <span className="text-xs text-muted-foreground">({(node as AssetNodeData).tag})</span>
                         )}
@@ -275,16 +279,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                           {node.type === 'asset' && getStatusIndicator()}
                        </div>
 
-                       {/* Removed the explicit dropdown trigger button */}
-                       {/* {node.type === 'asset' && (
-                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-5 w-5 p-0 ml-1 flex-shrink-0 opacity-50 group-hover:opacity-100">
-                                    <MoreVertical className="h-4 w-4" />
-                                    <span className="sr-only">Ações</span>
-                                 </Button>
-                             </DropdownMenuTrigger>
-                        )} */}
-
                  </div>
               </NodeContainer>
 
@@ -304,12 +298,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                          <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
                        </Link>
                      </DropdownMenuItem>
-                      {/* Removed "Imprimir Etiqueta" */}
-                     {/* <DropdownMenuItem asChild>
-                        <Link href={`/labels/print?assetId=${node.id}`}>
-                         <Printer className="mr-2 h-4 w-4" /> Imprimir Etiqueta
-                       </Link>
-                     </DropdownMenuItem> */}
                      <DropdownMenuSeparator />
                      <DropdownMenuItem
                          className="text-destructive focus:bg-destructive/10 focus:text-destructive"
@@ -501,11 +489,11 @@ export default function AssetTreePage() {
         {/* Legend moved to the bottom */}
            <div className="text-xs text-muted-foreground mt-4 flex flex-wrap gap-x-4 gap-y-1 justify-center items-center">
               <span className="font-semibold mr-2">Legenda:</span>
-              <span className="flex items-center gap-1"><Building className="inline h-3 w-3 text-blue-600" /> Empresa</span>
-              <span className="flex items-center gap-1"><Folder className="inline h-3 w-3 text-yellow-600"/> Local (com filhos)</span>
-              <span className="flex items-center gap-1"><MapPin className="inline h-3 w-3 text-green-600" /> Local Final</span>
-              <span className="flex items-center gap-1"><Package className="inline h-3 w-3 text-indigo-600"/> Ativo Pai</span>
-              <span className="flex items-center gap-1"><AssetIcon className="inline h-3 w-3 text-orange-600"/> Ativo Final</span>
+              <span className="flex items-center gap-1"><Building className="inline h-3 w-3 text-muted-foreground/80" /> Empresa</span>
+              <span className="flex items-center gap-1"><Network className="inline h-3 w-3 text-muted-foreground/80"/> Local (com filhos)</span>
+              <span className="flex items-center gap-1"><MapPin className="inline h-3 w-3 text-muted-foreground/80" /> Local Final</span>
+              <span className="flex items-center gap-1"><Package className="inline h-3 w-3 text-muted-foreground/80"/> Ativo Pai</span>
+              <span className="flex items-center gap-1"><AssetIcon className="inline h-3 w-3 text-muted-foreground/80"/> Ativo Final</span>
               <span className="ml-2 flex items-center gap-1"><Home className="h-3 w-3 text-blue-500" /> Próprio</span>
               <span className="flex items-center gap-1"><Building className="h-3 w-3 text-orange-500" /> Alugado</span>
                <span className="ml-2 flex items-center gap-1"><CheckCircle className="h-3 w-3 text-green-600"/> Ativo</span>
