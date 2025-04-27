@@ -25,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { cn } from '@/lib/utils'; // Make sure cn is imported
+import { cn } from '@/lib/utils';
 import { QrCodeModal } from '@/components/feature/qr-code-modal';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -51,7 +51,10 @@ const attachmentSchema = z.object({
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
-  tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
+  tag: z.string()
+    .min(1, { message: 'A tag única é obrigatória.' })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'})
+    .describe('A tag é única dentro da empresa e não pode ser alterada após a criação.'), // Clarified description for edit page
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
   parentId: z.string().optional(),
@@ -415,12 +418,15 @@ export default function EditAssetPage() {
         ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
         : { ...data };
 
+    // Exclude the 'tag' field from the data sent for update, as it should not be changed.
+    const { tag, ...dataWithoutTag } = cleanedData;
+
     const dataToSave = {
-         ...cleanedData,
-         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
+         ...dataWithoutTag,
+         parentId: dataWithoutTag.parentId === '__none__' ? undefined : dataWithoutTag.parentId,
          // Attachments are already in cleanedData from form state
      };
-     console.log('Data prepared for saving:', dataToSave);
+     console.log('Data prepared for saving (excluding tag):', dataToSave);
 
 
     // TODO: Implement file upload and removal logic

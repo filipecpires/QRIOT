@@ -38,7 +38,10 @@ const attachmentSchema = z.object({
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
-  tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
+  tag: z.string()
+    .min(1, { message: 'A tag única é obrigatória.' })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'})
+    .describe('A tag deve ser única dentro da sua empresa. A validação de unicidade ocorre no servidor.'), // Updated description
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
   parentId: z.string().optional(),
@@ -260,8 +263,14 @@ export default function NewAssetPage() {
 
     // Replace with actual API call to save the asset (including photo URLs)
     // try {
+    //   // Assume companyId is available (e.g., from user context)
+    //   const companyId = 'YOUR_COMPANY_ID'; // Replace with actual company ID
+    //   // Check tag uniqueness within the company before saving (server-side)
+    //   // const isTagUnique = await checkTagUniqueness(companyId, dataToSave.tag);
+    //   // if (!isTagUnique) throw new Error('Tag já existe nesta empresa.');
+    //
     //   const photoUrls = await uploadFiles(selectedFiles); // Your upload function
-    //   const finalData = { ...dataToSave, photoUrls };
+    //   const finalData = { ...dataToSave, photoUrls, companyId };
     //   const response = await fetch('/api/assets', {
     //     method: 'POST',
     //     headers: { 'Content-Type': 'application/json' },
@@ -279,7 +288,7 @@ export default function NewAssetPage() {
     //   console.error('Error saving asset:', error);
     //   toast({
     //     title: 'Erro ao Salvar',
-    //     description: 'Não foi possível cadastrar o ativo. Tente novamente.',
+    //     description: error.message || 'Não foi possível cadastrar o ativo. Tente novamente.',
     //     variant: 'destructive',
     //   });
     // } finally {
@@ -326,7 +335,7 @@ export default function NewAssetPage() {
                       <FormControl>
                         <Input placeholder="Ex: TI-NB-001" {...field} />
                       </FormControl>
-                      <FormDescription>Use um código único para identificar o ativo.</FormDescription>
+                      <FormDescription>Use um código único para identificar o ativo <span className="font-semibold">dentro da sua empresa</span>.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -708,7 +717,7 @@ export default function NewAssetPage() {
                     type="file"
                     multiple
                     accept="image/*" // Only accept image files
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" // Adjusted class
+                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" // Use overlay approach
                     onChange={handleFileChange}
                   />
                   <p className="text-xs text-muted-foreground mt-2">Apenas imagens são permitidas.</p>
