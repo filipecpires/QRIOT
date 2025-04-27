@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertTriangle, Info, Image as ImageIcon, Link as LinkIcon, MapPin, UserCircle, Calendar } from 'lucide-react'; // Corrected Link icon import
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { cn } from '@/lib/utils'; // Added missing import
 
 // Mock data structure - replace with actual fetching and data structure
 interface AssetCharacteristic {

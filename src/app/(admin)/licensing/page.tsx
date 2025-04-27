@@ -6,11 +6,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Badge, badgeVariants } from '@/components/ui/badge'; // Import badgeVariants
+import type { VariantProps } from 'class-variance-authority'; // Correct import path
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText, AlertCircle, CheckCircle, ShoppingCart, CalendarDays, Hash } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils'; // Import cn
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'; // Import Alert components
 
 // Define License Data Structure
 interface LicenseInfo {
@@ -217,7 +219,7 @@ export default function LicensingPage() {
              </Card>
              {/* Add FAQ or contact info about licensing here */}
              <div className="text-center mt-6 text-sm text-muted-foreground">
-                Precisa de mais ativos ou tem dúvidas sobre sua licença? <a href="#" className="text-primary hover:underline">Entre em contato</a>.
+                Precisa de mais ativos ou tem dúvidas sobre sua licença? <a href="mailto:contato@qriot.app" className="text-primary hover:underline">Entre em contato</a>.
             </div>
         </div>
     );
