@@ -1,19 +1,21 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
+  BarChart,
+  Bar,
   LineChart,
   Line,
   CartesianGrid,
   XAxis,
   YAxis,
-  Tooltip as RechartsTooltip, // Alias recharts tooltip
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -25,29 +27,26 @@ import {
     AlertTriangle,
     CalendarClock,
     History,
-    TrendingUp,
-    TrendingDown,
     ArrowRight,
     Building,
     Home,
-    ListChecks,
+    CheckSquare,
     RefreshCw,
-    CheckCircle,
-    XCircle,
-    MinusCircle,
     Users,
     MapPin,
     PlusCircle,
     Activity,
     FileWarning,
-    CheckSquare
+    TrendingUp,
+    TrendingDown
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart'; // Use ShadCN chart components
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
-import { StatsCard } from '@/components/feature/stats-card'; // Import the new StatsCard
+import { StatsCard } from '@/components/feature/stats-card';
+import { Badge } from '@/components/ui/badge'; // Added Badge import
 
 // --- Mock Data Structures ---
 interface AssetSummary {
@@ -95,11 +94,24 @@ interface LostAsset {
      lastLocation?: string;
 }
 
+interface AssetCountByCategory {
+    category: string;
+    count: number;
+    fill: string; // Color for the chart
+}
+
+interface AssetStatusCount {
+    status: 'active' | 'lost' | 'inactive';
+    count: number;
+    fill: string;
+}
+
 // --- Mock Fetch Functions ---
-// Assume fetchDashboardData is defined elsewhere and provides the necessary data structure
 async function fetchDashboardData(): Promise<{
     summary: AssetSummary;
     byLocation: CountByLocation[];
+    byCategory: AssetCountByCategory[];
+    byStatus: AssetStatusCount[];
     assetHistory: AssetTimeSeries[];
     recentActivity: RecentActivityLog[];
     expiringRentals: ExpiringRental[];
@@ -128,6 +140,21 @@ async function fetchDashboardData(): Promise<{
     { locationName: 'Sala Treinamento', count: 90 },
     { locationName: 'Outros Locais', count: 349 },
   ].sort((a, b) => b.count - a.count).slice(0, 5);
+
+   const categoryColors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+   const byCategory: AssetCountByCategory[] = [
+       { category: 'Eletrônicos', count: 600, fill: categoryColors[0] },
+       { category: 'Mobiliário', count: 300, fill: categoryColors[1] },
+       { category: 'Ferramentas', count: 150, fill: categoryColors[2] },
+       { category: 'Veículos', count: 34, fill: categoryColors[3] },
+       { category: 'Outros', count: 150, fill: categoryColors[4] },
+   ].sort((a,b) => b.count - a.count);
+
+   const byStatus: AssetStatusCount[] = [
+        { status: 'active', count: summary.active, fill: 'var(--chart-1)' }, // Use a chart color (e.g., green-like)
+        { status: 'lost', count: summary.lost, fill: 'var(--chart-5)' },   // Use a chart color (e.g., red-like)
+        { status: 'inactive', count: summary.inactive, fill: 'var(--chart-3)' }, // Use a chart color (e.g., gray/yellow-like)
+    ];
 
    const assetHistory: AssetTimeSeries[] = Array.from({ length: 30 }).map((_, i) => {
        const date = subDays(new Date(), 29 - i);
@@ -162,6 +189,8 @@ async function fetchDashboardData(): Promise<{
   return {
     summary,
     byLocation,
+    byCategory,
+    byStatus,
     assetHistory,
     recentActivity,
     expiringRentals: expiringRentals.filter(r => differenceInDays(r.rentalEndDate, new Date()) <= 30),
@@ -185,51 +214,68 @@ const getActionDetails = (log: RecentActivityLog) => {
     }
 };
 
+
+// Chart Configs
+const statusChartConfig = {
+    count: { label: "Ativos" },
+    active: { label: "Ativos", color: "hsl(var(--chart-1))" },
+    lost: { label: "Perdidos", color: "hsl(var(--chart-5))" },
+    inactive: { label: "Inativos", color: "hsl(var(--chart-3))" },
+} satisfies ChartConfig;
+
+const categoryChartConfig = {
+    count: { label: "Ativos" },
+    // Define labels dynamically or ensure config keys match `data?.byCategory.category`
+} satisfies ChartConfig; // Extend this as needed
+
 // Pie Chart Active Index State Handler
 const renderActiveShape = (props: any) => {
-  const RADIAN = Math.PI / 180;
-  const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
-  const sin = Math.sin(-RADIAN * midAngle);
-  const cos = Math.cos(-RADIAN * midAngle);
-  const sx = cx + (outerRadius + 10) * cos;
-  const sy = cy + (outerRadius + 10) * sin;
-  const mx = cx + (outerRadius + 30) * cos;
-  const my = cy + (outerRadius + 30) * sin;
-  const ex = mx + (cos >= 0 ? 1 : -1) * 22;
-  const ey = my;
-  const textAnchor = cos >= 0 ? 'start' : 'end';
+    const RADIAN = Math.PI / 180;
+    const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
+    const sin = Math.sin(-RADIAN * midAngle);
+    const cos = Math.cos(-RADIAN * midAngle);
+    const sx = cx + (outerRadius + 5) * cos; // Adjusted offset
+    const sy = cy + (outerRadius + 5) * sin;
+    const mx = cx + (outerRadius + 15) * cos; // Adjusted offset
+    const my = cy + (outerRadius + 15) * sin;
+    const ex = mx + (cos >= 0 ? 1 : -1) * 12; // Adjusted length
+    const ey = my;
+    const textAnchor = cos >= 0 ? 'start' : 'end';
 
-  return (
-    <g>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="font-bold">
-        {payload.name}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        innerRadius={outerRadius + 6}
-        outerRadius={outerRadius + 10}
-        fill={fill}
-      />
-      <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
-      <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))">{`${value} Ativos`}</text>
-      <text x={ex + (cos >= 0 ? 1 : -1) * 12} y={ey} dy={18} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))">
-        {`(Rate ${(percent * 100).toFixed(2)}%)`}
-      </text>
-    </g>
-  );
+    return (
+      <g>
+        {/* Keep center text simple or remove */}
+        {/* <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="font-bold text-sm">
+          {payload.name}
+        </text> */}
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={fill}
+        />
+        {/* Outer ring */}
+        <Sector
+          cx={cx}
+          cy={cy}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          innerRadius={outerRadius + 4}
+          outerRadius={outerRadius + 6}
+          fill={fill}
+        />
+        {/* Connector line and text */}
+        <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
+        <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
+        <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs">{`${payload.name} (${value})`}</text>
+        <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} dy={12} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))" className="text-xs">
+          {`(${(percent * 100).toFixed(1)}%)`}
+        </text>
+      </g>
+    );
 };
 
 
@@ -263,8 +309,10 @@ export default function DashboardPage() {
     useEffect(() => {
         if (!lastUpdatedAt) return;
         const interval = setInterval(() => {
+            // Create a new Date object to trigger state update if needed,
+            // although formatDistanceToNow handles the relative time itself.
             setLastUpdatedAt(new Date(lastUpdatedAt));
-        }, 60000);
+        }, 60000); // Update every minute
         return () => clearInterval(interval);
     }, [lastUpdatedAt]);
 
@@ -274,16 +322,25 @@ export default function DashboardPage() {
         count: { label: "Ativos", color: "hsl(var(--primary))" },
     }), []);
 
-    const locationChartData = useMemo(() => (data?.byLocation || []).map((item, index) => ({
-        name: item.locationName,
-        value: item.count,
-        fill: `var(--chart-${(index % 5) + 1})` // Cycle through chart colors
-    })), [data?.byLocation]);
+    const categoryChartData = useMemo(() => data?.byCategory || [], [data?.byCategory]);
+    // Create dynamic config for categories based on fetched data
+    const dynamicCategoryChartConfig = useMemo(() => {
+        const config: ChartConfig = { count: { label: "Ativos" } };
+        data?.byCategory.forEach(cat => {
+            config[cat.category] = { label: cat.category, color: cat.fill };
+        });
+        return config;
+    }, [data?.byCategory]);
+
+    const statusChartData = useMemo(() => data?.byStatus || [], [data?.byStatus]);
 
 
     const assetTrend = useMemo(() => {
         if (!data?.assetHistory || data.assetHistory.length < 2) return 0;
-        return data.assetHistory[data.assetHistory.length - 1].count - data.assetHistory[0].count;
+        const currentCount = data.assetHistory[data.assetHistory.length - 1].count;
+        // Find count from ~30 days ago (first element)
+        const pastCount = data.assetHistory[0].count;
+        return currentCount - pastCount;
     }, [data?.assetHistory]);
 
      const onPieEnter = useCallback(
@@ -338,9 +395,9 @@ export default function DashboardPage() {
            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                <h1 className="text-3xl font-bold">Dashboard Geral</h1>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Button onClick={() => loadData(false)} variant="ghost" size="sm" disabled={loading}>
-                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}/>
-                  </Button>
+                    <Button onClick={() => loadData(false)} variant="ghost" size="icon" disabled={loading} className="h-8 w-8">
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}/>
+                    </Button>
                    <span>
                      Última atualização:{' '}
                       {lastUpdatedAt ? formatDistanceToNow(lastUpdatedAt, { addSuffix: true, locale: ptBR }) : 'Carregando...'}
@@ -354,9 +411,9 @@ export default function DashboardPage() {
                 value={summary.total.toLocaleString()}
                 icon={Package}
                 description={
-                  <span className="flex items-center gap-1">
-                      {assetTrend >= 0 ? <TrendingUp className="h-4 w-4 text-green-500"/> : <TrendingDown className="h-4 w-4 text-red-500"/>}
-                      {assetTrend.toLocaleString()} nos últimos 30 dias
+                  <span className={cn("flex items-center gap-1 text-xs", assetTrend >= 0 ? "text-green-600" : "text-red-600")}>
+                      {assetTrend >= 0 ? <TrendingUp className="h-4 w-4"/> : <TrendingDown className="h-4 w-4"/>}
+                      {assetTrend > 0 ? '+' : ''}{assetTrend.toLocaleString()} nos últimos 30 dias
                   </span>
                 }
                 isLoading={loading}
@@ -365,14 +422,22 @@ export default function DashboardPage() {
                 title="Locais Cadastrados"
                 value={locationCount.toLocaleString()}
                 icon={MapPin}
-                description="Locais físicos gerenciados"
+                description={
+                   <Link href="/locations" className="text-primary hover:underline flex items-center text-xs">
+                        Gerenciar Locais <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                }
                 isLoading={loading}
               />
              <StatsCard
                 title="Usuários Ativos"
                 value={userCount.toLocaleString()}
                 icon={Users}
-                description="Usuários com acesso"
+                 description={
+                   <Link href="/users" className="text-primary hover:underline flex items-center text-xs">
+                        Gerenciar Usuários <ArrowRight className="ml-1 h-3 w-3" />
+                    </Link>
+                }
                 isLoading={loading}
              />
              <StatsCard
@@ -380,7 +445,7 @@ export default function DashboardPage() {
                 value={`${inventoryProgress}%`}
                 icon={CheckSquare}
                 description={
-                     <Link href="/inventory/scan" className="text-primary hover:underline flex items-center">
+                     <Link href="/inventory/scan" className="text-primary hover:underline flex items-center text-xs">
                         Iniciar Inventário <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
@@ -388,11 +453,13 @@ export default function DashboardPage() {
              />
           </div>
 
-           {/* Charts Section */}
+           {/* Charts Section - Row 1 */}
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                 {/* Asset History */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Histórico de Ativos (Últimos 30 dias)</CardTitle>
+                         <CardDescription>Contagem total de ativos ao longo do tempo.</CardDescription>
                     </CardHeader>
                     <CardContent>
                          <ChartContainer config={assetHistoryChartConfig} className="aspect-auto h-[250px] w-full">
@@ -406,47 +473,117 @@ export default function DashboardPage() {
                                     tickFormatter={(value) => format(new Date(value + 'T00:00:00'), 'dd/MM')} // Add T00:00:00 for correct timezone handling
                                 />
                                 <YAxis tickLine={false} axisLine={false} tickMargin={8} width={30} />
-                                <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="line" hideLabel />} />
+                                <ChartTooltip
+                                    cursor={false}
+                                    content={<ChartTooltipContent indicator="line" hideLabel />}
+                                    />
                                 <Line dataKey="count" type="monotone" stroke="var(--color-count)" strokeWidth={2} dot={false} name="Ativos" />
                             </LineChart>
                         </ChartContainer>
                     </CardContent>
                  </Card>
+
+                 {/* Assets by Status */}
                  <Card>
                     <CardHeader>
-                        <CardTitle>Ativos por Localização (Top 5)</CardTitle>
-                         <CardDescription>Distribuição dos ativos.</CardDescription>
+                        <CardTitle>Distribuição por Status</CardTitle>
+                         <CardDescription>Distribuição atual dos ativos por status.</CardDescription>
                     </CardHeader>
                     <CardContent className="flex items-center justify-center aspect-auto h-[250px]">
-                         <ChartContainer config={{}} className="h-full w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
+                        <ChartContainer config={statusChartConfig} className="h-full w-full">
+                             <ResponsiveContainer width="100%" height="100%">
+                                <BarChart
+                                    data={statusChartData}
+                                    layout="vertical"
+                                    margin={{left: 10, right: 10, top: 10, bottom: 10}}
+                                >
+                                    <CartesianGrid horizontal={false} strokeDasharray="3 3"/>
+                                    <XAxis type="number" hide />
+                                    <YAxis
+                                        dataKey="status"
+                                        type="category"
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickMargin={10}
+                                        width={60}
+                                        tickFormatter={(value) => statusChartConfig[value as keyof typeof statusChartConfig]?.label || value}
+                                    />
                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                    <Pie
-                                        data={locationChartData}
-                                        dataKey="value"
-                                        nameKey="name"
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60} // Make it a donut chart
-                                        outerRadius={80}
-                                        activeIndex={pieActiveIndex}
-                                        activeShape={renderActiveShape}
-                                        onMouseEnter={onPieEnter}
-                                     >
-                                        {locationChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                    <Bar dataKey="count" layout="vertical" radius={4}>
+                                        {statusChartData.map((entry) => (
+                                            <Cell key={`cell-${entry.status}`} fill={entry.fill} />
                                         ))}
-                                    </Pie>
-                                </PieChart>
+                                     </Bar>
+                                </BarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Activity, Rentals, Lost Assets - Using Cards */}
+           {/* Charts Section - Row 2 */}
+            <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                {/* Assets by Category */}
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Ativos por Categoria</CardTitle>
+                        <CardDescription>Distribuição dos ativos por categoria principal.</CardDescription>
+                    </CardHeader>
+                     <CardContent className="flex items-center justify-center aspect-auto h-[250px]">
+                         <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                    <Pie
+                                        data={categoryChartData}
+                                        dataKey="count"
+                                        nameKey="category"
+                                        cx="50%"
+                                        cy="50%"
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        activeIndex={pieActiveIndex}
+                                        activeShape={renderActiveShape}
+                                        onMouseEnter={onPieEnter}
+                                     >
+                                        {categoryChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                        ))}
+                                    </Pie>
+                                    {/* Consider adding Legend if needed */}
+                                     {/* <ChartLegend content={<ChartLegendContent nameKey="category" />} /> */}
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </CardContent>
+                </Card>
+
+                 {/* Assets by Location (already done above, maybe replace with something else?) */}
+                 {/* Example: Placeholder for another chart */}
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Ativos por Localização (Top 5)</CardTitle>
+                         <CardDescription>Concentração de ativos nos principais locais.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[250px]">
+                         <ChartContainer config={{ count: { label: "Ativos" } }} className="w-full h-full">
+                             <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                                    <XAxis dataKey="locationName" hide/>
+                                    <YAxis dataKey="locationName" type="category" width={100} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </ChartContainer>
+                    </CardContent>
+                 </Card>
+            </div>
+
+            {/* Activity, Rentals, Lost Assets - Row */}
              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Recent Activity */}
                 <Card className="lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
@@ -475,11 +612,12 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                          <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                            <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
 
+                {/* Expiring Rentals */}
                  <Card className="lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo</CardTitle>
@@ -490,7 +628,7 @@ export default function DashboardPage() {
                          <div className="space-y-3">
                              {expiringRentals
                                 .sort((a,b) => a.rentalEndDate.getTime() - b.rentalEndDate.getTime())
-                                .slice(0, 5)
+                                .slice(0, 5) // Limit to 5 for dashboard view
                                 .map(rental => {
                                     const daysLeft = differenceInDays(rental.rentalEndDate, new Date());
                                     const isUrgent = daysLeft <= 7;
@@ -518,12 +656,13 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter>
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                            <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
 
+                {/* Lost Assets */}
                  <Card className="border-destructive lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Perdidos</CardTitle>
@@ -551,7 +690,7 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter>
-                         <Button variant="outline" size="sm" className="w-full" asChild>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
                              <Link href="/assets?filter=lost">Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
