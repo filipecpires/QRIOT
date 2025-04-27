@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -87,7 +88,7 @@ const DropdownMenuItem = React.forwardRef<
       inset && "pl-8",
       className
     )}
-    {...props}
+    {...props} // Pass all props including onSelect
   />
 ))
 DropdownMenuItem.displayName = DropdownMenuPrimitive.Item.displayName
@@ -198,3 +199,5 @@ export {
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
 }
+
+    
