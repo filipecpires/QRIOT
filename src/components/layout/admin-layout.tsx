@@ -3,12 +3,14 @@
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag } from 'lucide-react'; // Added icons
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft } from 'lucide-react'; // Added PanelLeft for trigger
 import Link from 'next/link';
+import { Button } from '@/components/ui/button'; // Import Button for the trigger
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider defaultOpen={true}>
+      {/* The actual sidebar component */}
       <Sidebar collapsible="icon">
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
@@ -18,6 +20,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>
+            {/* Dashboard */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Dashboard">
                 <Link href="/dashboard">
@@ -26,6 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {/* Assets */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Ativos">
                 <Link href="/assets">
@@ -34,6 +38,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             {/* Asset Tree */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Árvore Hierárquica">
                 <Link href="/assets/tree">
@@ -42,6 +47,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             {/* Inventory Scan */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Inventário (Scan)">
                 <Link href="/inventory/scan">
@@ -50,7 +56,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            {/* Characteristic Scan */}
+             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Registrar Caract. (Scan)">
                 <Link href="/characteristics/scan">
                   <Tag />
@@ -58,6 +65,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             {/* Locations */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Locais">
                 <Link href="/locations">
@@ -66,6 +74,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             {/* Users */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Usuários">
                 <Link href="/users">
@@ -74,7 +83,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            {/* Print Labels */}
+             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
                 <Link href="/labels/print">
                   <Printer />
@@ -82,7 +92,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
+            {/* Audit Log */}
+             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Log de Auditoria">
                 <Link href="/audit-log">
                   <History />
@@ -94,7 +105,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </SidebarContent>
         <SidebarFooter>
           <SidebarMenu>
-            <SidebarMenuItem>
+             {/* Licensing */}
+             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Licença">
                 <Link href="/licensing">
                   <FileText />
@@ -102,6 +114,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            {/* Settings */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Configurações">
                 <Link href="/settings">
@@ -110,6 +123,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+             {/* Logout */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Sair">
                 <Link href="/logout"> {/* Update with actual logout logic later */}
@@ -121,15 +135,26 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
+
+      {/* Main content area that adjusts based on sidebar state */}
       <SidebarInset>
+        {/* Header within the main content area */}
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
-          <SidebarTrigger className="md:hidden" /> {/* Mobile Trigger */}
-           {/* Placeholder for user avatar/menu, or can keep the title */}
+          {/* Sidebar Trigger Button - Visible on all screen sizes */}
+          <SidebarTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-7 w-7">
+                <PanelLeft />
+                <span className="sr-only">Toggle Sidebar</span>
+              </Button>
+          </SidebarTrigger>
+
+          {/* Placeholder for user avatar/menu or other header content */}
           <div className="flex items-center gap-4">
-             <span className="font-semibold hidden md:inline">QRot.io</span>
              {/* Add User Avatar/Menu Here later */}
+             <span className="font-semibold hidden md:inline"></span> {/* Title removed, more space for user menu */}
            </div>
         </header>
+        {/* The actual page content rendered here */}
         <main className="flex-1 p-4 md:p-6 overflow-auto"> {/* Ensure main content is scrollable */}
           {children}
         </main>
