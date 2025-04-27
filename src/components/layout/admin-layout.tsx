@@ -15,6 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Sheet is needed for mobile
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -126,9 +128,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
-        <SidebarFooter>
+        {/* Footer is removed as per user request */}
+        {/* <SidebarFooter>
           <SidebarMenu>
-             {/* Licensing */}
              <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Licença">
                 <Link href="/licensing">
@@ -137,7 +139,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {/* Settings */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Configurações">
                 <Link href="/settings">
@@ -146,17 +147,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             {/* Logout */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Sair">
-                <Link href="/logout"> {/* Update with actual logout logic later */}
+                <Link href="/logout">
                   <LogOut />
                   <span>Sair</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
-        </SidebarFooter>
+        </SidebarFooter> */}
       </Sidebar>
 
       {/* Main content area that adjusts based on sidebar state */}
@@ -165,9 +165,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30"> {/* Added sticky */}
           {/* Sidebar Trigger Button - Visible on all screen sizes */}
           <SidebarTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8"> {/* Adjusted size */}
-                <PanelLeft />
-                <span className="sr-only">Toggle Sidebar</span>
+              {/* No need for Button asChild={true} here, just pass children */}
+               <Button variant="ghost" size="icon" className="h-8 w-8">
+                 <PanelLeft />
+                 <span className="sr-only">Toggle Sidebar</span>
               </Button>
           </SidebarTrigger>
 
@@ -198,6 +199,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                   <Link href="/profile">
                     <UserCircle className="mr-2 h-4 w-4" />
                     <span>Meu Perfil</span>
+                  </Link>
+                </DropdownMenuItem>
+                 <DropdownMenuItem asChild>
+                  <Link href="/licensing">
+                     <FileText className="mr-2 h-4 w-4" />
+                    <span>Licença</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
