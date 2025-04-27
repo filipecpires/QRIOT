@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save, Edit, KeyRound, UserCircle } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; // Import Badge component
 
 // Mock User Data Structure
 interface UserProfile {
