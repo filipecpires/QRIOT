@@ -336,11 +336,7 @@ export default function DashboardPage() {
                  </div>
               </CardContent>
                <CardFooter className="pt-4"> {/* Add padding top */}
-                    <Button size="sm" variant="outline" className="w-full" asChild>
-                     <Link href="/assets">
-                       Ver Todos Ativos <ArrowRight className="inline ml-1 h-4 w-4" />
-                     </Link>
-                    </Button>
+                   <Button size="sm" variant="outline" className="w-full" asChild><Link href="/assets">Ver Todos Ativos <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button>
                </CardFooter>
             </Card>
              <Card className="h-full flex flex-col">
@@ -355,11 +351,7 @@ export default function DashboardPage() {
                  {byLocation.length > 0 && <p className="text-xs text-muted-foreground mt-1">Principal: {byLocation[0].locationName} ({byLocation[0].count} ativos)</p>}
               </CardContent>
                <CardFooter className="pt-4">
-                   <Button size="sm" variant="outline" className="w-full" asChild>
-                     <Link href="/locations">
-                         Gerenciar Locais <ArrowRight className="inline ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
+                   <Button size="sm" variant="outline" className="w-full" asChild><Link href="/locations">Gerenciar Locais <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button>
                </CardFooter>
             </Card>
             <Card className="h-full flex flex-col">
@@ -374,11 +366,7 @@ export default function DashboardPage() {
                 {/* <p className="text-xs text-muted-foreground mt-1">2 Admins, 5 Gerentes...</p> */}
               </CardContent>
                <CardFooter className="pt-4">
-                  <Button size="sm" variant="outline" className="w-full" asChild>
-                    <Link href="/users">
-                       Gerenciar Usuários <ArrowRight className="inline ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
+                  <Button size="sm" variant="outline" className="w-full" asChild><Link href="/users">Gerenciar Usuários <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button>
                </CardFooter>
             </Card>
             <Card className="h-full flex flex-col">
@@ -396,11 +384,7 @@ export default function DashboardPage() {
 
               </CardContent>
                 <CardFooter className="pt-4">
-                    <Button variant="default" size="sm" className="w-full" asChild>
-                       <Link href="/inventory/scan">
-                         <CheckSquare className="inline mr-1 h-4 w-4" /> Iniciar Inventário
-                       </Link>
-                   </Button>
+                    <Button variant="default" size="sm" className="w-full" asChild><Link href="/inventory/scan"><CheckSquare className="inline mr-1 h-4 w-4" /> Iniciar Inventário</Link></Button>
                </CardFooter>
             </Card>
           </div>
@@ -485,9 +469,7 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter className="pt-4">
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
-                        </Button>
+                        <Button variant="outline" size="sm" className="w-full" asChild><Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button>
                     </CardFooter>
                 </Card>
 
@@ -537,9 +519,7 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter className="pt-4">
-                        <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* TODO: Implement filter */}
-                         </Button>
+                        <Button variant="outline" size="sm" className="w-full" asChild><Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button> {/* TODO: Implement filter */}
                     </CardFooter>
                 </Card>
 
@@ -578,9 +558,7 @@ export default function DashboardPage() {
                       )}
                    </CardContent>
                     <CardFooter className="pt-4">
-                         <Button variant="outline" size="sm" className="w-full" asChild>
-                             <Link href="/assets?filter=lost">Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* TODO: Implement filter */}
-                         </Button>
+                         <Button variant="outline" size="sm" className="w-full" asChild><Link href="/assets?filter=lost">Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button> {/* TODO: Implement filter */}
                     </CardFooter>
                 </Card>
             </div>
@@ -623,10 +601,8 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
                  <CardFooter className="pt-4">
-                    <Button variant="outline" size="sm" className="w-full" asChild>
-                       <Link href="/inventory/scan">Ver Relatório Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* Link to inventory report page eventually */}
-                     </Button>
-                </CardFooter>
+                    <Button variant="outline" size="sm" className="w-full" asChild><Link href="/inventory/scan">Ver Relatório Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link></Button> {/* Link to inventory report page eventually */}
+                 </CardFooter>
              </Card>
 
         </div>
