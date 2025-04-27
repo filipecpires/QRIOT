@@ -8,18 +8,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { QrCode, CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit, CalendarDays } from 'lucide-react'; // Added CalendarDays
+import { QrCode, CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit, CalendarDays, Plus, Trash2, Settings } from 'lucide-react'; // Added Plus, Trash2, Settings
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'; // Import Popover components
-import { Calendar } from '@/components/ui/calendar'; // Import Calendar
-import { format } from 'date-fns'; // Import date-fns format
-import { ptBR } from 'date-fns/locale'; // Import ptBR locale
+import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'; // Import Dialog components
 
-// Mock data (replace with actual data fetching)
+// Define structure for a characteristic to be applied
+interface AppliedCharacteristic {
+    key: string;
+    value: any;
+    // Potentially add isPublic flag if needed during scan
+}
+
+// Define structure for a NEW characteristic category to be added during scan
+interface NewCharacteristicCategory {
+    id: string; // Temporary ID for state management
+    key: string; // The name of the new characteristic category
+    description?: string; // Optional description
+    defaultValue?: string | number | boolean | Date; // Optional default value
+    valueType: 'text' | 'number' | 'boolean' | 'date'; // Type for potential default value input
+}
+
+// Combined template structure for existing characteristics
 interface CharacteristicTemplate {
     id: string;
     key: string; // Name of the characteristic (e.g., 'Voltagem', 'Localização Prateleira')
@@ -33,7 +50,7 @@ interface ScannedAssetInfo {
     name: string; // Fetched after scan
     status: 'pending' | 'success' | 'error';
     message?: string;
-    appliedCharacteristics?: { key: string; value: any }[]; // Store applied values temporarily
+    appliedCharacteristics?: AppliedCharacteristic[]; // Store applied values temporarily
 }
 
 // Mock fetch functions
@@ -60,11 +77,19 @@ async function fetchAssetNameByTag(tag: string): Promise<string | null> {
     return mockAssets[tag] || null;
 }
 
-async function applyCharacteristicsToAsset(tag: string, characteristics: { key: string; value: any }[]): Promise<{ success: boolean; message?: string }> {
+// Updated function to apply both existing and NEW characteristics
+async function applyCharacteristicsToAsset(tag: string, characteristics: AppliedCharacteristic[]): Promise<{ success: boolean; message?: string }> {
     console.log(`Applying characteristics to ${tag}:`, characteristics);
     await new Promise(resolve => setTimeout(resolve, 600)); // Simulate API call
-    // Replace with actual API call (e.g., update Firestore document)
-    // Handle potential errors (e.g., asset not found, invalid data)
+
+    // Replace with actual API call:
+    // 1. Find asset by tag.
+    // 2. Iterate through 'characteristics'.
+    // 3. For each characteristic:
+    //    - Check if a characteristic with the same 'key' already exists for the asset.
+    //    - If it exists, UPDATE its value (and potentially isPublic, isActive).
+    //    - If it DOES NOT exist, CREATE a new characteristic for the asset with the given key, value, and default visibility/status.
+
     const shouldFail = Math.random() < 0.1; // Simulate occasional failure
     if (shouldFail) {
         return { success: false, message: 'Erro simulado ao salvar.' };
@@ -77,14 +102,16 @@ export default function CharacteristicScanPage() {
     const [templates, setTemplates] = useState<CharacteristicTemplate[]>([]);
     const [selectedTemplates, setSelectedTemplates] = useState<CharacteristicTemplate[]>([]);
     const [characteristicValues, setCharacteristicValues] = useState<{ [templateId: string]: any }>({});
+    const [newCategories, setNewCategories] = useState<NewCharacteristicCategory[]>([]); // State for new categories
     const [scannedAssets, setScannedAssets] = useState<ScannedAssetInfo[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
     const [isLoadingAsset, setIsLoadingAsset] = useState(false);
     const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false); // For confirmation popup
+    const [lastScannedDataForModal, setLastScannedDataForModal] = useState<{tag: string, name: string, characteristics: AppliedCharacteristic[]} | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    // QR Scanner library state would go here (e.g., react-qr-scanner or custom logic)
     const lastScannedTag = useRef<string | null>(null);
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -166,16 +193,42 @@ export default function CharacteristicScanPage() {
         setCharacteristicValues(prev => ({ ...prev, [templateId]: processedValue }));
     };
 
+    // --- New Category Functions ---
+    const addNewCategory = () => {
+        setNewCategories(prev => [
+            ...prev,
+            { id: `new-${Date.now()}`, key: '', valueType: 'text', defaultValue: '', description: '' }
+        ]);
+    };
+
+    const removeNewCategory = (id: string) => {
+        setNewCategories(prev => prev.filter(cat => cat.id !== id));
+    };
+
+    const handleNewCategoryChange = (id: string, field: keyof NewCharacteristicCategory, value: any) => {
+        setNewCategories(prev => prev.map(cat =>
+            cat.id === id ? { ...cat, [field]: value } : cat
+        ));
+    };
+    // --- End New Category Functions ---
+
+
     const startScanSession = () => {
-        if (selectedTemplates.length === 0) {
-            toast({ title: 'Atenção', description: 'Selecione pelo menos uma característica para aplicar.', variant: 'destructive' });
+        if (selectedTemplates.length === 0 && newCategories.length === 0) {
+            toast({ title: 'Atenção', description: 'Selecione ou adicione pelo menos uma característica para aplicar.', variant: 'destructive' });
             return;
+        }
+        // Validate new categories have names
+        if (newCategories.some(cat => !cat.key.trim())) {
+             toast({ title: 'Atenção', description: 'Todas as novas características adicionadas devem ter um nome.', variant: 'destructive' });
+             return;
         }
         setScannedAssets([]); // Clear previous session
         setIsScanning(true);
         setShowCameraFeed(true); // Show camera when scanning starts
         // Initialize QR Scanner library here
-        console.log("Starting scan session with characteristics:", selectedTemplates.map(t => ({ key: t.key, value: characteristicValues[t.id] })));
+        console.log("Starting scan session with existing characteristics:", selectedTemplates.map(t => ({ key: t.key, value: characteristicValues[t.id] })));
+        console.log("Starting scan session with NEW characteristics:", newCategories);
          // TODO: Add QR scanner initialization logic
     };
 
@@ -228,31 +281,59 @@ export default function CharacteristicScanPage() {
             return;
         }
 
-        // Prepare characteristics to apply based on current form values
-        const characteristicsToApply = selectedTemplates.map(template => ({
+        // Prepare characteristics to apply (from selected templates)
+        const characteristicsFromTemplates = selectedTemplates.map(template => ({
             key: template.key,
-            // Use the processed value (could be ISO date string or other types)
             value: characteristicValues[template.id] ?? template.defaultValue ?? (template.valueType === 'boolean' ? false : ''),
         }));
 
+        // Prepare characteristics to apply (from new categories)
+        const characteristicsFromNew = newCategories.map(cat => ({
+            key: cat.key,
+            value: cat.defaultValue ?? (cat.valueType === 'boolean' ? false : ''), // Use default value if provided
+            // Note: Description might need to be handled differently, maybe added to asset notes or a separate characteristic?
+            // For now, we primarily focus on applying the key/value pair.
+        }));
 
-        const newAssetInfo: ScannedAssetInfo = { tag, name: assetName, status: 'pending', appliedCharacteristics: characteristicsToApply };
-        setScannedAssets(prev => [newAssetInfo, ...prev]); // Add to top with pending status
+        const allCharacteristicsToApply = [...characteristicsFromTemplates, ...characteristicsFromNew];
+
+        // --- Show Confirmation Modal ---
+        setLastScannedDataForModal({ tag, name: assetName, characteristics: allCharacteristicsToApply });
+        setShowConfirmationModal(true);
+        // Do not proceed with saving yet, wait for modal confirmation
+        setIsLoadingAsset(false); // Stop loading indicator while modal is shown
+
+
+    }, [isScanning, isLoadingAsset, scannedAssets, selectedTemplates, characteristicValues, newCategories]); // Added newCategories dependency
+
+
+    const confirmApplyCharacteristics = async () => {
+        if (!lastScannedDataForModal) return;
+
+        const { tag, name, characteristics } = lastScannedDataForModal;
+        setShowConfirmationModal(false); // Close modal
+        setIsLoadingAsset(true); // Show loading indicator again
+
+         const newAssetInfo: ScannedAssetInfo = { tag, name, status: 'pending', appliedCharacteristics: characteristics };
+         setScannedAssets(prev => [newAssetInfo, ...prev]); // Add to list optimistically
 
         try {
-            const result = await applyCharacteristicsToAsset(tag, characteristicsToApply);
+            const result = await applyCharacteristicsToAsset(tag, characteristics);
             setScannedAssets(prev => prev.map(asset =>
                 asset.tag === tag
                     ? { ...asset, status: result.success ? 'success' : 'error', message: result.message }
                     : asset
             ));
             if (result.success) {
-                // Optional: Play a success sound/vibration
+                 toast({title: "Sucesso", description: `Características aplicadas a ${tag}.`, variant: "default"});
+                 // Optional: Play a success sound/vibration
             } else {
+                toast({title: "Erro", description: `Falha ao aplicar características a ${tag}: ${result.message}`, variant: "destructive"});
                 // Optional: Play an error sound/vibration
             }
         } catch (error) {
             console.error("Error applying characteristics:", error);
+            toast({title: "Erro Inesperado", description: `Ocorreu um erro ao salvar para ${tag}.`, variant: "destructive"});
             setScannedAssets(prev => prev.map(asset =>
                 asset.tag === tag
                     ? { ...asset, status: 'error', message: 'Erro inesperado ao salvar.' }
@@ -261,31 +342,42 @@ export default function CharacteristicScanPage() {
              // Optional: Play an error sound/vibration
         } finally {
             setIsLoadingAsset(false);
+            setLastScannedDataForModal(null); // Clear modal data
         }
+     };
 
-    }, [isScanning, isLoadingAsset, scannedAssets, selectedTemplates, characteristicValues]); // Dependencies for the callback
-
+     const cancelApplyCharacteristics = () => {
+        setShowConfirmationModal(false);
+        setLastScannedDataForModal(null);
+        // Optional: Provide feedback that the operation was cancelled
+        toast({ title: "Cancelado", description: `Aplicação de características para ${lastScannedDataForModal?.tag} cancelada.`, variant: "default"});
+         lastScannedTag.current = null; // Allow rescanning immediately after cancel
+        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
+    };
 
     return (
         <div className="container mx-auto py-10 space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Tag className="h-6 w-6"/> Registrar Características via Scan</CardTitle>
-                    <CardDescription>Selecione as características e seus valores padrão, depois escaneie os QR Codes dos ativos para aplicá-las em massa.</CardDescription>
+                    <CardDescription>Selecione características existentes ou adicione novas, defina valores e escaneie QR Codes para aplicá-las em massa.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* 1. Select Characteristics */}
-                    <div className="space-y-3">
-                        <Label className="text-lg font-semibold">1. Selecione as Características</Label>
-                        <p className="text-sm text-muted-foreground">Marque as características que deseja aplicar aos ativos escaneados.</p>
-                        {isLoadingTemplates ? (
-                            <div className="space-y-2">
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-full" />
-                                <Skeleton className="h-8 w-2/3" />
-                            </div>
-                        ) : (
-                            <ScrollArea className="h-40 rounded-md border p-3">
+                    {/* 1. Select/Add Characteristics */}
+                    <div className="space-y-4">
+                        <Label className="text-lg font-semibold">1. Configure as Características</Label>
+                         <p className="text-sm text-muted-foreground">Selecione características existentes da lista ou adicione novas categorias que serão aplicadas aos ativos escaneados.</p>
+
+                        {/* Existing Templates */}
+                         <div className="space-y-2 border p-4 rounded-md">
+                            <Label className="font-medium">Características Existentes</Label>
+                            {isLoadingTemplates ? (
+                                <div className="space-y-2">
+                                    <Skeleton className="h-8 w-full" />
+                                    <Skeleton className="h-8 w-2/3" />
+                                </div>
+                            ) : (
+                                <ScrollArea className="h-32">
                                 <div className="space-y-2">
                                 {templates.map((template) => (
                                     <div key={template.id} className="flex items-center space-x-2">
@@ -303,15 +395,96 @@ export default function CharacteristicScanPage() {
                                     </div>
                                 ))}
                                 </div>
-                             </ScrollArea>
-                        )}
+                                </ScrollArea>
+                            )}
+                        </div>
+
+                        {/* Add New Categories */}
+                         <div className="space-y-3 border p-4 rounded-md">
+                             <Label className="font-medium">Adicionar Novas Características</Label>
+                             {newCategories.map((cat) => (
+                                 <div key={cat.id} className="flex items-end gap-2 p-2 border rounded bg-muted/30">
+                                    <div className="flex-1 space-y-1">
+                                         <Label htmlFor={`new-cat-key-${cat.id}`} className="text-xs">Nome da Característica</Label>
+                                         <Input
+                                             id={`new-cat-key-${cat.id}`}
+                                             placeholder="Ex: Número Patrimônio Antigo"
+                                             value={cat.key}
+                                             onChange={(e) => handleNewCategoryChange(cat.id, 'key', e.target.value)}
+                                          />
+                                    </div>
+                                    <div className="flex-1 space-y-1">
+                                        <Label htmlFor={`new-cat-desc-${cat.id}`} className="text-xs">Descrição (Opcional)</Label>
+                                        <Input
+                                            id={`new-cat-desc-${cat.id}`}
+                                            placeholder="Detalhes adicionais"
+                                            value={cat.description || ''}
+                                            onChange={(e) => handleNewCategoryChange(cat.id, 'description', e.target.value)}
+                                         />
+                                    </div>
+                                     <div className="w-32 space-y-1">
+                                         <Label htmlFor={`new-cat-valtype-${cat.id}`} className="text-xs">Tipo Valor</Label>
+                                         <Select
+                                             value={cat.valueType}
+                                             onValueChange={(v: 'text' | 'number' | 'boolean' | 'date') => handleNewCategoryChange(cat.id, 'valueType', v)}
+                                         >
+                                            <SelectTrigger id={`new-cat-valtype-${cat.id}`}>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="text">Texto</SelectItem>
+                                                <SelectItem value="number">Número</SelectItem>
+                                                <SelectItem value="boolean">Sim/Não</SelectItem>
+                                                <SelectItem value="date">Data</SelectItem>
+                                            </SelectContent>
+                                         </Select>
+                                     </div>
+                                     <div className="flex-1 space-y-1">
+                                         <Label htmlFor={`new-cat-default-${cat.id}`} className="text-xs">Valor Padrão (Opcional)</Label>
+                                          {/* Render input based on valueType */}
+                                         {cat.valueType === 'boolean' ? (
+                                             <Switch
+                                                 id={`new-cat-default-${cat.id}`}
+                                                 checked={!!cat.defaultValue}
+                                                 onCheckedChange={(checked) => handleNewCategoryChange(cat.id, 'defaultValue', checked)}
+                                              />
+                                         ) : cat.valueType === 'date' ? (
+                                             <Popover>
+                                                 <PopoverTrigger asChild>
+                                                    <Button variant="outline" size="sm" className="w-full justify-start">
+                                                        {cat.defaultValue instanceof Date ? format(cat.defaultValue, 'P', { locale: ptBR }) : "Selecione"}
+                                                    </Button>
+                                                 </PopoverTrigger>
+                                                 <PopoverContent className="w-auto p-0">
+                                                     <Calendar mode="single" selected={cat.defaultValue as Date | undefined} onSelect={(d) => handleNewCategoryChange(cat.id, 'defaultValue', d)} locale={ptBR} />
+                                                 </PopoverContent>
+                                             </Popover>
+                                         ) : (
+                                             <Input
+                                                 id={`new-cat-default-${cat.id}`}
+                                                 type={cat.valueType === 'number' ? 'number' : 'text'}
+                                                 placeholder="Valor inicial"
+                                                 value={cat.defaultValue as string | number || ''}
+                                                 onChange={(e) => handleNewCategoryChange(cat.id, 'defaultValue', e.target.value)}
+                                              />
+                                         )}
+                                     </div>
+                                     <Button variant="ghost" size="icon" onClick={() => removeNewCategory(cat.id)} title="Remover Nova Característica">
+                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                     </Button>
+                                </div>
+                             ))}
+                             <Button type="button" variant="outline" size="sm" onClick={addNewCategory}>
+                                <Plus className="mr-2 h-4 w-4"/> Adicionar Nova
+                            </Button>
+                         </div>
                     </div>
 
-                    {/* 2. Define Values (if templates selected) */}
+                    {/* 2. Define Values for SELECTED Templates */}
                     {selectedTemplates.length > 0 && (
-                        <div className="space-y-3">
-                            <Label className="text-lg font-semibold">2. Defina os Valores</Label>
-                            <p className="text-sm text-muted-foreground">Preencha os valores que serão aplicados para as características selecionadas. Estes valores serão usados para *todos* os ativos escaneados nesta sessão.</p>
+                        <div className="space-y-3 border p-4 rounded-md">
+                            <Label className="text-lg font-semibold">2. Defina os Valores (para Características Existentes Selecionadas)</Label>
+                            <p className="text-sm text-muted-foreground">Preencha os valores que serão aplicados para as características selecionadas da lista acima. Estes valores serão usados para *todos* os ativos escaneados nesta sessão.</p>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {selectedTemplates.map((template) => (
                                     <div key={`val-${template.id}`} className="space-y-1">
@@ -371,12 +544,12 @@ export default function CharacteristicScanPage() {
                     {/* 3. Start Scanning */}
                     <div className="space-y-3">
                          <Label className="text-lg font-semibold">3. Escanear Ativos</Label>
-                         <p className="text-sm text-muted-foreground">Clique em "Iniciar" para ativar a câmera e começar a escanear os QR Codes dos ativos. As características e valores definidos acima serão aplicados.</p>
+                         <p className="text-sm text-muted-foreground">Clique em "Iniciar" para ativar a câmera e começar a escanear os QR Codes dos ativos. As características configuradas serão aplicadas após confirmação.</p>
                          <div className="flex gap-4 items-center">
                              <Button
                                 size="lg"
                                 onClick={isScanning ? stopScanSession : startScanSession}
-                                disabled={isLoadingTemplates || selectedTemplates.length === 0}
+                                disabled={isLoadingTemplates || (selectedTemplates.length === 0 && newCategories.length === 0)}
                                 className={isScanning ? 'bg-destructive hover:bg-destructive/90' : ''}
                              >
                                 {isScanning ? (
@@ -389,7 +562,8 @@ export default function CharacteristicScanPage() {
                                     </>
                                 )}
                              </Button>
-                             {isScanning && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+                             {isScanning && !isLoadingAsset && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+                             {isLoadingAsset && <span className="text-sm text-muted-foreground">Processando...</span>}
                          </div>
                     </div>
 
@@ -470,10 +644,36 @@ export default function CharacteristicScanPage() {
                  </Card>
             )}
 
+             {/* Confirmation Modal */}
+             <Dialog open={showConfirmationModal} onOpenChange={(open) => !open && cancelApplyCharacteristics()}>
+                <DialogContent>
+                    <DialogHeader>
+                    <DialogTitle>Confirmar Aplicação de Características</DialogTitle>
+                    <DialogDescription>
+                        Aplicar as seguintes características ao ativo: <span className="font-semibold">{lastScannedDataForModal?.name} ({lastScannedDataForModal?.tag})</span>?
+                    </DialogDescription>
+                    </DialogHeader>
+                    <ScrollArea className="max-h-60 mt-4 border rounded-md p-3">
+                        <ul className="space-y-1 text-sm">
+                        {lastScannedDataForModal?.characteristics.map((char, i) => (
+                            <li key={i}>
+                                <span className="font-medium">{char.key}:</span>{' '}
+                                <span className="text-muted-foreground">{String(char.value)}</span>
+                                {/* Add description if available for new categories */}
+                            </li>
+                         ))}
+                        </ul>
+                    </ScrollArea>
+                    <DialogFooter>
+                    <Button variant="outline" onClick={cancelApplyCharacteristics}>Cancelar</Button>
+                    <Button onClick={confirmApplyCharacteristics} disabled={isLoadingAsset}>
+                         {isLoadingAsset ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                         Confirmar e Aplicar
+                    </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
         </div>
     );
 }
-
-
-    

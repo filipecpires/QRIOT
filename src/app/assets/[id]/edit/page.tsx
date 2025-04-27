@@ -4,7 +4,7 @@
 import { useState, useEffect, ChangeEvent, DragEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Image from 'next/image';
@@ -39,7 +39,15 @@ interface ExistingPhoto {
     name?: string;
 }
 
-// Updated schema with rental fields
+// Schema for individual attachment
+const attachmentSchema = z.object({
+  id: z.string().optional(), // For existing attachments during edit
+  name: z.string().min(1, { message: 'Nome do anexo é obrigatório.' }),
+  url: z.string().url({ message: 'URL inválida.' }),
+  isPublic: z.boolean().default(false),
+});
+
+// Updated schema with rental fields and attachments
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
@@ -57,8 +65,9 @@ const assetSchema = z.object({
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
       isPublic: z.boolean().default(false),
-      isActive: z.boolean().default(true),
+      isActive: z.boolean().default(true), // Keep isActive for DB logic
   })).optional(),
+  attachments: z.array(attachmentSchema).optional(),
   description: z.string().optional(),
   status: z.enum(['active', 'lost', 'inactive']).default('active'),
 }).refine(data => {
@@ -81,6 +90,7 @@ const assetSchema = z.object({
 
 
 type AssetFormData = z.infer<typeof assetSchema>;
+type Attachment = z.infer<typeof attachmentSchema>;
 
 // Mock data
 const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
@@ -110,16 +120,17 @@ async function fetchAssetsForParent(excludeId?: string): Promise<{ id: string; n
   return allAssets.filter(asset => asset.id !== excludeId);
 }
 
-// Mock data with existing photos and rental info
-interface AssetDataWithPhotosAndRental extends Omit<AssetFormData, 'rentalStartDate' | 'rentalEndDate'> {
+// Mock data with existing photos, rental info, and attachments
+interface AssetDataFromAPI extends Omit<AssetFormData, 'rentalStartDate' | 'rentalEndDate' | 'attachments'> {
     photos?: ExistingPhoto[];
+    attachments?: Attachment[]; // Use Attachment type
     rentalStartDate?: string; // Dates as strings for initial fetch
     rentalEndDate?: string;
 }
 
 
 // Mock function to fetch asset data by ID
-async function fetchAssetData(id: string): Promise<AssetDataWithPhotosAndRental | null> {
+async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
      console.log(`Fetching asset with ID: ${id}`);
      await new Promise(resolve => setTimeout(resolve, 1000));
     if (id === 'ASSET001') {
@@ -138,8 +149,12 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotosAndRental 
                 { id: 'char4', key: 'Número de Série', value: 'ABC123XYZ', isPublic: false, isActive: true },
                 { id: 'char5', key: 'Voltagem', value: 'Bivolt', isPublic: true, isActive: true },
                 { id: 'char6', key: 'Ano Fabricação', value: '2022', isPublic: true, isActive: true},
-                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false },
+                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false }, // Logically deleted
             ],
+            attachments: [
+                { id: 'attach1', name: 'Manual do Usuário', url: 'https://example.com/manual.pdf', isPublic: true },
+                { id: 'attach2', name: 'Nota Fiscal', url: 'https://example.com/invoice.pdf', isPublic: false },
+             ],
             description: 'Notebook corporativo para desenvolvimento.',
             status: 'active',
             photos: [
@@ -164,6 +179,7 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotosAndRental 
                  { id: 'char8', key: 'Cor', value: 'Preta', isPublic: true, isActive: true },
                  { id: 'char9', key: 'Material', value: 'Tecido', isPublic: true, isActive: true },
             ],
+            attachments: [],
             description: 'Cadeira ergonômica. Marcada como perdida.',
             status: 'lost',
             photos: [ { id: 'photo3', url: 'https://picsum.photos/seed/asset003/200/150', name: 'cadeira.jpg' } ]
@@ -181,7 +197,7 @@ export default function EditAssetPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [characteristics, setCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
-  const [assetData, setAssetData] = useState<AssetDataWithPhotosAndRental | null>(null);
+  const [assetData, setAssetData] = useState<AssetDataFromAPI | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([]);
   const [newPhotos, setNewPhotos] = useState<File[]>([]);
@@ -189,6 +205,8 @@ export default function EditAssetPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [parentAssets, setParentAssets] = useState<{ id: string; name: string; tag: string }[]>([]);
   const [isLoadingParents, setIsLoadingParents] = useState(true);
+  const [newAttachmentName, setNewAttachmentName] = useState('');
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
 
 
   const form = useForm<AssetFormData>({
@@ -206,9 +224,15 @@ export default function EditAssetPage() {
       rentalEndDate: undefined,
       rentalCost: undefined,
       characteristics: [],
+      attachments: [],
       description: '',
       status: 'active',
     },
+  });
+
+   const { fields: attachmentFields, append: appendAttachment, remove: removeAttachment, update: updateAttachment } = useFieldArray({
+    control: form.control,
+    name: "attachments",
   });
 
    useEffect(() => {
@@ -221,15 +245,22 @@ export default function EditAssetPage() {
                      setAssetData(data);
 
                       // Convert date strings to Date objects for the form
+                      // Filter characteristics to only include active ones for the state `characteristics`
+                     const activeCharacteristics = (data.characteristics || []).filter(c => c.isActive);
+                     // Keep ALL characteristics in the form data for submission logic
+                     const allCharacteristicsForForm = data.characteristics || [];
+
                      const formData = {
                         ...data,
                         parentId: data.parentId || '__none__',
                         rentalStartDate: data.rentalStartDate ? new Date(data.rentalStartDate) : undefined,
                         rentalEndDate: data.rentalEndDate ? new Date(data.rentalEndDate) : undefined,
+                        characteristics: allCharacteristicsForForm, // Form holds all for saving isActive=false
+                        attachments: data.attachments || [],
                      };
 
                      form.reset(formData);
-                     setCharacteristics(data.characteristics || []);
+                     setCharacteristics(activeCharacteristics); // State only holds active for display/editing
                      setExistingPhotos(data.photos || []);
                      setNewPhotos([]);
                      setPhotosToRemove([]);
@@ -259,28 +290,82 @@ export default function EditAssetPage() {
 
    const addCharacteristic = () => {
        const newChar = { key: '', value: '', isPublic: false, isActive: true };
-       const updatedCharacteristics = [...characteristics, newChar];
-        setCharacteristics(updatedCharacteristics);
-        form.setValue('characteristics', updatedCharacteristics);
+       // Add to the local state for immediate display
+       setCharacteristics(prev => [...prev, newChar]);
+       // Update the form's characteristics array as well
+       form.setValue('characteristics', [...form.getValues('characteristics'), newChar]);
    };
 
-   const toggleCharacteristicActive = (index: number) => {
-       const updatedCharacteristics = [...characteristics];
-       updatedCharacteristics[index].isActive = !updatedCharacteristics[index].isActive;
-       setCharacteristics(updatedCharacteristics);
-       form.setValue('characteristics', updatedCharacteristics);
+   // This function now logically "deletes" by setting isActive to false in the form state
+   const removeCharacteristic = (index: number) => {
+        // Find the actual index in the form's array corresponding to the visible index
+        const activeCharacteristics = form.getValues('characteristics').filter(c => c.isActive);
+        const characteristicToRemove = activeCharacteristics[index];
+        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToRemove?.id || (c.key === characteristicToRemove?.key && c.value === characteristicToRemove?.value && !c.id)); // Match by ID or content for new ones
+
+        if (formIndex !== -1) {
+            const updatedFormCharacteristics = [...form.getValues('characteristics')];
+            updatedFormCharacteristics[formIndex].isActive = false;
+            form.setValue('characteristics', updatedFormCharacteristics);
+
+            // Update the local state to remove it from the visible list
+            setCharacteristics(prev => prev.filter((_, i) => i !== index));
+
+            toast({ title: "Característica Desativada", description: "A característica foi marcada como inativa e não será exibida, mas permanecerá no histórico.", variant: "default" });
+        } else {
+             console.error("Could not find characteristic in form data to deactivate.");
+             // Fallback: remove directly from local state if form sync fails somehow
+              setCharacteristics(prev => prev.filter((_, i) => i !== index));
+        }
    };
 
+   // Handles changes only for VISIBLE characteristics
    const handleCharacteristicChange = (index: number, field: 'key' | 'value' | 'isPublic', value: string | boolean) => {
-      const updatedCharacteristics = [...characteristics];
-      if (field === 'isPublic') {
-         updatedCharacteristics[index][field] = value as boolean;
-      } else {
-         updatedCharacteristics[index][field] = value as string;
-      }
-      setCharacteristics(updatedCharacteristics);
-      form.setValue('characteristics', updatedCharacteristics);
+       // Update the local state for immediate UI feedback
+        const updatedLocalCharacteristics = [...characteristics];
+        if (field === 'isPublic') {
+            updatedLocalCharacteristics[index][field] = value as boolean;
+        } else {
+            updatedLocalCharacteristics[index][field] = value as string;
+        }
+        setCharacteristics(updatedLocalCharacteristics);
+
+        // Find the corresponding characteristic in the form data and update it
+        const characteristicToUpdate = updatedLocalCharacteristics[index];
+        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToUpdate?.id || (c.key === characteristicToUpdate?.key && c.value === characteristicToUpdate?.value && !c.id)); // Match by ID or content
+
+        if (formIndex !== -1) {
+            const updatedFormCharacteristics = [...form.getValues('characteristics')];
+            if (field === 'isPublic') {
+                updatedFormCharacteristics[formIndex][field] = value as boolean;
+            } else {
+                 updatedFormCharacteristics[formIndex][field] = value as string;
+            }
+            form.setValue('characteristics', updatedFormCharacteristics);
+        } else {
+            console.error("Could not find characteristic in form data to update.");
+        }
    };
+
+    const handleAddAttachment = () => {
+        if (newAttachmentName && newAttachmentUrl) {
+            try {
+                new URL(newAttachmentUrl); // Basic validation
+                appendAttachment({ name: newAttachmentName, url: newAttachmentUrl, isPublic: false });
+                setNewAttachmentName('');
+                setNewAttachmentUrl('');
+            } catch (_) {
+                 toast({ title: "URL Inválida", description: "Por favor, insira uma URL válida.", variant: "destructive" });
+            }
+        } else {
+            toast({ title: "Campos Incompletos", description: "Preencha o nome e a URL do anexo.", variant: "destructive" });
+        }
+    };
+
+    const handleAttachmentPublicToggle = (index: number, checked: boolean) => {
+        updateAttachment(index, { ...attachmentFields[index], isPublic: checked });
+    };
+
 
   // --- File Upload Handlers ---
    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -322,13 +407,8 @@ export default function EditAssetPage() {
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
 
-    const characteristicsToSave = characteristics.map(char => ({
-         id: char.id,
-         key: char.key,
-         value: char.value,
-         isPublic: char.isPublic,
-         isActive: char.isActive,
-     }));
+    // Note: 'data.characteristics' already contains ALL characteristics, including inactive ones
+    // The server should handle saving based on the 'isActive' flag
 
      // Clean up rental data if ownership is 'own'
     const cleanedData = data.ownershipType === 'own'
@@ -337,8 +417,8 @@ export default function EditAssetPage() {
 
     const dataToSave = {
          ...cleanedData,
-         characteristics: characteristicsToSave,
          parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
+         // Attachments are already in cleanedData from form state
      };
      console.log('Data prepared for saving:', dataToSave);
 
@@ -704,81 +784,64 @@ export default function EditAssetPage() {
                   )}
                 />
 
-             {/* Characteristics Section */}
+             {/* Characteristics Section - Only displays active characteristics */}
               <div>
-                <h3 className="text-lg font-semibold mb-2">Características Adicionais</h3>
+                <h3 className="text-lg font-semibold mb-2">Características Adicionais (Ativas)</h3>
+                 {/* Map over the local 'characteristics' state which only contains active ones */}
                  {characteristics.map((char, index) => (
-                     <div key={char.id || `new-${index}`} className={cn(
-                         "flex items-end gap-2 mb-3 p-3 border rounded-md",
-                         char.isActive ? "bg-muted/30" : "bg-destructive/10 border-destructive/50 opacity-70"
-                     )}>
-                        <FormField control={form.control} name={`characteristics.${index}.key`} render={({ field: keyField }) => (
-                           <FormItem className="flex-1">
-                              <FormLabel className="text-xs">Característica</FormLabel>
-                              <FormControl>
-                                 <Input
-                                    placeholder="Ex: Voltagem"
-                                    value={char.key}
-                                    onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
-                                    disabled={!char.isActive}
-                                    className={cn(!char.isActive && "line-through")}
-                                 />
-                              </FormControl>
-                              <FormMessage />
+                     <div key={char.id || `active-${index}`} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
+                        {/* Use the index from the local 'characteristics' state */}
+                         <FormItem className="flex-1">
+                           <FormLabel className="text-xs">Característica</FormLabel>
+                           <FormControl>
+                              <Input
+                                 placeholder="Ex: Voltagem"
+                                 value={char.key}
+                                 onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
+                              />
+                           </FormControl>
+                           {/* Optional: Add FormMessage if you validate characteristics individually */}
+                         </FormItem>
+
+                         <FormItem className="flex-1">
+                             <FormLabel className="text-xs">Valor</FormLabel>
+                             <FormControl>
+                               <Input
+                                   placeholder="Ex: 220V"
+                                   value={char.value}
+                                   onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
+                               />
+                             </FormControl>
                            </FormItem>
-                          )}
-                        />
-                         <FormField control={form.control} name={`characteristics.${index}.value`} render={({ field: valueField }) => (
-                             <FormItem className="flex-1">
-                                <FormLabel className="text-xs">Valor</FormLabel>
-                                <FormControl>
-                                  <Input
-                                      placeholder="Ex: 220V"
-                                      value={char.value}
-                                      onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
-                                      disabled={!char.isActive}
-                                      className={cn(!char.isActive && "line-through")}
+
+                           <FormItem className="flex items-center space-x-2 pb-1">
+                             <FormControl>
+                                 <Checkbox
+                                     checked={char.isPublic}
+                                     onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
                                   />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                           )}
-                         />
-                         <FormField control={form.control} name={`characteristics.${index}.isPublic`} render={({ field: publicField }) => (
-                              <FormItem className="flex items-center space-x-2 pb-1">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={char.isPublic}
-                                        onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
-                                        disabled={!char.isActive}
-                                     />
-                                </FormControl>
-                                <FormLabel className="text-xs font-normal !mt-0">
-                                  Público?
-                                </FormLabel>
-                                <FormMessage />
-                               </FormItem>
-                             )}
-                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                           onClick={() => toggleCharacteristicActive(index)}
-                          className={cn(
-                              "hover:bg-opacity-20",
-                              char.isActive ? "text-destructive hover:bg-destructive" : "text-green-600 hover:bg-green-600"
-                          )}
-                          title={char.isActive ? "Desativar Característica" : "Reativar Característica"}
-                        >
-                          {char.isActive ? <Trash2 className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
-                        </Button>
+                             </FormControl>
+                             <FormLabel className="text-xs font-normal !mt-0">
+                               Público?
+                             </FormLabel>
+                            </FormItem>
+
+                         <Button
+                           type="button"
+                           variant="ghost"
+                           size="icon"
+                           onClick={() => removeCharacteristic(index)} // This now sets isActive=false
+                           className="text-destructive hover:bg-destructive/10"
+                           title="Desativar Característica"
+                         >
+                           <Trash2 className="h-4 w-4" />
+                         </Button>
                     </div>
                  ))}
                  <Button type="button" variant="outline" size="sm" onClick={addCharacteristic}>
                    <Plus className="mr-2 h-4 w-4" /> Adicionar Nova Característica
                  </Button>
-                 <p className="text-xs text-muted-foreground mt-1">Características desativadas não são excluídas permanentemente.</p>
+                 <p className="text-xs text-muted-foreground mt-1">Características desativadas não são exibidas aqui, mas não são excluídas permanentemente.</p>
               </div>
 
               {/* Photo Upload Section */}
@@ -855,35 +918,95 @@ export default function EditAssetPage() {
                 </div>
               </div>
 
-               {/* Attachments Section - Placeholder */}
-                <div>
-                <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
-                 {/* Display existing attachments with remove option */}
-                  <div className="mb-4 space-y-2">
-                     {/* Example existing attachment */}
-                    <div className="flex items-center justify-between border p-2 rounded-md bg-muted/50">
-                        <a href="https://example.com/manual.pdf" target="_blank" rel="noopener noreferrer" className="text-sm text-accent hover:underline flex items-center gap-1">
-                             <LinkIcon className="h-4 w-4" /> Manual do Usuário
-                        </a>
-                        <Button variant="ghost" size="icon" className="text-destructive h-6 w-6">
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
-                    </div>
-                     {/* Add more existing attachments */}
-                 </div>
-                 <div className="flex items-end gap-2 mb-3">
+              {/* Attachments Section */}
+               <div>
+                 <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
+                 {/* Display existing attachments */}
+                 {attachmentFields.map((field, index) => (
+                   <div key={field.id} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.name`}
+                       render={({ field }) => (
+                         <FormItem className="flex-1">
+                           <FormLabel>Nome</FormLabel>
+                           <FormControl>
+                             <Input {...field} />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.url`}
+                       render={({ field }) => (
+                         <FormItem className="flex-1">
+                           <FormLabel>URL</FormLabel>
+                           <FormControl>
+                             <Input {...field} />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.isPublic`}
+                       render={({ field: checkboxField }) => (
+                         <FormItem className="flex flex-col items-center space-y-1 pb-1">
+                           <FormLabel className="text-xs font-normal">Público?</FormLabel>
+                           <FormControl>
+                             <Checkbox
+                               checked={checkboxField.value}
+                               onCheckedChange={checkboxField.onChange} // Directly use onChange from RHF
+                             />
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <Button
+                       type="button"
+                       variant="ghost"
+                       size="icon"
+                       onClick={() => removeAttachment(index)}
+                       className="text-destructive hover:bg-destructive/10"
+                       title="Remover Anexo"
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 ))}
+
+                 {/* Input for new attachment */}
+                 <div className="flex items-end gap-2 mt-4">
                     <div className="flex-1">
-                        <Label htmlFor="attachment-link" className="text-xs">Novo Link</Label>
-                        <Input id="attachment-link" placeholder="https://..." />
+                        <Label htmlFor="new-attachment-name">Nome do Novo Anexo</Label>
+                        <Input
+                            id="new-attachment-name"
+                            placeholder="Ex: Manual de Instruções"
+                            value={newAttachmentName}
+                            onChange={(e) => setNewAttachmentName(e.target.value)}
+                         />
                     </div>
-                     <div className="flex-1">
-                        <Label htmlFor="attachment-name" className="text-xs">Nome do Anexo</Label>
-                        <Input id="attachment-name" placeholder="Ex: Nota Fiscal" />
+                    <div className="flex-1">
+                        <Label htmlFor="new-attachment-url">Link do Anexo</Label>
+                        <Input
+                             id="new-attachment-url"
+                             placeholder="https://..."
+                             value={newAttachmentUrl}
+                             onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                         />
                     </div>
-                    <Button type="button" variant="outline" size="sm">
-                       <Plus className="mr-1 h-4 w-4" /> Adicionar
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
+                       <Plus className="mr-2 h-4 w-4" /> Adicionar Anexo
                     </Button>
                  </div>
+                 <FormDescription>Adicione links para manuais, notas fiscais, etc. e defina a visibilidade pública.</FormDescription>
+                  {form.formState.errors.attachments && (
+                    <FormMessage>{form.formState.errors.attachments.message}</FormMessage>
+                  )}
               </div>
 
 

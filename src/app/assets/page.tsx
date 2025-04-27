@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, AlertTriangle, QrCode, Home, Building } from 'lucide-react'; // Added Home, Building icons
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Eye, Home, Building } from 'lucide-react'; // Removed QrCode, Added Eye
 import { Input } from '@/components/ui/input';
-import { QrCodeModal } from '@/components/feature/qr-code-modal'; // Import the QR Code modal
+// import { QrCodeModal } from '@/components/feature/qr-code-modal'; // No longer needed here
 
 // Mock data - replace with actual data fetching later
 const assets = [
@@ -22,25 +22,26 @@ const assets = [
 type Asset = typeof assets[0];
 
 export default function AssetsPage() {
-   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+   // State for QR code modal is removed as the button is changed
+   // const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+   // const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
-   const openQrModal = (asset: Asset) => {
-        setSelectedAsset(asset);
-        setIsQrModalOpen(true);
-   };
+   // const openQrModal = (asset: Asset) => {
+   //      setSelectedAsset(asset);
+   //      setIsQrModalOpen(true);
+   // };
 
-   const closeQrModal = () => {
-        setSelectedAsset(null);
-        setIsQrModalOpen(false);
-   };
+   // const closeQrModal = () => {
+   //      setSelectedAsset(null);
+   //      setIsQrModalOpen(false);
+   // };
 
    // Construct the public URL based on the asset tag
     const getPublicUrl = (tag: string) => {
         if (typeof window !== 'undefined') {
             return `${window.location.origin}/public/asset/${tag}`;
         }
-        return '';
+        return '#'; // Fallback URL if window is not defined (SSR/build time)
     };
 
   return (
@@ -111,11 +112,14 @@ export default function AssetsPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                     <Button variant="ghost" size="icon" onClick={() => openQrModal(asset)} title="Ver QR Code">
-                        <QrCode className="h-4 w-4" />
+                     {/* Changed Button: View Public Page instead of QR Code */}
+                     <Button variant="ghost" size="icon" asChild title="Ver Página Pública">
+                        <Link href={getPublicUrl(asset.tag)} target="_blank">
+                            <Eye className="h-4 w-4" />
+                        </Link>
                       </Button>
-                    <Button variant="ghost" size="icon" asChild>
-                       <Link href={`/assets/${asset.id}/edit`} title="Editar">
+                    <Button variant="ghost" size="icon" asChild title="Editar">
+                       <Link href={`/assets/${asset.id}/edit`}>
                         <Edit className="h-4 w-4" />
                       </Link>
                     </Button>
@@ -138,7 +142,8 @@ export default function AssetsPage() {
         </CardContent>
       </Card>
 
-      {selectedAsset && (
+      {/* QR Code Modal is removed */}
+      {/* {selectedAsset && (
            <QrCodeModal
              isOpen={isQrModalOpen}
              onClose={closeQrModal}
@@ -146,7 +151,7 @@ export default function AssetsPage() {
              assetName={selectedAsset.name}
              assetTag={selectedAsset.tag}
            />
-        )}
+        )} */}
     </div>
   );
 }

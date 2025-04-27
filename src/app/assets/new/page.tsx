@@ -4,7 +4,7 @@
 import { useState, useCallback, ChangeEvent, DragEvent, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import Image from 'next/image';
@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign, Link as LinkIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -26,7 +26,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale'; // Import Brazilian Portuguese locale
 
-// Updated schema with rental fields
+// Schema for individual attachment
+const attachmentSchema = z.object({
+  id: z.string().optional(), // For existing attachments during edit
+  name: z.string().min(1, { message: 'Nome do anexo é obrigatório.' }),
+  url: z.string().url({ message: 'URL inválida.' }),
+  isPublic: z.boolean().default(false),
+});
+
+// Updated schema with attachments array
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
@@ -44,6 +52,7 @@ const assetSchema = z.object({
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
       isPublic: z.boolean().default(false),
   })).optional(),
+  attachments: z.array(attachmentSchema).optional(), // Array of attachments
   description: z.string().optional(),
 }).refine(data => {
     // If rented, require rental company and dates
@@ -67,6 +76,7 @@ const assetSchema = z.object({
 
 
 type AssetFormData = z.infer<typeof assetSchema>;
+type Attachment = z.infer<typeof attachmentSchema>;
 
 // Mock data - replace with actual data fetching later
 const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
@@ -105,6 +115,8 @@ export default function NewAssetPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [parentAssets, setParentAssets] = useState<{ id: string; name: string; tag: string }[]>([]);
   const [isLoadingParents, setIsLoadingParents] = useState(true);
+  const [newAttachmentName, setNewAttachmentName] = useState('');
+  const [newAttachmentUrl, setNewAttachmentUrl] = useState('');
 
   const form = useForm<AssetFormData>({
     resolver: zodResolver(assetSchema),
@@ -121,8 +133,14 @@ export default function NewAssetPage() {
       rentalEndDate: undefined,
       rentalCost: undefined,
       characteristics: [],
+      attachments: [], // Initialize attachments array
       description: '',
     },
+  });
+
+  const { fields: attachmentFields, append: appendAttachment, remove: removeAttachment } = useFieldArray({
+    control: form.control,
+    name: "attachments",
   });
 
    useEffect(() => {
@@ -164,6 +182,22 @@ export default function NewAssetPage() {
       setCharacteristics(updatedCharacteristics);
       form.setValue('characteristics', updatedCharacteristics);
    };
+
+    const handleAddAttachment = () => {
+        if (newAttachmentName && newAttachmentUrl) {
+            try {
+                // Basic URL validation (more robust needed for production)
+                new URL(newAttachmentUrl);
+                appendAttachment({ name: newAttachmentName, url: newAttachmentUrl, isPublic: false });
+                setNewAttachmentName('');
+                setNewAttachmentUrl('');
+            } catch (_) {
+                toast({ title: "URL Inválida", description: "Por favor, insira uma URL válida para o anexo.", variant: "destructive" });
+            }
+        } else {
+             toast({ title: "Campos Incompletos", description: "Preencha o nome e a URL do anexo.", variant: "destructive" });
+        }
+    };
 
   // --- File Upload Handlers ---
    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +245,7 @@ export default function NewAssetPage() {
     const dataToSave = {
         ...cleanedData,
         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
+        // Attachments are already part of 'data' due to useFieldArray
     };
     console.log('Data prepared for saving:', dataToSave);
 
@@ -673,7 +708,7 @@ export default function NewAssetPage() {
                     type="file"
                     multiple
                     accept="image/*" // Only accept image files
-                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={handleFileChange}
                   />
                   <p className="text-xs text-muted-foreground mt-2">Apenas imagens são permitidas.</p>
@@ -708,24 +743,97 @@ export default function NewAssetPage() {
                  )}
               </div>
 
-               {/* Attachments Section - Placeholder */}
+             {/* Attachments Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
-                 <div className="flex items-end gap-2 mb-3">
+                {/* Display existing attachments */}
+                 {attachmentFields.map((field, index) => (
+                   <div key={field.id} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.name`}
+                       render={({ field }) => (
+                         <FormItem className="flex-1">
+                           <FormLabel>Nome</FormLabel>
+                           <FormControl>
+                             <Input {...field} readOnly className="bg-muted/50"/>
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.url`}
+                       render={({ field }) => (
+                         <FormItem className="flex-1">
+                           <FormLabel>URL</FormLabel>
+                           <FormControl>
+                             <Input {...field} readOnly className="bg-muted/50"/>
+                           </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <FormField
+                       control={form.control}
+                       name={`attachments.${index}.isPublic`}
+                       render={({ field: checkboxField }) => ( // Renamed field to avoid conflict
+                         <FormItem className="flex flex-col items-center space-y-1 pb-1">
+                             <FormLabel className="text-xs font-normal">Público?</FormLabel>
+                             <FormControl>
+                               <Checkbox
+                                 checked={checkboxField.value}
+                                 onCheckedChange={checkboxField.onChange}
+                               />
+                             </FormControl>
+                           <FormMessage />
+                         </FormItem>
+                       )}
+                     />
+                     <Button
+                       type="button"
+                       variant="ghost"
+                       size="icon"
+                       onClick={() => removeAttachment(index)}
+                       className="text-destructive hover:bg-destructive/10"
+                       title="Remover Anexo"
+                     >
+                       <Trash2 className="h-4 w-4" />
+                     </Button>
+                   </div>
+                 ))}
+
+                 {/* Input for new attachment */}
+                 <div className="flex items-end gap-2 mt-4">
                     <div className="flex-1">
-                        <Label htmlFor="attachment-link">Link do Anexo</Label>
-                        <Input id="attachment-link" placeholder="Ex: https://docs.google.com/document/d/..." />
+                        <Label htmlFor="new-attachment-name">Nome do Novo Anexo</Label>
+                        <Input
+                            id="new-attachment-name"
+                            placeholder="Ex: Manual de Instruções"
+                            value={newAttachmentName}
+                            onChange={(e) => setNewAttachmentName(e.target.value)}
+                         />
                     </div>
-                     <div className="flex-1">
-                        <Label htmlFor="attachment-name">Nome do Anexo</Label>
-                        <Input id="attachment-name" placeholder="Ex: Manual de Instruções" />
+                    <div className="flex-1">
+                        <Label htmlFor="new-attachment-url">Link do Anexo</Label>
+                        <Input
+                             id="new-attachment-url"
+                             placeholder="https://..."
+                             value={newAttachmentUrl}
+                             onChange={(e) => setNewAttachmentUrl(e.target.value)}
+                         />
                     </div>
-                    <Button type="button" variant="outline" size="sm">
+                    <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
                        <Plus className="mr-2 h-4 w-4" /> Adicionar Anexo
                     </Button>
                  </div>
-                 {/* Display added attachments here */}
+                  <FormDescription>Adicione links para manuais, notas fiscais, etc.</FormDescription>
+                  {form.formState.errors.attachments && (
+                     <FormMessage>{form.formState.errors.attachments.message}</FormMessage>
+                  )}
               </div>
+
 
             </CardContent>
             <CardFooter className="flex justify-end gap-2">

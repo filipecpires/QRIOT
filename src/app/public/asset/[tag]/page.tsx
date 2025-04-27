@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useParams } from 'next/navigation';
@@ -22,8 +23,10 @@ interface AssetPhoto {
 }
 
 interface AssetAttachment {
+    id?: string; // ID might be useful
     name: string;
     url: string;
+    isPublic: boolean; // Added flag
 }
 
 interface PublicAssetData {
@@ -80,8 +83,8 @@ async function fetchPublicAssetData(tag: string): Promise<PublicAssetData | null
                  { url: 'https://picsum.photos/seed/asset001_2/600/400', description: 'Vista lateral' }
             ],
             attachments: [
-                { name: 'Manual do Usuário', url: 'https://example.com/manual.pdf' },
-                { name: 'Nota Fiscal', url: 'https://example.com/invoice.pdf' }
+                { id: 'attach1', name: 'Manual do Usuário', url: 'https://example.com/manual.pdf', isPublic: true }, // Public
+                { id: 'attach2', name: 'Nota Fiscal', url: 'https://example.com/invoice.pdf', isPublic: false } // Not Public
             ],
             status: 'active',
             lastInventoryDate: '2024-05-10'
@@ -194,6 +197,7 @@ export default function PublicAssetPage() {
     }
 
      const publicCharacteristics = asset.characteristics.filter(c => c.isPublic);
+     const publicAttachments = asset.attachments.filter(a => a.isPublic); // Filter attachments
 
     return (
          <div className="container mx-auto max-w-4xl py-10 px-4 bg-secondary/50"> {/* Light gray background for page */}
@@ -308,13 +312,13 @@ export default function PublicAssetPage() {
                     )}
 
 
-                     {/* Attachments Section */}
-                     {asset.attachments.length > 0 && (
+                     {/* Attachments Section - Only shows public attachments */}
+                     {publicAttachments.length > 0 && (
                          <div>
-                            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><LinkIcon className="h-5 w-5" /> Anexos</h3>
+                            <h3 className="text-lg font-semibold mb-2 flex items-center gap-2"><LinkIcon className="h-5 w-5" /> Anexos Públicos</h3>
                              <ul className="space-y-2">
-                                {asset.attachments.map((att, index) => (
-                                    <li key={index}>
+                                {publicAttachments.map((att, index) => (
+                                    <li key={att.id || index}>
                                         <a
                                             href={att.url}
                                             target="_blank"
@@ -329,7 +333,7 @@ export default function PublicAssetPage() {
                          </div>
                      )}
 
-                      {publicCharacteristics.length === 0 && asset.photos.length === 0 && asset.attachments.length === 0 && !asset.description && (
+                      {publicCharacteristics.length === 0 && asset.photos.length === 0 && publicAttachments.length === 0 && !asset.description && (
                          <p className="text-muted-foreground text-center py-4">Nenhuma informação pública adicional disponível para este ativo.</p>
                       )}
 
