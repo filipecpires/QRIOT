@@ -1,10 +1,11 @@
+
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { Toaster } from "@/components/ui/toaster";
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut } from 'lucide-react';
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge } from 'lucide-react'; // Added GitMerge for tree icon
 import Link from 'next/link';
 
 const geistSans = Geist({
@@ -53,6 +54,14 @@ export default function RootLayout({
                     <Link href="/assets">
                       <QrCode />
                       <span>Ativos</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                   <SidebarMenuButton asChild tooltip="Árvore de Ativos">
+                    <Link href="/assets/tree">
+                      <GitMerge /> {/* Using GitMerge as a tree icon */}
+                      <span>Árvore de Ativos</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

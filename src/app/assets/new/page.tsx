@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useCallback, ChangeEvent, DragEvent } from 'react';
+import { useState, useCallback, ChangeEvent, DragEvent, useEffect } from 'react'; // Added useEffect
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -27,6 +27,7 @@ const assetSchema = z.object({
   tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
+  parentId: z.string().optional(), // Add parentId field
   characteristics: z.array(z.object({
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
@@ -54,6 +55,18 @@ const users = [
   { id: 'user4', name: 'Ana Costa' },
 ];
 
+// Mock function to fetch existing assets for parent selection
+async function fetchAssetsForParent(): Promise<{ id: string; name: string; tag: string }[]> {
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
+  return [
+    { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'TI-NB-001' },
+    { id: 'ASSET002', name: 'Monitor LG 27"', tag: 'TI-MN-005' },
+    { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'MOB-CAD-012' },
+    { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'TI-PROJ-002' },
+  ];
+}
+
+
 export default function NewAssetPage() {
   const router = useRouter();
   const { toast } = useToast();
@@ -61,6 +74,8 @@ export default function NewAssetPage() {
   const [characteristics, setCharacteristics] = useState<{ key: string; value: string; isPublic: boolean }[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [parentAssets, setParentAssets] = useState<{ id: string; name: string; tag: string }[]>([]);
+  const [isLoadingParents, setIsLoadingParents] = useState(true);
 
   const form = useForm<AssetFormData>({
     resolver: zodResolver(assetSchema),
@@ -70,10 +85,28 @@ export default function NewAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
+      parentId: '',
       characteristics: [],
       description: '',
     },
   });
+
+   useEffect(() => {
+    const loadParentAssets = async () => {
+      setIsLoadingParents(true);
+      try {
+        const assets = await fetchAssetsForParent();
+        setParentAssets(assets);
+      } catch (error) {
+        console.error("Error fetching parent assets:", error);
+        toast({ title: "Erro", description: "Não foi possível carregar a lista de ativos pais.", variant: "destructive" });
+      } finally {
+        setIsLoadingParents(false);
+      }
+    };
+    loadParentAssets();
+   }, [toast]);
+
 
    const addCharacteristic = () => {
     setCharacteristics([...characteristics, { key: '', value: '', isPublic: false }]);
@@ -136,6 +169,14 @@ export default function NewAssetPage() {
     console.log('Submitting asset data:', data);
     console.log('Selected files:', selectedFiles);
 
+    // Ensure parentId is either a valid ID or null/undefined if 'Nenhum' is selected
+    const dataToSave = {
+        ...data,
+        parentId: data.parentId === '' ? undefined : data.parentId,
+    };
+    console.log('Data prepared for saving:', dataToSave);
+
+
     // TODO: Implement file upload logic here (e.g., upload to Firebase Storage)
     // 1. Upload each file in `selectedFiles`
     // 2. Get the download URLs
@@ -147,11 +188,11 @@ export default function NewAssetPage() {
     // Replace with actual API call to save the asset (including photo URLs)
     // try {
     //   const photoUrls = await uploadFiles(selectedFiles); // Your upload function
-    //   const dataToSave = { ...data, photoUrls };
+    //   const finalData = { ...dataToSave, photoUrls };
     //   const response = await fetch('/api/assets', {
     //     method: 'POST',
     //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(dataToSave),
+    //     body: JSON.stringify(finalData),
     //   });
     //   if (!response.ok) throw new Error('Failed to save asset');
     //   const result = await response.json();
@@ -291,6 +332,34 @@ export default function NewAssetPage() {
                 />
               </div>
 
+                {/* Parent Asset Field */}
+                 <FormField
+                  control={form.control}
+                  name="parentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ativo Pai (Opcional)</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingParents}>
+                        <FormControl>
+                          <SelectTrigger>
+                             <SelectValue placeholder={isLoadingParents ? "Carregando ativos..." : "Selecione um ativo pai (se aplicável)"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {parentAssets.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                                {asset.name} ({asset.tag})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Vincule este ativo a outro já existente (ex: monitor a um computador).</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                <FormField
                 control={form.control}
                 name="description"
@@ -403,7 +472,7 @@ export default function NewAssetPage() {
                     type="file"
                     multiple
                     accept="image/*" // Only accept image files
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={handleFileChange}
                   />
                   <p className="text-xs text-muted-foreground mt-2">Apenas imagens são permitidas.</p>

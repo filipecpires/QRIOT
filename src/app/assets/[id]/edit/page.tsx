@@ -39,6 +39,7 @@ const assetSchema = z.object({
   tag: z.string().min(1, { message: 'A tag única é obrigatória.' }).regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'}), // Unique validation should be server-side
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
+  parentId: z.string().optional(), // Add parentId field
   characteristics: z.array(z.object({
       id: z.string().optional(), // Keep track of existing characteristics for updates/logical delete
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
@@ -69,6 +70,18 @@ const users = [
   { id: 'user4', name: 'Ana Costa' },
 ];
 
+// Mock function to fetch existing assets for parent selection
+async function fetchAssetsForParent(excludeId?: string): Promise<{ id: string; name: string; tag: string }[]> {
+  await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
+  const allAssets = [
+    { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'TI-NB-001' },
+    { id: 'ASSET002', name: 'Monitor LG 27"', tag: 'TI-MN-005' },
+    { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'MOB-CAD-012' },
+    { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'TI-PROJ-002' },
+  ];
+  return allAssets.filter(asset => asset.id !== excludeId); // Exclude the current asset
+}
+
 // Mock data with existing photos
 interface AssetDataWithPhotos extends AssetFormData {
     photos?: ExistingPhoto[];
@@ -86,6 +99,7 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
             tag: 'TI-NB-001',
             locationId: 'loc1',
             responsibleUserId: 'user1',
+            parentId: undefined, // Example: No parent
             characteristics: [
                 { id: 'char1', key: 'Processador', value: 'Intel Core i7', isPublic: true, isActive: true },
                 { id: 'char2', key: 'Memória RAM', value: '16GB', isPublic: true, isActive: true },
@@ -109,6 +123,7 @@ async function fetchAssetData(id: string): Promise<AssetDataWithPhotos | null> {
             tag: 'MOB-CAD-012',
             locationId: 'loc3',
             responsibleUserId: 'user3',
+            parentId: 'ASSET001', // Example: Linked to the notebook
              characteristics: [
                  { id: 'char8', key: 'Cor', value: 'Preta', isPublic: true, isActive: true },
                  { id: 'char9', key: 'Material', value: 'Tecido', isPublic: true, isActive: true },
@@ -136,6 +151,8 @@ export default function EditAssetPage() {
   const [newPhotos, setNewPhotos] = useState<File[]>([]); // Files to be uploaded
   const [photosToRemove, setPhotosToRemove] = useState<string[]>([]); // IDs of photos to remove
   const [isDragging, setIsDragging] = useState(false);
+  const [parentAssets, setParentAssets] = useState<{ id: string; name: string; tag: string }[]>([]);
+  const [isLoadingParents, setIsLoadingParents] = useState(true);
 
 
   const form = useForm<AssetFormData>({
@@ -146,6 +163,7 @@ export default function EditAssetPage() {
       tag: '',
       locationId: '',
       responsibleUserId: '',
+      parentId: '',
       characteristics: [],
       description: '',
       status: 'active',
@@ -156,17 +174,34 @@ export default function EditAssetPage() {
         if (assetId) {
             const loadData = async () => {
                 setIsDataLoading(true);
+                setIsLoadingParents(true); // Start loading parents
                 const data = await fetchAssetData(assetId);
                  if (data) {
                      setAssetData(data);
-                     form.reset(data); // Populate form with fetched data
-                     setCharacteristics(data.characteristics || []); // Set characteristics state
-                     setExistingPhotos(data.photos || []); // Set existing photos
-                     setNewPhotos([]); // Clear new photos on load
-                     setPhotosToRemove([]); // Clear photos to remove on load
+                     form.reset({ // Reset form with fetched data
+                       ...data,
+                       parentId: data.parentId || '', // Ensure parentId is string or empty string
+                     });
+                     setCharacteristics(data.characteristics || []);
+                     setExistingPhotos(data.photos || []);
+                     setNewPhotos([]);
+                     setPhotosToRemove([]);
+
+                     // Fetch parent assets excluding the current one
+                     try {
+                         const assets = await fetchAssetsForParent(assetId);
+                         setParentAssets(assets);
+                     } catch (error) {
+                        console.error("Error fetching parent assets:", error);
+                         toast({ title: "Erro", description: "Não foi possível carregar a lista de ativos pais.", variant: "destructive" });
+                     } finally {
+                        setIsLoadingParents(false);
+                     }
+
                  } else {
                      toast({ title: "Erro", description: "Ativo não encontrado.", variant: "destructive" });
                      router.replace('/assets'); // Redirect if not found
+                     setIsLoadingParents(false); // Stop parent loading if asset not found
                  }
                 setIsDataLoading(false);
             };
@@ -252,7 +287,13 @@ export default function EditAssetPage() {
          isPublic: char.isPublic,
          isActive: char.isActive,
      }));
-     const dataToSave = { ...data, characteristics: characteristicsToSave };
+
+     // Ensure parentId is either a valid ID or null/undefined if 'Nenhum' is selected
+    const dataToSave = {
+         ...data,
+         characteristics: characteristicsToSave,
+         parentId: data.parentId === '' ? undefined : data.parentId,
+     };
      console.log('Data prepared for saving:', dataToSave);
 
 
@@ -320,6 +361,7 @@ export default function EditAssetPage() {
                              <Skeleton className="h-10 w-full" />
                              <Skeleton className="h-10 w-full" />
                          </div>
+                          <Skeleton className="h-10 w-full" /> {/* Parent Asset Skeleton */}
                          <Skeleton className="h-20 w-full" />
                           <Skeleton className="h-10 w-1/3" />
                          <Skeleton className="h-24 w-full" />
@@ -360,7 +402,7 @@ export default function EditAssetPage() {
     }
 
     // Construct the public URL based on the asset tag
-    const publicUrl = `${window.location.origin}/public/asset/${assetData.tag}`;
+    const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${assetData.tag}` : '';
 
 
   return (
@@ -422,6 +464,36 @@ export default function EditAssetPage() {
                  <FormField control={form.control} name="locationId" render={({ field }) => (<FormItem><FormLabel>Local</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}<SelectItem value="new">-- Criar Novo Local --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
                  <FormField control={form.control} name="responsibleUserId" render={({ field }) => (<FormItem><FormLabel>Responsável</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}<SelectItem value="new">-- Criar Novo Usuário --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
+
+              {/* Parent Asset Field */}
+              <FormField
+                  control={form.control}
+                  name="parentId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ativo Pai (Opcional)</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || ''} disabled={isLoadingParents}>
+                        <FormControl>
+                          <SelectTrigger>
+                             <SelectValue placeholder={isLoadingParents ? "Carregando ativos..." : "Selecione um ativo pai (se aplicável)"} />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="">Nenhum</SelectItem>
+                          {parentAssets.map((asset) => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                                {asset.name} ({asset.tag})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormDescription>Vincule este ativo a outro já existente (ex: monitor a um computador).</FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+
               <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
 
                {/* Status Field */}
@@ -596,7 +668,7 @@ export default function EditAssetPage() {
                     type="file"
                     multiple
                     accept="image/*"
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                     onChange={handleFileChange}
                   />
                    <p className="text-xs text-muted-foreground mt-2">Adicione mais fotos para o ativo.</p>
