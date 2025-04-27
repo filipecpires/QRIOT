@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'QRot.io - Gestão de Ativos',
-  description: 'Sistema online para gestão de ativos físicos com QR Code.',
+  title: 'QRIoT.app - Gestão Inteligente de Ativos',
+  description: 'Sistema online para gestão inteligente de ativos físicos com QR Code e IoT.',
 };
 
 export default function RootLayout({

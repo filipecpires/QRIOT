@@ -15,7 +15,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
             <QrCode className="h-6 w-6 text-sidebar-primary" />
-            <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRot.io</span>
+            <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
           </Link>
         </SidebarHeader>
         <SidebarContent>

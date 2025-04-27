@@ -15,7 +15,7 @@ export default function LandingPage() {
                 <div className="container flex h-14 items-center justify-between">
                     <Link href="/" className="flex items-center gap-2 font-bold text-lg text-primary">
                         <QrCode className="h-6 w-6" />
-                        QRot.io
+                        QRIoT.app
                     </Link>
                     <nav className="flex items-center gap-4">
                         {/* <Link href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Recursos</Link> */}
@@ -34,7 +34,7 @@ export default function LandingPage() {
                     Gerencie seus Ativos com <span className="text-primary">Inteligência</span> e <span className="text-accent">Praticidade</span>.
                  </h1>
                  <p className="max-w-2xl text-lg text-muted-foreground">
-                    O QRot.io simplifica o controle do seu patrimônio. Cadastre, localize, inventarie e monitore tudo com a facilidade dos QR Codes.
+                    O QRIoT.app simplifica o controle do seu patrimônio. Cadastre, localize, inventarie e monitore tudo com a facilidade dos QR Codes.
                  </p>
                  <div className="flex gap-4">
                     <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
@@ -45,7 +45,7 @@ export default function LandingPage() {
                     </Button>
                  </div>
                  {/* Optional: Add an illustrative image/screenshot */}
-                 {/* <Image src="/placeholder-hero.svg" alt="QRot.io Illustration" width={600} height={400} className="mt-8 rounded-lg shadow-lg"/> */}
+                 {/* <Image src="/placeholder-hero.svg" alt="QRIoT.app Illustration" width={600} height={400} className="mt-8 rounded-lg shadow-lg"/> */}
                   <div className="mt-8 h-64 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground">
                     [ Placeholder para Imagem/Vídeo Ilustrativo ]
                   </div>
@@ -53,7 +53,7 @@ export default function LandingPage() {
 
             {/* Features Section */}
             <section id="features" className="container py-16 md:py-24 bg-secondary/10 rounded-t-lg">
-                <h2 className="text-3xl font-bold text-center mb-12">Por que escolher o QRot.io?</h2>
+                <h2 className="text-3xl font-bold text-center mb-12">Por que escolher o QRIoT.app?</h2>
                 <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
                     <Card className="shadow-sm hover:shadow-md transition-shadow">
                          <CardContent className="p-6 flex flex-col items-center text-center">
@@ -141,10 +141,10 @@ export default function LandingPage() {
                     <Zap className="h-12 w-12 mx-auto mb-4 text-accent" />
                     <h2 className="text-3xl font-bold mb-4">Pronto para Simplificar sua Gestão de Ativos?</h2>
                     <p className="max-w-xl mx-auto mb-8 text-primary-foreground/80">
-                        Solicite uma demonstração personalizada e veja como o QRot.io pode transformar o controle do seu patrimônio.
+                        Solicite uma demonstração personalizada e veja como o QRIoT.app pode transformar o controle do seu patrimônio.
                     </p>
                     <Button size="lg" variant="secondary" asChild>
-                        <Link href="mailto:contato@qrot.io?subject=Demonstração QRot.io"> {/* Replace with actual contact method */}
+                        <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app"> {/* Updated email */}
                             <Phone className="mr-2 h-5 w-5" /> Quero uma Demonstração
                         </Link>
                     </Button>
@@ -154,7 +154,7 @@ export default function LandingPage() {
             {/* Footer */}
             <footer className="py-6 border-t">
                 <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-                    <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} QRot.io. Todos os direitos reservados.</p>
+                    <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} QRIoT.app. Todos os direitos reservados.</p>
                     {/* Optional: Add social links or privacy policy link */}
                 </div>
             </footer>

@@ -341,7 +341,7 @@ export default function PublicAssetPage() {
              </Card>
 
              <footer className="mt-8 text-center text-xs text-muted-foreground">
-                Gerenciado por QRot.io - Acesso registrado em {new Date().toLocaleString('pt-BR')}
+                Gerenciado por QRIoT.app - Acesso registrado em {new Date().toLocaleString('pt-BR')}
              </footer>
          </div>
     );

@@ -18,7 +18,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Configurações Gerais</CardTitle>
-            <CardDescription>Ajustes gerais do sistema QRot.io.</CardDescription>
+            <CardDescription>Ajustes gerais do sistema QRIoT.app.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
