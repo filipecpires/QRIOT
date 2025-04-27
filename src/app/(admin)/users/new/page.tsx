@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react'; // Added useEffect
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -15,22 +15,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
+// import { Switch } from '@/components/ui/switch'; // Removed Switch, status is active by default
 
 const userSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   email: z.string().email({ message: 'Email inválido.' }),
   role: z.string().min(1, { message: 'Selecione um perfil.' }),
   managerId: z.string().optional(), // Optional, as admins/top-level managers might not have one
-  password: z.string().min(8, { message: 'A senha deve ter pelo menos 8 caracteres.' }), // Add password confirmation later if needed
-  isActive: z.boolean().default(true),
+  password: z.string().min(8, { message: 'A senha deve ter pelo menos 8 caracteres.' }),
+  // isActive is true by default, no need for field unless explicit control needed during creation
 });
 
 type UserFormData = z.infer<typeof userSchema>;
 
 // Mock data - replace with actual data fetching later
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
-const managers = [ // Filtered list of users who can be managers (Admins and Managers)
+const initialManagers = [ // Example data
   { id: 'user1', name: 'João Silva (Admin)' },
   { id: 'user2', name: 'Maria Oliveira (Gerente)' },
 ];
@@ -40,6 +40,21 @@ export default function NewUserPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [managers, setManagers] = useState<{id: string, name: string}[]>([]); // State for managers list
+  const [isLoadingManagers, setIsLoadingManagers] = useState(true);
+
+  // Fetch managers on component mount
+   useEffect(() => {
+       const fetchManagers = async () => {
+           setIsLoadingManagers(true);
+           // TODO: Replace with actual API call to fetch users with Admin or Manager roles
+           await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
+           setManagers(initialManagers);
+           setIsLoadingManagers(false);
+       };
+       fetchManagers();
+   }, []);
+
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userSchema),
@@ -49,7 +64,7 @@ export default function NewUserPage() {
       role: '',
       managerId: '__none__', // Default to none
       password: '',
-      isActive: true,
+      // isActive: true, // No need to set here, handled by backend or default logic
     },
   });
 
@@ -61,6 +76,7 @@ export default function NewUserPage() {
     const dataToSave = {
         ...data,
         managerId: data.managerId === '__none__' ? undefined : data.managerId,
+        isActive: true, // Explicitly set status for backend
     };
 
     // Simulate API call (Firebase Auth + Firestore)
@@ -70,9 +86,10 @@ export default function NewUserPage() {
     // try {
     //   // 1. Create user in Firebase Auth
     //   // 2. Save user details (including role, managerId, status) in Firestore (using dataToSave)
+    //   // 3. Send welcome email (optional)
     //   toast({
     //     title: 'Sucesso!',
-    //     description: `Usuário "${data.name}" cadastrado com sucesso.`,
+    //     description: `Usuário "${data.name}" cadastrado. Um email de boas-vindas foi enviado.`,
     //     variant: 'default',
     //   });
     //   router.push('/users'); // Redirect to users list
@@ -94,14 +111,14 @@ export default function NewUserPage() {
      // --- REMOVE THIS BLOCK AFTER API IMPLEMENTATION ---
      toast({
         title: 'Sucesso! (Simulado)',
-        description: `Usuário "${data.name}" cadastrado com sucesso.`,
+        description: `Usuário "${data.name}" cadastrado. Email de boas-vindas enviado (simulado).`,
       });
       router.push('/users');
     // --- END REMOVE BLOCK ---
   }
 
   return (
-    <div className="space-y-6"> {/* Use simple div instead of container */}
+    <div className="space-y-6">
       <Button variant="outline" size="sm" asChild className="mb-4">
         <Link href="/users">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Lista
@@ -138,6 +155,7 @@ export default function NewUserPage() {
                       <FormControl>
                         <Input type="email" placeholder="Ex: joao.silva@empresa.com" {...field} />
                       </FormControl>
+                       <FormDescription>Este será o login do usuário.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -149,11 +167,11 @@ export default function NewUserPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Senha</FormLabel>
+                      <FormLabel>Senha Inicial</FormLabel>
                       <FormControl>
                         <Input type="password" placeholder="********" {...field} />
                       </FormControl>
-                       <FormDescription>Mínimo 8 caracteres.</FormDescription>
+                       <FormDescription>Mínimo 8 caracteres. O usuário poderá alterar depois.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -188,10 +206,14 @@ export default function NewUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gerente Direto (Opcional)</FormLabel>
-                       <Select onValueChange={field.onChange} value={field.value || '__none__'}>
+                       <Select
+                         onValueChange={field.onChange}
+                         value={field.value || '__none__'}
+                         disabled={isLoadingManagers}
+                        >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione o gerente (se aplicável)" />
+                            <SelectValue placeholder={isLoadingManagers ? "Carregando..." : "Selecione o gerente"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -207,7 +229,8 @@ export default function NewUserPage() {
                   )}
                 />
                </div>
-                 <FormField
+               {/* isActive field is removed - handled by default logic */}
+                 {/* <FormField
                     control={form.control}
                     name="isActive"
                     render={({ field }) => (
@@ -226,14 +249,14 @@ export default function NewUserPage() {
                       </FormControl>
                     </FormItem>
                     )}
-                />
+                /> */}
 
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading || isLoadingManagers}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
@@ -251,3 +274,5 @@ export default function NewUserPage() {
     </div>
   );
 }
+
+    

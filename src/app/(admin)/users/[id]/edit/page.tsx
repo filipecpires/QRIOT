@@ -14,10 +14,21 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Trash2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Trash2, KeyRound } from 'lucide-react'; // Removed UserCog, UserCheck etc. Added KeyRound
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 // Schema for editing - password becomes optional
 const userEditSchema = z.object({
@@ -25,7 +36,7 @@ const userEditSchema = z.object({
   email: z.string().email({ message: 'Email inválido.' }), // Email typically cannot be changed easily in Firebase Auth
   role: z.string().min(1, { message: 'Selecione um perfil.' }),
   managerId: z.string().optional(),
-  password: z.string().min(8, { message: 'A nova senha deve ter pelo menos 8 caracteres.' }).optional().or(z.literal('')), // Optional for update
+  // password: z.string().min(8, { message: 'A nova senha deve ter pelo menos 8 caracteres.' }).optional().or(z.literal('')), // Password change handled separately
   isActive: z.boolean().default(true),
 });
 
@@ -33,7 +44,7 @@ type UserEditFormData = z.infer<typeof userEditSchema>;
 
 // Mock data - replace with actual data fetching later
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
-const managers = [ // Should exclude the current user being edited
+const initialManagers = [ // Should exclude the current user being edited
   { id: 'user1', name: 'João Silva (Admin)' },
   { id: 'user2', name: 'Maria Oliveira (Gerente)' },
 ];
@@ -58,6 +69,22 @@ async function fetchUserData(id: string): Promise<Omit<UserEditFormData, 'passwo
             managerId: 'user2', // Maria Oliveira
             isActive: false, // Example inactive user
         };
+    } else if (id === 'user1') { // Add Admin user
+         return {
+            name: 'João Silva',
+            email: 'joao.silva@example.com',
+            role: 'Administrador',
+            managerId: undefined,
+            isActive: true,
+        };
+    } else if (id === 'user2') { // Add Manager user
+        return {
+            name: 'Maria Oliveira',
+            email: 'maria.oliveira@example.com',
+            role: 'Gerente',
+            managerId: 'user1',
+            isActive: true,
+        };
     }
     return null; // Not found
 }
@@ -79,6 +106,12 @@ export default function EditUserPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [userData, setUserData] = useState<Omit<UserEditFormData, 'password'> | null>(null);
+  const [managers, setManagers] = useState<{id: string, name: string}[]>([]);
+  const [isLoadingManagers, setIsLoadingManagers] = useState(true);
+
+  // Placeholder for logged-in user's info (replace with actual auth context)
+  const loggedInUserId = 'user1'; // Example: assume admin is logged in
+  const loggedInUserRole = 'Administrador'; // Example: assume admin is logged in
 
   const form = useForm<UserEditFormData>({
     resolver: zodResolver(userEditSchema),
@@ -87,12 +120,23 @@ export default function EditUserPage() {
       email: '',
       role: '',
       managerId: '__none__', // Default to none
-      password: '', // Keep password empty initially
+      // password: '', // Password handled separately
       isActive: true,
     },
   });
 
  useEffect(() => {
+        // Fetch managers list (excluding the user being edited)
+       const fetchManagers = async () => {
+           setIsLoadingManagers(true);
+           // TODO: Replace with actual API call
+           await new Promise(resolve => setTimeout(resolve, 500));
+           setManagers(initialManagers.filter(m => m.id !== userId));
+           setIsLoadingManagers(false);
+       };
+
+       fetchManagers();
+
         if (userId) {
             const loadData = async () => {
                 setIsDataLoading(true);
@@ -105,7 +149,7 @@ export default function EditUserPage() {
                          role: data.role,
                          managerId: data.managerId || '__none__', // Ensure managerId is string or '__none__'
                          isActive: data.isActive,
-                         password: '', // Ensure password is empty
+                         // password: '', // Ensure password is empty
                      });
                  } else {
                      toast({ title: "Erro", description: "Usuário não encontrado.", variant: "destructive" });
@@ -118,26 +162,73 @@ export default function EditUserPage() {
    }, [userId, form, router, toast]);
 
 
+  // Check if the logged-in user can edit the target user based on roles/hierarchy
+  const canEdit = () => {
+      if (!userData) return false;
+      if (loggedInUserRole === 'Administrador') return true;
+      if (loggedInUserRole === 'Gerente') {
+         // TODO: Implement logic to check if target user is a subordinate of the logged-in manager
+         // For now, let's assume managers can edit anyone except Admins (placeholder)
+         return userData.role !== 'Administrador';
+      }
+      return false; // Technicians/Inventors cannot edit
+  };
+
+   // Check if logged-in user can delete the target user
+    const canDelete = () => {
+        if (!userData) return false;
+        // Only Admins can delete, and not themselves or other Admins
+        return loggedInUserRole === 'Administrador' && userData.id !== loggedInUserId && userData.role !== 'Administrador';
+    };
+
+    // Check if logged-in user can toggle activation status
+    const canToggleStatus = () => {
+        if (!userData) return false;
+        // Admins can toggle anyone except themselves
+        if (loggedInUserRole === 'Administrador') return userData.id !== loggedInUserId;
+        // Managers can toggle their subordinates (placeholder logic)
+        if (loggedInUserRole === 'Gerente') {
+            // TODO: Check if target user is subordinate
+            return userData.role !== 'Administrador'; // Example: Manager cannot deactivate Admin
+        }
+        return false;
+    };
+
+    // Check if logged-in user can reset password
+    const canResetPassword = () => {
+        if (!userData) return false;
+        // Admins can reset anyone except themselves? (Decide policy)
+        if (loggedInUserRole === 'Administrador') return true; // Admins can reset anyone
+        // Managers can reset subordinates (placeholder logic)
+        if (loggedInUserRole === 'Gerente') {
+             // TODO: Check if target user is subordinate
+             return userData.role !== 'Administrador'; // Example: Manager cannot reset Admin
+        }
+        return false;
+    };
+
+
   async function onSubmit(data: UserEditFormData) {
+      if (!canEdit()) {
+         toast({ title: "Permissão Negada", description: "Você não tem permissão para editar este usuário.", variant: "destructive" });
+         return;
+      }
+
     setIsLoading(true);
     console.log('Updating user data:', data);
 
-    // Prepare data: Remove empty password if not provided, map '__none__' to undefined
-    const dataToSave = { ...data };
-    if (!dataToSave.password) {
-      delete dataToSave.password;
-    }
-     if (dataToSave.managerId === '__none__') {
-         dataToSave.managerId = undefined;
-     }
+    // Prepare data: map '__none__' to undefined
+    const dataToSave = {
+        ...data,
+        managerId: data.managerId === '__none__' ? undefined : data.managerId,
+    };
 
-    // Simulate API call (Firebase Auth update + Firestore update)
+    // Simulate API call ( Firestore update)
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
-    // Replace with actual API call to update user data (Firestore) and potentially password (Auth)
+    // Replace with actual API call to update user data (Firestore)
     // try {
-    //   // 1. Update user details in Firestore (using dataToSave)
-    //   // 2. If password provided, update in Firebase Auth (requires re-authentication or admin SDK)
+    //   // Update user details in Firestore (using dataToSave)
     //   toast({
     //     title: 'Sucesso!',
     //     description: `Usuário "${data.name}" atualizado com sucesso.`,
@@ -163,9 +254,39 @@ export default function EditUserPage() {
     // --- END REMOVE BLOCK ---
   }
 
-     if (isDataLoading) {
+   const resetPasswordAction = async () => {
+       if (!canResetPassword() || !userData) return;
+
+        setIsLoading(true); // Indicate loading for the reset action
+        console.log(`Initiating password reset for ${userData.email}`);
+        // TODO: Implement API call to trigger Firebase password reset email
+         await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+        try {
+            // await sendPasswordResetEmail(auth, userData.email); // Firebase function
+            toast({
+                title: "Email de Redefinição Enviado",
+                description: `Um email foi enviado para ${userData.email} com instruções.`,
+            });
+        } catch (error) {
+             console.error("Password reset failed:", error);
+             toast({ title: "Erro", description: "Falha ao enviar email de redefinição.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const deleteUserAction = () => {
+        if (!canDelete() || !userData) return;
+        // Logic is inside the AlertDialog on confirm
+        console.log(`Attempting to delete user ${userData.name}`);
+         // TODO: Call actual API inside AlertDialog confirm action
+         // Show confirmation dialog (handled by AlertDialogTrigger/Content)
+    }
+
+
+     if (isDataLoading || isLoadingManagers) {
          return (
-            <div className="space-y-6"> {/* Use simple div instead of container */}
+            <div className="space-y-6">
                  <Skeleton className="h-8 w-32 mb-4" />
                 <Card>
                     <CardHeader>
@@ -183,16 +304,20 @@ export default function EditUserPage() {
                              <Skeleton className="h-10 w-full" />
                              <Skeleton className="h-10 w-full" />
                          </div>
-                         <Skeleton className="h-10 w-full" />
+                         {/* <Skeleton className="h-10 w-full" /> Password field removed */}
                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <Skeleton className="h-10 w-full" />
                             <Skeleton className="h-10 w-full" />
                          </div>
                          <Skeleton className="h-16 w-full border p-3" />
+                         <Skeleton className="h-10 w-40" /> {/* Reset password button placeholder */}
                     </CardContent>
-                    <CardFooter className="flex justify-end gap-2">
-                         <Skeleton className="h-10 w-24" />
-                        <Skeleton className="h-10 w-24" />
+                    <CardFooter className="flex justify-between">
+                        <Skeleton className="h-10 w-32" /> {/* Delete button placeholder */}
+                         <div className="flex gap-2">
+                             <Skeleton className="h-10 w-24" />
+                            <Skeleton className="h-10 w-24" />
+                         </div>
                     </CardFooter>
                 </Card>
             </div>
@@ -209,7 +334,7 @@ export default function EditUserPage() {
 
 
   return (
-    <div className="space-y-6"> {/* Use simple div instead of container */}
+    <div className="space-y-6">
       <Button variant="outline" size="sm" asChild className="mb-4">
         <Link href="/users">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Lista
@@ -240,7 +365,7 @@ export default function EditUserPage() {
                     <FormItem>
                       <FormLabel>Nome Completo</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: João da Silva" {...field} />
+                        <Input placeholder="Ex: João da Silva" {...field} disabled={!canEdit()} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -262,7 +387,8 @@ export default function EditUserPage() {
                 />
               </div>
 
-               <FormField
+               {/* Password field removed - handled by Reset Password button */}
+               {/* <FormField
                   control={form.control}
                   name="password"
                   render={({ field }) => (
@@ -275,7 +401,7 @@ export default function EditUserPage() {
                       <FormMessage />
                     </FormItem>
                   )}
-                />
+                /> */}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
@@ -284,7 +410,7 @@ export default function EditUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Perfil de Acesso</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit() || userData.role === 'Administrador'}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o perfil" />
@@ -292,10 +418,13 @@ export default function EditUserPage() {
                         </FormControl>
                         <SelectContent>
                           {roles.map((role) => (
-                            <SelectItem key={role} value={role}>{role}</SelectItem>
+                            <SelectItem key={role} value={role} disabled={role === 'Administrador' && loggedInUserRole !== 'Administrador'}>
+                                {role}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
+                       <FormDescription>Define as permissões do usuário.</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -306,16 +435,19 @@ export default function EditUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gerente Direto (Opcional)</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value || '__none__'}>
+                      <Select
+                         onValueChange={field.onChange}
+                         value={field.value || '__none__'}
+                         disabled={!canEdit() || isLoadingManagers}
+                       >
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Selecione o gerente (se aplicável)" />
+                            <SelectValue placeholder={isLoadingManagers ? "Carregando..." : "Selecione o gerente"} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                            <SelectItem value="__none__">Nenhum</SelectItem>
-                           {/* Filter out the current user from the managers list */}
-                          {managers.filter(m => m.id !== userId).map((manager) => (
+                          {managers.map((manager) => (
                             <SelectItem key={manager.id} value={manager.id}>{manager.name}</SelectItem>
                           ))}
                         </SelectContent>
@@ -341,24 +473,57 @@ export default function EditUserPage() {
                         <Switch
                           checked={field.value}
                           onCheckedChange={field.onChange}
-                          aria-readonly={userId === 'user1'} // Example: Prevent deactivating the main admin
-                          disabled={userId === 'user1'} // Example: Prevent deactivating the main admin
+                          aria-readonly={!canToggleStatus()}
+                          disabled={!canToggleStatus()}
                         />
                       </FormControl>
                     </FormItem>
                     )}
                 />
 
+                 <Button
+                    type="button"
+                    variant="outline"
+                    onClick={resetPasswordAction}
+                    disabled={!canResetPassword() || isLoading}
+                    className="w-fit"
+                 >
+                   <KeyRound className="mr-2 h-4 w-4" /> Redefinir Senha por Email
+                </Button>
+
+
             </CardContent>
              <CardFooter className="flex justify-between">
-                 <Button type="button" variant="destructive" onClick={() => { /* Implement delete confirmation */ }} disabled={userId === 'user1' /* Example disable delete for admin */}>
-                    <Trash2 className="mr-2 h-4 w-4" /> Excluir Usuário
-                 </Button>
+                <AlertDialog>
+                     <AlertDialogTrigger asChild>
+                         <Button type="button" variant="destructive" disabled={!canDelete()}>
+                             <Trash2 className="mr-2 h-4 w-4" /> Excluir Usuário
+                         </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                         <AlertDialogHeader>
+                           <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                           <AlertDialogDescription>
+                             Tem certeza que deseja excluir permanentemente o usuário "{userData.name}"? Esta ação não pode ser desfeita e removerá o acesso do usuário.
+                           </AlertDialogDescription>
+                         </AlertDialogHeader>
+                         <AlertDialogFooter>
+                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                           <AlertDialogAction
+                             onClick={deleteUserAction}
+                             className="bg-destructive hover:bg-destructive/90"
+                           >
+                             Confirmar Exclusão
+                           </AlertDialogAction>
+                         </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+
                  <div className="flex gap-2">
                     <Button type="button" variant="outline" onClick={() => router.back()}>
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading || !canEdit()}>
                         {isLoading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Atualizando...
@@ -377,3 +542,5 @@ export default function EditUserPage() {
     </div>
   );
 }
+
+    
