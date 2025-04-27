@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
-import { Sheet, SheetContent } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Added SheetHeader, SheetTitle
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   Tooltip,
@@ -169,7 +169,7 @@ const Sidebar = React.forwardRef<
     {
       side = "left",
       variant = "sidebar",
-      collapsible = "offcanvas",
+      collapsible = "icon", // Changed default to icon
       className,
       children,
       ...props
@@ -199,7 +199,7 @@ const Sidebar = React.forwardRef<
           <SheetContent
             data-sidebar="sidebar"
             data-mobile="true"
-            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
+            className="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden" // Close button is hidden by default by Radix in SheetContent
             style={
               {
                 "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
@@ -207,6 +207,12 @@ const Sidebar = React.forwardRef<
             }
             side={side}
           >
+            {/* Add a visually hidden title for accessibility */}
+            <SheetHeader className="sr-only">
+              <SheetTitle>Menu Principal</SheetTitle>
+            </SheetHeader>
+            {/* The children passed to Sidebar are rendered here */}
+            {/* This includes SidebarHeader, SidebarContent, SidebarFooter */}
             <div className="flex h-full w-full flex-col">{children}</div>
           </SheetContent>
         </Sheet>
@@ -281,7 +287,7 @@ const SidebarTrigger = React.forwardRef<
       {...props}
     >
       {/* Ensure children or default icon is rendered correctly */}
-      {asChild ? children : (
+      {children ? children : ( // Render children if passed, otherwise default icon
         <>
           <PanelLeft />
           <span className="sr-only">Toggle Sidebar</span>
