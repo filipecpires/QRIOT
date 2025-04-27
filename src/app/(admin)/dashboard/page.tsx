@@ -337,7 +337,7 @@ export default function DashboardPage() {
                <CardFooter className="pt-4"> {/* Add padding top */}
                     <Button size="sm" variant="outline" className="w-full" asChild>
                      <Link href="/assets">
-                       <span>Ver Todos Ativos <ArrowRight className="inline ml-1 h-4 w-4" /></span>
+                       Ver Todos Ativos <ArrowRight className="inline ml-1 h-4 w-4" />
                      </Link>
                     </Button>
                </CardFooter>
@@ -356,7 +356,7 @@ export default function DashboardPage() {
                <CardFooter className="pt-4">
                    <Button size="sm" variant="outline" className="w-full" asChild>
                      <Link href="/locations">
-                         <span>Gerenciar Locais <ArrowRight className="inline ml-1 h-4 w-4" /></span>
+                         Gerenciar Locais <ArrowRight className="inline ml-1 h-4 w-4" />
                     </Link>
                   </Button>
                </CardFooter>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
                <CardFooter className="pt-4">
                   <Button size="sm" variant="outline" className="w-full" asChild>
                     <Link href="/users">
-                       <span>Gerenciar Usuários <ArrowRight className="inline ml-1 h-4 w-4" /></span>
+                       Gerenciar Usuários <ArrowRight className="inline ml-1 h-4 w-4" />
                     </Link>
                   </Button>
                </CardFooter>
@@ -397,7 +397,7 @@ export default function DashboardPage() {
                 <CardFooter className="pt-4">
                     <Button variant="default" size="sm" className="w-full" asChild>
                        <Link href="/inventory/scan">
-                         <span><CheckSquare className="inline mr-1 h-4 w-4" /> Iniciar Inventário</span>
+                         <CheckSquare className="inline mr-1 h-4 w-4" /> Iniciar Inventário
                        </Link>
                    </Button>
                </CardFooter>
@@ -485,7 +485,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter className="pt-4">
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/audit-log"><span>Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></span></Link>
+                           <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -534,7 +534,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter className="pt-4">
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                           <Link href="/assets?filter=rented_expiring"><span>Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></span></Link> {/* TODO: Implement filter */}
+                           <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* TODO: Implement filter */}
                          </Button>
                     </CardFooter>
                 </Card>
@@ -575,7 +575,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter className="pt-4">
                          <Button variant="outline" size="sm" className="w-full" asChild>
-                             <Link href="/assets?filter=lost"><span>Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></span></Link> {/* TODO: Implement filter */}
+                             <Link href="/assets?filter=lost">Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* TODO: Implement filter */}
                          </Button>
                     </CardFooter>
                 </Card>
@@ -619,8 +619,9 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
                  <CardFooter className="pt-4">
-                    <Button variant="outline" size="sm" className="w-full" asChild>
-                       <Link href="/inventory/scan"><span>Ver Relatório Completo <ArrowRight className="inline ml-1 h-4 w-4" /></span></Link> {/* Link to inventory report page eventually */}
+                    <Button variant="outline" size="sm" className="w-full">
+                       {/* Removed asChild because Button cannot have Link as direct child */}
+                       <Link href="/inventory/scan">Ver Relatório Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link> {/* Link to inventory report page eventually */}
                      </Button>
                 </CardFooter>
              </Card>
@@ -628,4 +629,3 @@ export default function DashboardPage() {
         </div>
     );
 }
-
