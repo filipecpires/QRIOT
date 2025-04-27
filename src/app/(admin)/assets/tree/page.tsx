@@ -127,10 +127,9 @@ interface TreeViewNodeProps {
     expandedNodes: Set<string>;
     onToggleExpand: (nodeId: string) => void;
     onDeleteNode: (nodeId: string, nodeType: NodeType) => void; // Callback to update state after deletion
-    isLast: boolean; // Flag to help with line drawing (optional)
 }
 
-const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes, onToggleExpand, onDeleteNode, isLast }) => {
+const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes, onToggleExpand, onDeleteNode }) => {
     const { toast } = useToast();
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const isExpanded = expandedNodes.has(node.id);
@@ -204,8 +203,8 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
     // Click anywhere on the node container to trigger the dropdown if it's an asset
     const NodeContainer = node.type === 'asset' ? DropdownMenuTrigger : 'div';
     const nodeContainerProps = node.type === 'asset'
-        ? { asChild: true, className: "cursor-pointer" } // Use asChild and add pointer cursor for assets
-        : { onClick: () => hasChildren && onToggleExpand(node.id), className: hasChildren ? "cursor-pointer" : "" }; // Keep expand/collapse for non-assets
+        ? { asChild: true, className: "cursor-pointer w-full block" } // Use asChild and add pointer cursor for assets, ensure it's a block element
+        : { onClick: () => hasChildren && onToggleExpand(node.id), className: cn("w-full", hasChildren ? "cursor-pointer" : "") }; // Keep expand/collapse for non-assets
 
 
     return (
@@ -218,8 +217,8 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                          // Removed text color class - handled by icons
                      )}
                      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
-                     // If it's not an asset but has children, allow click to expand/collapse
-                     onClick={node.type !== 'asset' && hasChildren ? () => onToggleExpand(node.id) : undefined}
+                      // REMOVED onClick handler here for assets to prevent conflict with DropdownMenuTrigger
+                      // onClick={node.type !== 'asset' && hasChildren ? () => onToggleExpand(node.id) : undefined}
                  >
                       {/* Toggle Button */}
                      <div className="w-4 flex-shrink-0">
@@ -323,7 +322,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                             expandedNodes={expandedNodes}
                             onToggleExpand={onToggleExpand}
                             onDeleteNode={onDeleteNode}
-                            isLast={index === node.rawChildren!.length - 1}
                         />
                     ))}
                 </ul>
@@ -474,7 +472,6 @@ export default function AssetTreePage() {
                     expandedNodes={expandedNodes}
                     onToggleExpand={handleToggleExpand}
                     onDeleteNode={handleDeleteNode}
-                    isLast={true}
                   />
                 </ul>
                 )}
@@ -504,4 +501,3 @@ export default function AssetTreePage() {
      </TooltipProvider>
   );
 }
-
