@@ -20,10 +20,11 @@ import {
   PieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
 } from 'recharts';
 import {
-    PlusCircle,
-    List,
+    Package,
     MapPin,
     Users,
     ScanLine,
@@ -32,10 +33,17 @@ import {
     AlertTriangle,
     CalendarClock,
     FileWarning,
-    Package
+    Activity,
+    TrendingUp,
+    TrendingDown,
+    PlusCircle,
+    ArrowRight, // Added ArrowRight
+    Building, // Added Building for Rented
+    Home // Added Home for Own
 } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'; // Import Chart components
 
 // --- Mock Data Structures ---
 interface AssetSummary {
@@ -47,14 +55,14 @@ interface AssetSummary {
   own: number;
 }
 
-interface CountByCategory {
-  name: string;
-  value: number;
+interface CountByLocation {
+    locationName: string;
+    count: number;
 }
 
-interface CountByStatus {
-    name: string;
-    value: number;
+interface AssetTimeSeries {
+    date: string; // e.g., "YYYY-MM-DD"
+    count: number;
 }
 
 interface RecentActivityLog {
@@ -63,6 +71,8 @@ interface RecentActivityLog {
   userName: string;
   action: string;
   entityName: string;
+  entityType: 'Asset' | 'Location' | 'User' | 'Characteristic' | 'Other'; // Added entityType
+  details?: string; // Optional details
 }
 
 interface ExpiringRental {
@@ -70,6 +80,7 @@ interface ExpiringRental {
     name: string;
     tag: string;
     rentalEndDate: Date;
+    rentalCompany: string; // Added rental company
 }
 
 interface LostAsset {
@@ -77,18 +88,20 @@ interface LostAsset {
      name: string;
      tag: string;
      lostDate: Date; // Assuming we track when it was marked lost
+     lastLocation?: string; // Added last known location
 }
 
 // --- Mock Fetch Functions ---
 async function fetchDashboardData(): Promise<{
     summary: AssetSummary;
-    byCategory: CountByCategory[];
-    byStatus: CountByStatus[];
+    byLocation: CountByLocation[];
+    assetHistory: AssetTimeSeries[];
     recentActivity: RecentActivityLog[];
     expiringRentals: ExpiringRental[];
     lostAssets: LostAsset[];
     locationCount: number;
     userCount: number;
+    inventoryProgress: number; // Percentage
 }> {
   await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate delay
 
@@ -101,55 +114,75 @@ async function fetchDashboardData(): Promise<{
     own: 1084,
   };
 
-  const byCategory: CountByCategory[] = [
-    { name: 'Eletrônicos', value: 600 },
-    { name: 'Mobiliário', value: 350 },
-    { name: 'Ferramentas', value: 150 },
-    { name: 'Veículos', value: 34 },
-    { name: 'Outros', value: 100 },
-  ];
+  const byLocation: CountByLocation[] = [
+    { locationName: 'Escritório 1', count: 150 },
+    { locationName: 'Escritório 2', count: 120 },
+    { locationName: 'Almoxarifado', count: 450 },
+    { locationName: 'Sala Reuniões', count: 75 },
+    { locationName: 'Sala Treinamento', count: 90 },
+    { locationName: 'Outros Locais', count: 349 }, // Group smaller locations
+  ].sort((a, b) => b.count - a.count).slice(0, 5); // Top 5 + Others
 
-  const byStatus: CountByStatus[] = [
-      { name: 'Ativo', value: summary.active },
-      { name: 'Inativo', value: summary.inactive },
-      { name: 'Perdido', value: summary.lost },
-    ];
+   const assetHistory: AssetTimeSeries[] = Array.from({ length: 30 }).map((_, i) => {
+       const date = subDays(new Date(), 29 - i);
+       const baseCount = 800 + i * 10;
+       const variation = Math.random() * 50 - 25; // Random +/- 25
+       return {
+           date: format(date, 'yyyy-MM-dd'),
+           count: Math.max(0, Math.round(baseCount + variation)), // Ensure count is not negative
+       };
+   });
+
 
   const recentActivity: RecentActivityLog[] = [
-    { id: 'log1', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), userName: 'João Silva', action: 'CREATE', entityName: 'Novo Monitor (TI-MN-006)' },
-    { id: 'log2', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), userName: 'Maria Oliveira', action: 'UPDATE', entityName: 'Notebook Dell (TI-NB-001)' },
-    { id: 'log3', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), userName: 'Carlos Pereira', action: 'MARK_LOST', entityName: 'Cadeira Escritório (MOB-CAD-012)' },
-     { id: 'log4', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), userName: 'João Silva', action: 'CREATE_USER', entityName: 'Ana Costa' },
-     { id: 'log5', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), userName: 'Maria Oliveira', action: 'UPDATE_LOCATION', entityName: 'Escritório 1' },
+    { id: 'log1', timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000), userName: 'João Silva', action: 'CREATE', entityType: 'Asset', entityName: 'Novo Monitor (TI-MN-006)', details: 'Adicionado ao Escritório 1' },
+    { id: 'log2', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), userName: 'Maria Oliveira', action: 'UPDATE', entityType: 'Asset', entityName: 'Notebook Dell (TI-NB-001)', details: 'Localização alterada para Sala Reuniões' },
+    { id: 'log3', timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), userName: 'Carlos Pereira', action: 'MARK_LOST', entityType: 'Asset', entityName: 'Cadeira Escritório (MOB-CAD-012)' },
+     { id: 'log4', timestamp: new Date(Date.now() - 8 * 60 * 60 * 1000), userName: 'João Silva', action: 'CREATE', entityType: 'User', entityName: 'Ana Costa' },
+     { id: 'log5', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000), userName: 'Maria Oliveira', action: 'UPDATE', entityType: 'Location', entityName: 'Escritório 1', details: 'Coordenadas GPS atualizadas' },
+      { id: 'log6', timestamp: new Date(Date.now() - 15 * 60 * 60 * 1000), userName: 'Carlos Pereira', action: 'INVENTORY', entityType: 'Asset', entityName: 'Projetor Epson (TI-PROJ-002)', details: `Inventário ${new Date().getFullYear()}` },
   ];
 
   const expiringRentals: ExpiringRental[] = [
-      { id: 'ASSET003', name: 'Cadeira Escritório', tag: 'MOB-CAD-012', rentalEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)}, // 15 days
-      { id: 'ASSETRENT01', name: 'Impressora HP Laser', tag: 'TI-IMP-001', rentalEndDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000)}, // 25 days
-      { id: 'ASSETRENT02', name: 'Servidor Dell R740', tag: 'SRV-DELL-01', rentalEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000)}, // 5 days
+      { id: 'ASSET003', name: 'Cadeira Escritório', tag: 'MOB-CAD-012', rentalEndDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), rentalCompany: 'LocaTudo'}, // 15 days
+      { id: 'ASSETRENT01', name: 'Impressora HP Laser', tag: 'TI-IMP-001', rentalEndDate: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000), rentalCompany: 'Print Fácil'}, // 25 days
+      { id: 'ASSETRENT02', name: 'Servidor Dell R740', tag: 'SRV-DELL-01', rentalEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), rentalCompany: 'ServerRent'}, // 5 days
+      { id: 'ASSETRENT03', name: 'Veículo Fiat Strada', tag: 'VEI-FIA-015', rentalEndDate: new Date(Date.now() + 40 * 24 * 60 * 60 * 1000), rentalCompany: 'Movida'}, // 40 days (won't show by default if limit is 30 days)
    ];
 
    const lostAssets: LostAsset[] = [
-        { id: 'ASSET003', name: 'Cadeira Escritório', tag: 'MOB-CAD-012', lostDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) },
-        { id: 'ASSETLOST01', name: 'Furadeira Bosch', tag: 'FER-FUR-005', lostDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000) },
+        { id: 'ASSET003', name: 'Cadeira Escritório', tag: 'MOB-CAD-012', lostDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), lastLocation: 'Sala Reuniões' },
+        { id: 'ASSETLOST01', name: 'Furadeira Bosch', tag: 'FER-FUR-005', lostDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), lastLocation: 'Oficina' },
     ];
 
   return {
     summary,
-    byCategory,
-    byStatus,
+    byLocation,
+    assetHistory,
     recentActivity,
-    expiringRentals,
+    expiringRentals: expiringRentals.filter(r => differenceInDays(r.rentalEndDate, new Date()) <= 30), // Filter for next 30 days
     lostAssets,
     locationCount: 56,
     userCount: 12,
+    inventoryProgress: 85, // Example progress
   };
 }
 
-
 // Chart Colors
-const COLORS_CATEGORY = ['#003049', '#d62828', '#f77f00', '#fcbf49', '#eae2b7']; // Example Colors
-const COLORS_STATUS = ['#22c55e', '#6b7280', '#ef4444']; // Green, Gray, Red
+const COLORS_LOCATION = ['#003049', '#d62828', '#f77f00', '#fcbf49', '#eae2b7', '#6b7280']; // Added gray for 'Others'
+
+// Action Descriptions and Icons
+const getActionDetails = (log: RecentActivityLog) => {
+    switch (log.action) {
+        case 'CREATE': return { icon: PlusCircle, text: `criou ${log.entityType.toLowerCase()} ${log.entityName}`, color: 'text-green-600' };
+        case 'UPDATE': return { icon: Activity, text: `atualizou ${log.entityType.toLowerCase()} ${log.entityName}`, color: 'text-blue-600' };
+        case 'DELETE': return { icon: FileWarning, text: `excluiu ${log.entityType.toLowerCase()} ${log.entityName}`, color: 'text-red-600' };
+        case 'MARK_LOST': return { icon: AlertTriangle, text: `marcou ${log.entityType.toLowerCase()} ${log.entityName} como perdido`, color: 'text-orange-600' };
+        case 'INVENTORY': return { icon: CheckSquare, text: `inventariou ${log.entityType.toLowerCase()} ${log.entityName}`, color: 'text-purple-600' };
+        default: return { icon: History, text: `${log.action.toLowerCase()} em ${log.entityName}`, color: 'text-muted-foreground' };
+    }
+};
+
 
 export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
@@ -178,18 +211,19 @@ export default function DashboardPage() {
             <div className="space-y-6">
                  <Skeleton className="h-8 w-32 mb-6" />
                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <Skeleton className="h-36" />
-                    <Skeleton className="h-36" />
-                    <Skeleton className="h-36" />
-                    <Skeleton className="h-36" />
+                    <Skeleton className="h-40" /> {/* Increased height */}
+                    <Skeleton className="h-40" />
+                    <Skeleton className="h-40" />
+                    <Skeleton className="h-40" />
                 </div>
                  <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                      <Skeleton className="h-80" />
                      <Skeleton className="h-80" />
                  </div>
-                 <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-                    <Skeleton className="h-64" />
-                    <Skeleton className="h-64" />
+                 <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-3"> {/* Changed to 3 cols */}
+                    <Skeleton className="h-72" />
+                    <Skeleton className="h-72" />
+                    <Skeleton className="h-72" />
                 </div>
             </div>
         );
@@ -207,12 +241,21 @@ export default function DashboardPage() {
         return null; // Or a different loading/empty state
     }
 
-    const { summary, byCategory, byStatus, recentActivity, expiringRentals, lostAssets, locationCount, userCount } = data;
+    const { summary, byLocation, assetHistory, recentActivity, expiringRentals, lostAssets, locationCount, userCount, inventoryProgress } = data;
+
+    const assetTrend = assetHistory.length > 1
+        ? assetHistory[assetHistory.length - 1].count - assetHistory[0].count
+        : 0;
+
+    // Chart config for time series
+    const chartConfig = {
+        count: { label: "Ativos", color: "hsl(var(--primary))" },
+    } satisfies ChartContainer["config"];
 
 
     return (
         <div className="space-y-8"> {/* Increased spacing */}
-          <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+          <h1 className="text-3xl font-bold mb-6">Dashboard Geral</h1>
           {/* Summary Cards */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
@@ -222,15 +265,27 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{summary.total.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">
-                  {summary.active} Ativos / {summary.lost} Perdidos / {summary.rented} Alugados
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                  {assetTrend >= 0 ? <TrendingUp className="h-4 w-4 text-green-500"/> : <TrendingDown className="h-4 w-4 text-red-500"/>}
+                  {assetTrend.toLocaleString()} nos últimos 30 dias
                 </p>
-                <Button asChild size="sm" variant="outline" className="mt-4">
-                  <Link href="/assets/new">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Novo Ativo
-                  </Link>
-                </Button>
+                 <div className="text-xs text-muted-foreground mt-2 space-x-2">
+                    <Badge variant="default" className="bg-green-500">{summary.active} Ativos</Badge>
+                    <Badge variant="destructive">{summary.lost} Perdidos</Badge>
+                    <Badge variant="secondary">{summary.inactive} Inativos</Badge>
+                 </div>
+                 <div className="text-xs text-muted-foreground mt-1 space-x-2">
+                     <Badge variant="outline" className="border-blue-500 text-blue-700">{summary.own} Próprios</Badge>
+                     <Badge variant="outline" className="border-orange-500 text-orange-700">{summary.rented} Alugados</Badge>
+                 </div>
               </CardContent>
+               <CardFooter className="pt-4">
+                    <Button size="sm" variant="outline" className="w-full" asChild>
+                      <Link href="/assets">
+                         Ver Todos Ativos <ArrowRight className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+               </CardFooter>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -239,13 +294,17 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{locationCount.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Locais físicos gerenciados</p>
-                <Button asChild size="sm" variant="outline" className="mt-4">
-                   <Link href="/locations/new">
-                     <PlusCircle className="mr-2 h-4 w-4" /> Novo Local
-                  </Link>
-                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Locais físicos gerenciados</p>
+                 {/* Placeholder for top location */}
+                 {byLocation.length > 0 && <p className="text-xs text-muted-foreground mt-1">Principal: {byLocation[0].locationName} ({byLocation[0].count} ativos)</p>}
               </CardContent>
+               <CardFooter className="pt-4">
+                   <Button size="sm" variant="outline" className="w-full" asChild>
+                     <Link href="/locations">
+                        Gerenciar Locais <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+               </CardFooter>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -254,30 +313,35 @@ export default function DashboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{userCount.toLocaleString()}</div>
-                <p className="text-xs text-muted-foreground">Usuários com acesso ao sistema</p>
-                <Button asChild size="sm" variant="outline" className="mt-4">
-                  <Link href="/users/new">
-                    <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
-                  </Link>
-                </Button>
+                <p className="text-xs text-muted-foreground mt-1">Usuários com acesso ao sistema</p>
+                {/* Placeholder for roles breakdown */}
+                {/* <p className="text-xs text-muted-foreground mt-1">2 Admins, 5 Gerentes...</p> */}
               </CardContent>
+               <CardFooter className="pt-4">
+                  <Button size="sm" variant="outline" className="w-full" asChild>
+                    <Link href="/users">
+                       Gerenciar Usuários <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+               </CardFooter>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Inventário Rápido</CardTitle>
+                <CardTitle className="text-sm font-medium">Progresso do Inventário ({new Date().getFullYear()})</CardTitle>
                 <ScanLine className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                 <p className="text-xs text-muted-foreground mb-2">Use o scan para inventário contínuo.</p>
-                 {/* Placeholder for inventory status */}
-                 {/* <div className="text-2xl font-bold">85%</div>
-                 <p className="text-xs text-muted-foreground">Concluído nos últimos 30 dias</p> */}
-                 <Button variant="default" size="sm" className="mt-4 w-full" asChild>
-                   <Link href="/inventory/scan">
-                     <CheckSquare className="mr-2 h-4 w-4" /> Iniciar Inventário por Scan
-                   </Link>
-                </Button>
+                 <div className="text-2xl font-bold">{inventoryProgress}%</div>
+                 <p className="text-xs text-muted-foreground mt-1">Percentual de ativos inventariados este ano.</p>
+                 {/* Add progress bar? */}
               </CardContent>
+                <CardFooter className="pt-4">
+                    <Button variant="default" size="sm" className="w-full" asChild>
+                      <Link href="/inventory/scan">
+                        <CheckSquare className="mr-2 h-4 w-4" /> Iniciar Inventário por Scan
+                      </Link>
+                   </Button>
+               </CardFooter>
             </Card>
           </div>
 
@@ -285,48 +349,42 @@ export default function DashboardPage() {
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Ativos por Categoria</CardTitle>
-                         <CardDescription>Distribuição dos ativos pelas categorias cadastradas.</CardDescription>
+                        <CardTitle>Histórico de Ativos (Últimos 30 dias)</CardTitle>
+                         <CardDescription>Total de ativos registrados ao longo do tempo.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie
-                                    data={byCategory}
-                                    cx="50%"
-                                    cy="50%"
-                                    labelLine={false}
-                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                                    outerRadius={80}
-                                    fill="#8884d8"
-                                    dataKey="value"
-                                >
-                                    {byCategory.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS_CATEGORY[index % COLORS_CATEGORY.length]} />
-                                    ))}
-                                </Pie>
-                                <Tooltip formatter={(value: number) => value.toLocaleString()}/>
-                                <Legend />
-                            </PieChart>
-                        </ResponsiveContainer>
+                         <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
+                             <LineChart accessibilityLayer data={assetHistory} margin={{ left: 12, right: 12, top: 10, bottom: 10 }}>
+                                <CartesianGrid vertical={false} />
+                                <XAxis
+                                    dataKey="date"
+                                    tickLine={false}
+                                    axisLine={false}
+                                    tickMargin={8}
+                                    tickFormatter={(value) => format(new Date(value), 'dd/MM')}
+                                />
+                                <YAxis tickLine={false} axisLine={false} tickMargin={8} />
+                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                <Line dataKey="count" type="monotone" stroke="var(--color-count)" strokeWidth={2} dot={false} />
+                            </LineChart>
+                        </ChartContainer>
                     </CardContent>
                 </Card>
                 <Card>
                     <CardHeader>
-                        <CardTitle>Ativos por Status</CardTitle>
-                         <CardDescription>Distribuição dos ativos por status atual.</CardDescription>
+                        <CardTitle>Top 5 Locais por Quantidade de Ativos</CardTitle>
+                         <CardDescription>Distribuição dos ativos pelos principais locais.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                             <BarChart data={byStatus} layout="vertical" margin={{ right: 30 }}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis type="number" />
-                                <YAxis dataKey="name" type="category" width={80}/>
-                                <Tooltip formatter={(value: number) => value.toLocaleString()}/>
-                                {/* <Legend /> */}
-                                 <Bar dataKey="value" name="Quantidade" barSize={40}>
-                                     {byStatus.map((entry, index) => (
-                                        <Cell cursor="pointer" fill={COLORS_STATUS[index % COLORS_STATUS.length]} key={`cell-${index}`} />
+                        <ResponsiveContainer width="100%" height={250}>
+                             <BarChart data={byLocation} layout="vertical" margin={{ right: 30 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={false}/>
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="locationName" type="category" width={120} tick={{fontSize: 12}}/>
+                                <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
+                                 <Bar dataKey="count" name="Quantidade" layout="vertical" radius={4}>
+                                     {byLocation.map((entry, index) => (
+                                        <Cell cursor="pointer" fill={COLORS_LOCATION[index % COLORS_LOCATION.length]} key={`cell-${index}`} />
                                      ))}
                                  </Bar>
                             </BarChart>
@@ -340,37 +398,43 @@ export default function DashboardPage() {
                 <Card className="lg:col-span-1">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
-                       <CardDescription>Últimas ações realizadas no sistema.</CardDescription>
+                       <CardDescription>Últimas 5 ações realizadas no sistema.</CardDescription>
                    </CardHeader>
                    <CardContent>
                       {recentActivity.length > 0 ? (
                         <ul className="space-y-3 text-sm">
-                          {recentActivity.map(log => (
-                             <li key={log.id} className="flex justify-between items-center">
-                                <div>
-                                    <span className="font-medium">{log.userName}</span>{' '}
-                                    <span className="text-muted-foreground">{log.action.toLowerCase()}</span>{' '}
-                                    <span className="font-medium truncate" title={log.entityName}>{log.entityName}</span>
-                                </div>
-                                <span className="text-xs text-muted-foreground whitespace-nowrap ml-2" title={format(log.timestamp, "Pp", { locale: ptBR })}>
-                                     {format(log.timestamp, "HH:mm", { locale: ptBR })}
-                                </span>
-                            </li>
-                          ))}
+                          {recentActivity.slice(0, 5).map(log => {
+                             const actionInfo = getActionDetails(log);
+                             return (
+                                <li key={log.id} className="flex items-start gap-3">
+                                     <actionInfo.icon className={`mt-1 h-4 w-4 flex-shrink-0 ${actionInfo.color}`} />
+                                    <div>
+                                        <span className="font-medium">{log.userName}</span>{' '}
+                                        <span className={actionInfo.color}>{actionInfo.text}</span>
+                                        {log.details && <p className="text-xs text-muted-foreground italic">Detalhe: {log.details}</p>}
+                                        <p className="text-xs text-muted-foreground" title={format(log.timestamp, "Pp", { locale: ptBR })}>
+                                            {format(log.timestamp, "dd/MM HH:mm", { locale: ptBR })}
+                                        </p>
+                                    </div>
+                                </li>
+                             )
+                          })}
                         </ul>
                       ) : (
-                          <p className="text-muted-foreground text-center">Nenhuma atividade recente.</p>
+                          <p className="text-muted-foreground text-center py-4">Nenhuma atividade recente.</p>
                       )}
-                         <Button variant="link" size="sm" asChild className="mt-4 px-0">
-                             <Link href="/audit-log">Ver Log Completo</Link>
-                         </Button>
                    </CardContent>
+                    <CardFooter>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                             <Link href="/audit-log">Ver Log Completo</Link>
+                        </Button>
+                    </CardFooter>
                 </Card>
 
                  <Card className="lg:col-span-1">
                    <CardHeader>
-                       <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo</CardTitle>
-                       <CardDescription>Ativos alugados com término próximo (30 dias).</CardDescription>
+                       <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo (30 dias)</CardTitle>
+                       <CardDescription>Ativos alugados com término de contrato próximo.</CardDescription>
                    </CardHeader>
                    <CardContent>
                       {expiringRentals.length > 0 ? (
@@ -378,41 +442,47 @@ export default function DashboardPage() {
                            <TableHeader>
                              <TableRow>
                                <TableHead>Ativo</TableHead>
-                               <TableHead>Vencimento</TableHead>
+                               <TableHead className="text-right">Vencimento</TableHead>
                              </TableRow>
                            </TableHeader>
                            <TableBody>
                              {expiringRentals
                                 .sort((a,b) => a.rentalEndDate.getTime() - b.rentalEndDate.getTime()) // Sort by closest expiration
                                 .slice(0, 5) // Show top 5
-                                .map(rental => (
-                               <TableRow key={rental.id}>
-                                 <TableCell className="p-2">
-                                     <Link href={`/assets/${rental.id}/edit`} className="font-medium hover:underline truncate block" title={`${rental.name} (${rental.tag})`}>
-                                        {rental.name}
-                                     </Link>
-                                     <span className="text-xs text-muted-foreground">{rental.tag}</span>
-                                 </TableCell>
-                                 <TableCell className="p-2 text-xs text-right">
-                                    {format(rental.rentalEndDate, "dd/MM/yy", { locale: ptBR })}
-                                </TableCell>
-                               </TableRow>
-                             ))}
+                                .map(rental => {
+                                    const daysLeft = differenceInDays(rental.rentalEndDate, new Date());
+                                    const isUrgent = daysLeft <= 7;
+                                    return (
+                                        <TableRow key={rental.id}>
+                                          <TableCell className="p-2">
+                                              <Link href={`/assets/${rental.id}/edit`} className="font-medium hover:underline truncate block" title={`${rental.name} (${rental.tag})`}>
+                                                 {rental.name}
+                                              </Link>
+                                              <span className="text-xs text-muted-foreground flex items-center gap-1"><Building className="h-3 w-3"/>{rental.rentalCompany}</span>
+                                          </TableCell>
+                                          <TableCell className={`p-2 text-xs text-right font-medium ${isUrgent ? 'text-red-600' : ''}`}>
+                                             {format(rental.rentalEndDate, "dd/MM/yy", { locale: ptBR })} ({daysLeft}d)
+                                         </TableCell>
+                                        </TableRow>
+                                     )
+                                 })}
                            </TableBody>
                          </Table>
                       ) : (
-                          <p className="text-muted-foreground text-center">Nenhuma locação vencendo em breve.</p>
+                          <p className="text-muted-foreground text-center py-4">Nenhuma locação vencendo nos próximos 30 dias.</p>
                       )}
-                         <Button variant="link" size="sm" asChild className="mt-4 px-0">
-                             <Link href="/assets?filter=rented_expiring">Ver Todas</Link> {/* TODO: Implement filter */}
-                         </Button>
                    </CardContent>
+                    <CardFooter>
+                        <Button variant="outline" size="sm" className="w-full" asChild>
+                             <Link href="/assets?filter=rented_expiring">Ver Todas Locações</Link> {/* TODO: Implement filter */}
+                         </Button>
+                    </CardFooter>
                 </Card>
 
                  <Card className="border-destructive lg:col-span-1">
                    <CardHeader>
-                       <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Perdidos</CardTitle>
-                       <CardDescription>Ativos marcados como perdidos recentemente.</CardDescription>
+                       <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Marcados como Perdidos</CardTitle>
+                       <CardDescription>Ativos que foram recentemente marcados como perdidos.</CardDescription>
                    </CardHeader>
                    <CardContent>
                       {lostAssets.length > 0 ? (
@@ -420,7 +490,7 @@ export default function DashboardPage() {
                             <TableHeader>
                              <TableRow>
                                <TableHead>Ativo</TableHead>
-                               <TableHead>Marcado em</TableHead>
+                               <TableHead className="text-right">Marcado em</TableHead>
                              </TableRow>
                            </TableHeader>
                             <TableBody>
@@ -430,7 +500,7 @@ export default function DashboardPage() {
                                      <Link href={`/assets/${asset.id}/edit`} className="font-medium hover:underline truncate block" title={`${asset.name} (${asset.tag})`}>
                                         {asset.name}
                                      </Link>
-                                     <span className="text-xs text-muted-foreground">{asset.tag}</span>
+                                     {asset.lastLocation && <span className="text-xs text-muted-foreground flex items-center gap-1"><MapPin className="h-3 w-3"/>{asset.lastLocation}</span>}
                                  </TableCell>
                                  <TableCell className="p-2 text-xs text-right">
                                     {format(asset.lostDate, "dd/MM/yy", { locale: ptBR })}
@@ -440,16 +510,16 @@ export default function DashboardPage() {
                            </TableBody>
                          </Table>
                       ) : (
-                           <p className="text-muted-foreground text-center">Nenhum ativo marcado como perdido.</p>
+                           <p className="text-muted-foreground text-center py-4">Nenhum ativo marcado como perdido.</p>
                       )}
-                         <Button variant="link" size="sm" asChild className="mt-4 px-0">
-                             <Link href="/assets?filter=lost">Ver Todos</Link> {/* TODO: Implement filter */}
-                         </Button>
                    </CardContent>
+                    <CardFooter>
+                         <Button variant="outline" size="sm" className="w-full" asChild>
+                             <Link href="/assets?filter=lost">Ver Todos Perdidos</Link> {/* TODO: Implement filter */}
+                         </Button>
+                    </CardFooter>
                 </Card>
             </div>
         </div>
     );
 }
-
-    
