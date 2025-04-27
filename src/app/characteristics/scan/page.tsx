@@ -31,7 +31,7 @@ interface AppliedCharacteristic {
 interface NewCharacteristicCategory {
     id: string; // Temporary ID for state management
     key: string; // The name of the new characteristic category
-    description?: string; // Optional description
+    // description?: string; // REMOVED: Optional description
     defaultValue?: string | number | boolean | Date; // Optional default value
     valueType: 'text' | 'number' | 'boolean' | 'date'; // Type for potential default value input
 }
@@ -197,7 +197,7 @@ export default function CharacteristicScanPage() {
     const addNewCategory = () => {
         setNewCategories(prev => [
             ...prev,
-            { id: `new-${Date.now()}`, key: '', valueType: 'text', defaultValue: '', description: '' }
+            { id: `new-${Date.now()}`, key: '', valueType: 'text', defaultValue: '' } // Removed description
         ]);
     };
 
@@ -291,8 +291,6 @@ export default function CharacteristicScanPage() {
         const characteristicsFromNew = newCategories.map(cat => ({
             key: cat.key,
             value: cat.defaultValue ?? (cat.valueType === 'boolean' ? false : ''), // Use default value if provided
-            // Note: Description might need to be handled differently, maybe added to asset notes or a separate characteristic?
-            // For now, we primarily focus on applying the key/value pair.
         }));
 
         const allCharacteristicsToApply = [...characteristicsFromTemplates, ...characteristicsFromNew];
@@ -413,7 +411,8 @@ export default function CharacteristicScanPage() {
                                              onChange={(e) => handleNewCategoryChange(cat.id, 'key', e.target.value)}
                                           />
                                     </div>
-                                    <div className="flex-1 space-y-1">
+                                    {/* REMOVED: Description input field */}
+                                    {/* <div className="flex-1 space-y-1">
                                         <Label htmlFor={`new-cat-desc-${cat.id}`} className="text-xs">Descrição (Opcional)</Label>
                                         <Input
                                             id={`new-cat-desc-${cat.id}`}
@@ -421,7 +420,7 @@ export default function CharacteristicScanPage() {
                                             value={cat.description || ''}
                                             onChange={(e) => handleNewCategoryChange(cat.id, 'description', e.target.value)}
                                          />
-                                    </div>
+                                    </div> */}
                                      <div className="w-32 space-y-1">
                                          <Label htmlFor={`new-cat-valtype-${cat.id}`} className="text-xs">Tipo Valor</Label>
                                          <Select
