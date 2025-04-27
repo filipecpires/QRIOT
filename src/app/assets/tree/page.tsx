@@ -14,6 +14,7 @@ import ReactFlow, {
   Connection,
   MarkerType,
   Position, // Import Position for handle placement
+  Handle, // Import Handle explicitly
 } from 'reactflow';
 
 import 'reactflow/dist/style.css'; // Ensure styles are imported
@@ -138,7 +139,7 @@ const CustomNode: React.FC<{ data: TreeNode }> = ({ data }) => {
       )}
       >
        {/* Input handle (target) - always on top */}
-        <ReactFlow.Handle type="target" position={Position.Top} className="!bg-primary" />
+        <Handle type="target" position={Position.Top} className="!bg-primary" />
 
         {getNodeIcon()}
         <div className="flex-grow">
@@ -149,7 +150,7 @@ const CustomNode: React.FC<{ data: TreeNode }> = ({ data }) => {
         {getStatusBadge()}
 
         {/* Output handle (source) - always on bottom */}
-        <ReactFlow.Handle type="source" position={Position.Bottom} className="!bg-primary" />
+        <Handle type="source" position={Position.Bottom} className="!bg-primary" />
     </div>
   );
 };
