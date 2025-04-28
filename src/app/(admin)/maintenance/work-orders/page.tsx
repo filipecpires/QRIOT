@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, AlertTriangle } from 'lucide-react'; // Added more icons
+import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, AlertTriangle, XCircle } from 'lucide-react'; // Added XCircle
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -110,7 +110,7 @@ const getStatusBadgeVariant = (status: WorkOrderStatus): { variant: "default" | 
         case 'Open': return { variant: 'default', icon: AlertCircle, color: 'bg-blue-500 hover:bg-blue-600 text-white' };
         case 'In Progress': return { variant: 'secondary', icon: Hourglass, color: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
         case 'Completed': return { variant: 'default', icon: Check, color: 'bg-green-600 hover:bg-green-700 text-white' };
-        case 'Cancelled': return { variant: 'outline', icon: XCircle };
+        case 'Cancelled': return { variant: 'outline', icon: XCircle }; // Use imported XCircle
         default: return { variant: 'outline' };
     }
 };
@@ -391,3 +391,4 @@ export default function WorkOrdersPage() {
         </div>
     );
 }
+
