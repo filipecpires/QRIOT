@@ -17,14 +17,12 @@ export default function LandingPage() {
                         <QrCode className="h-6 w-6" />
                         QRIoT.app
                     </Link>
-                    <nav className="flex items-center gap-4">
-                        {/* <Link href="#features" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Recursos</Link> */}
-                        {/* <Link href="#pricing" className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary">Planos</Link> */}
-                         <Button size="sm" asChild>
+                    {/* Removed "Acessar Sistema" button from header nav */}
+                    {/* <nav className="flex items-center gap-4">
+                        <Button size="sm" asChild>
                             <Link href="/dashboard">Acessar Sistema</Link>
                          </Button>
-                         {/* <Button size="sm" variant="outline">Solicitar Demo</Button> */}
-                    </nav>
+                    </nav> */}
                 </div>
             </header>
 
@@ -38,14 +36,16 @@ export default function LandingPage() {
                  </p>
                  <div className="flex gap-4">
                     <Button size="lg" asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
-                        <Link href="#contact">Solicitar Demonstração</Link>
+                        <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app">
+                             {/* Wrap text in a single element */}
+                            <span>Solicitar Demonstração</span>
+                        </Link>
                     </Button>
-                     <Button size="lg" variant="outline" asChild>
+                    {/* Removed "Acessar Sistema" button from hero */}
+                    {/* <Button size="lg" variant="outline" asChild>
                         <Link href="/dashboard">Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                    </Button>
+                    </Button> */}
                  </div>
-                 {/* Optional: Add an illustrative image/screenshot */}
-                 {/* <Image src="/placeholder-hero.svg" alt="QRIoT.app Illustration" width={600} height={400} className="mt-8 rounded-lg shadow-lg"/> */}
                   <div className="mt-8 h-64 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground">
                     [ Placeholder para Imagem/Vídeo Ilustrativo ]
                   </div>
@@ -144,8 +144,11 @@ export default function LandingPage() {
                         Solicite uma demonstração personalizada e veja como o QRIoT.app pode transformar o controle do seu patrimônio.
                     </p>
                     <Button size="lg" variant="secondary" asChild>
-                        <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app"> {/* Updated email */}
-                            <Phone className="mr-2 h-5 w-5" /> Quero uma Demonstração
+                        <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app">
+                            {/* Wrap icon and text in a single element */}
+                            <span>
+                                <Phone className="mr-2 h-5 w-5" /> Quero uma Demonstração
+                            </span>
                         </Link>
                     </Button>
                 </div>
