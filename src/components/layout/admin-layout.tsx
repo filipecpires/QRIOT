@@ -3,10 +3,10 @@
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown } from 'lucide-react'; // Added PanelLeft, UserCircle, ChevronDown
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase } from 'lucide-react'; // Added Briefcase for Admin
 import Link from 'next/link';
-import { Button } from '@/components/ui/button'; // Import Button for the trigger
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"; // Import Avatar
+import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,9 +14,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet" // Sheet is needed for mobile
-import * as VisuallyHidden from "@radix-ui/react-visually-hidden"; // Import VisuallyHidden
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -32,6 +32,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     const userName = "João Silva";
     const userEmail = "joao.silva@example.com";
     const userAvatar = `https://i.pravatar.cc/40?u=${userEmail}`; // Placeholder avatar
+    const userRole = "Administrador"; // Mock role
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -100,15 +101,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             {/* Users */}
-            <SidebarMenuItem>
+             {/* Users - REMOVED */}
+            {/* <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Usuários">
                 <Link href="/users">
                   <Users />
                   <span className="group-data-[collapsible=icon]:hidden">Usuários</span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem>
+            </SidebarMenuItem> */}
             {/* Print Labels */}
              <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
@@ -127,19 +128,8 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarContent>
-        {/* Footer section removed and links moved to top user dropdown */}
-         {/* <SidebarFooter>
-           <SidebarMenu className="group-data-[collapsible=icon]:p-0">
-             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Licença">
-                <Link href="/licensing">
-                  <FileText />
-                  <span className="group-data-[collapsible=icon]:hidden">Licença</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+
+            {/* Settings (General) */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Configurações">
                 <Link href="/settings">
@@ -148,16 +138,23 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Sair">
-                <Link href="/logout">
-                  <LogOut />
-                  <span className="group-data-[collapsible=icon]:hidden">Sair</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+
+             {/* Admin Section (Conditional) */}
+             {/* TODO: Replace 'Administrador' with actual role check */}
+            {userRole === 'Administrador' && (
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Administração">
+                        <Link href="/settings/admin">
+                            <Briefcase />
+                             <span className="group-data-[collapsible=icon]:hidden">Administração</span>
+                        </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+            )}
           </SidebarMenu>
-        </SidebarFooter> */}
+        </SidebarContent>
+         {/* Footer is empty, links moved to top dropdown */}
+         <SidebarFooter />
       </Sidebar>
 
       {/* Main content area that adjusts based on sidebar state */}
@@ -166,7 +163,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30"> {/* Added sticky */}
           {/* Sidebar Trigger Button - Visible on all screen sizes */}
           <SidebarTrigger asChild>
-              {/* No need for Button asChild={true} here, just pass children */}
                <Button variant="ghost" size="icon" className="h-8 w-8">
                  <PanelLeft />
                  <span className="sr-only">Toggle Sidebar</span>
@@ -214,6 +210,15 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
+                {/* Add Admin link conditionally */}
+                 {userRole === 'Administrador' && (
+                     <DropdownMenuItem asChild>
+                         <Link href="/settings/admin">
+                             <Briefcase className="mr-2 h-4 w-4" />
+                             <span>Administração</span>
+                        </Link>
+                     </DropdownMenuItem>
+                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                    <Link href="/logout">

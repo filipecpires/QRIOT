@@ -34,7 +34,7 @@ import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
-// Mock data - replace with actual data fetching later
+// Mock data - replace with actual data fetching later (filtered by company)
 const initialUsers = [
   { id: 'user1', name: 'João Silva', email: 'joao.silva@example.com', role: 'Administrador', managerId: null, managerName: null, status: 'active', createdAt: new Date(2023, 10, 1) },
   { id: 'user2', name: 'Maria Oliveira', email: 'maria.oliveira@example.com', role: 'Gerente', managerId: 'user1', managerName: 'João Silva', status: 'active', createdAt: new Date(2023, 10, 5) },
@@ -65,15 +65,34 @@ function getInitials(name: string): string {
 
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
 
-export default function UsersPage() {
+export default function AdminUsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>(initialUsers);
+  const [users, setUsers] = useState<User[]>([]); // Initialize empty, fetch later
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('__all__'); // Default to __all__
   const [statusFilter, setStatusFilter] = useState('__all__'); // Default to __all__
-  // Add pagination state later
+  // TODO: Add pagination state
   // const [currentPage, setCurrentPage] = useState(1);
   // const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // TODO: Assume companyId is available from context or props
+  const companyId = 'COMPANY_XYZ';
+
+  // Fetch users for the specific company
+  useEffect(() => {
+    const fetchCompanyUsers = async (companyId: string) => {
+      setLoading(true);
+      console.log("Fetching users for company:", companyId);
+      // Replace with actual API call to fetch users filtered by companyId
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Filter mock data for demo purposes
+      const companyUsers = initialUsers; // In real app, this would be the API response
+      setUsers(companyUsers);
+      setLoading(false);
+    };
+    fetchCompanyUsers(companyId);
+  }, [companyId]);
 
   const filteredUsers = users.filter(user => {
     const searchMatch = searchTerm === '' ||
@@ -88,7 +107,7 @@ export default function UsersPage() {
   // const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const toggleUserStatus = (userId: string) => {
-    // TODO: Implement actual API call based on logged-in user permissions
+    // TODO: Implement actual API call based on logged-in user permissions and company context
     const userToToggle = users.find(u => u.id === userId);
     if (!userToToggle) return;
 
@@ -113,7 +132,7 @@ export default function UsersPage() {
   };
 
   const deleteUser = (userId: string) => {
-     // TODO: Implement actual API call based on logged-in user permissions
+     // TODO: Implement actual API call based on logged-in user permissions and company context
     const userToDelete = users.find(u => u.id === userId);
     if (!userToDelete) return;
 
@@ -160,9 +179,10 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Gerenciar Usuários</h1>
+        <h1 className="text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
         <Button asChild>
-          <Link href="/users/new">
+          {/* Ensure the 'new' link points to the correct admin path */}
+          <Link href="/settings/admin/users/new">
             <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
           </Link>
         </Button>
@@ -171,7 +191,7 @@ export default function UsersPage() {
       <Card>
         <CardHeader>
           <CardTitle>Lista de Usuários</CardTitle>
-          <CardDescription>Visualize e gerencie todos os usuários do sistema.</CardDescription>
+          <CardDescription>Visualize e gerencie todos os usuários vinculados a esta empresa.</CardDescription>
           <div className="pt-4 flex flex-col md:flex-row gap-2">
             <Input
               placeholder="Buscar por nome ou email..."
@@ -215,7 +235,18 @@ export default function UsersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.map((user) => (
+             {loading && Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={`skel-${i}`}>
+                    <TableCell><div className="flex items-center gap-3"><Avatar className="h-8 w-8 bg-muted" /><div className="h-4 w-24 bg-muted rounded"></div></div></TableCell>
+                    <TableCell><div className="h-4 w-40 bg-muted rounded"></div></TableCell>
+                    <TableCell><div className="h-4 w-20 bg-muted rounded"></div></TableCell>
+                    <TableCell><div className="h-4 w-24 bg-muted rounded"></div></TableCell>
+                    <TableCell><div className="h-4 w-16 bg-muted rounded"></div></TableCell>
+                    <TableCell><div className="h-4 w-20 bg-muted rounded"></div></TableCell>
+                    <TableCell className="text-right"><div className="h-8 w-8 bg-muted rounded"></div></TableCell>
+                </TableRow>
+             ))}
+              {!loading && filteredUsers.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell className="font-medium flex items-center gap-3">
                     <Avatar className="h-8 w-8">
@@ -253,7 +284,8 @@ export default function UsersPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Ações</DropdownMenuLabel>
                         <DropdownMenuItem asChild>
-                           <Link href={`/users/${user.id}/edit`}>
+                          {/* Ensure the 'edit' link points to the correct admin path */}
+                           <Link href={`/settings/admin/users/${user.id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" /> Editar
                           </Link>
                         </DropdownMenuItem>
@@ -301,10 +333,10 @@ export default function UsersPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {filteredUsers.length === 0 && (
+              {!loading && filteredUsers.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
-                    Nenhum usuário encontrado.
+                    Nenhum usuário encontrado para esta empresa.
                   </TableCell>
                 </TableRow>
               )}
@@ -326,4 +358,3 @@ export default function UsersPage() {
   );
 }
 
-    

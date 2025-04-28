@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Trash2, KeyRound } from 'lucide-react'; // Removed UserCog, UserCheck etc. Added KeyRound
+import { ArrowLeft, Save, Loader2, Trash2, KeyRound } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -44,49 +44,29 @@ type UserEditFormData = z.infer<typeof userEditSchema>;
 
 // Mock data - replace with actual data fetching later
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
-const initialManagers = [ // Should exclude the current user being edited
+const initialManagers = [ // Should exclude the current user being edited and be filtered by company
   { id: 'user1', name: 'João Silva (Admin)' },
   { id: 'user2', name: 'Maria Oliveira (Gerente)' },
 ];
 
 // Mock function to fetch user data by ID (excluding password)
-async function fetchUserData(id: string): Promise<Omit<UserEditFormData, 'password'> | null> {
-    console.log(`Fetching user with ID: ${id}`);
+async function fetchUserData(id: string, companyId: string): Promise<Omit<UserEditFormData, 'password'> | null> {
+    console.log(`Fetching user with ID: ${id} for company: ${companyId}`);
     await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate delay
-    if (id === 'user3') {
-        return {
-            name: 'Carlos Pereira',
-            email: 'carlos.pereira@example.com',
-            role: 'Técnico',
-            managerId: 'user2', // Maria Oliveira
-            isActive: true,
-        };
-    } else if (id === 'user4') {
-         return {
-            name: 'Ana Costa',
-            email: 'ana.costa@example.com',
-            role: 'Inventariante',
-            managerId: 'user2', // Maria Oliveira
-            isActive: false, // Example inactive user
-        };
-    } else if (id === 'user1') { // Add Admin user
-         return {
-            name: 'João Silva',
-            email: 'joao.silva@example.com',
-            role: 'Administrador',
-            managerId: undefined,
-            isActive: true,
-        };
-    } else if (id === 'user2') { // Add Manager user
-        return {
-            name: 'Maria Oliveira',
-            email: 'maria.oliveira@example.com',
-            role: 'Gerente',
-            managerId: 'user1',
-            isActive: true,
-        };
-    }
-    return null; // Not found
+
+    // Filter mock data by companyId (example)
+    const companyUsers = initialUsers.filter(u => u.id !== 'other-company-user'); // Placeholder filtering
+
+    const user = companyUsers.find(u => u.id === id);
+    if (!user) return null;
+
+    return {
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        managerId: user.managerId || undefined, // Return undefined if null
+        isActive: user.status === 'active',
+    };
 }
 
 function getInitials(name: string): string {
@@ -98,7 +78,7 @@ function getInitials(name: string): string {
 }
 
 
-export default function EditUserPage() {
+export default function AdminEditUserPage() {
   const router = useRouter();
   const params = useParams();
   const userId = params.id as string;
@@ -112,6 +92,7 @@ export default function EditUserPage() {
   // Placeholder for logged-in user's info (replace with actual auth context)
   const loggedInUserId = 'user1'; // Example: assume admin is logged in
   const loggedInUserRole = 'Administrador'; // Example: assume admin is logged in
+  const companyId = 'COMPANY_XYZ'; // Assume this is obtained from user context
 
   const form = useForm<UserEditFormData>({
     resolver: zodResolver(userEditSchema),
@@ -126,12 +107,13 @@ export default function EditUserPage() {
   });
 
  useEffect(() => {
-        // Fetch managers list (excluding the user being edited)
+        // Fetch managers list (excluding the user being edited and filtered by company)
        const fetchManagers = async () => {
            setIsLoadingManagers(true);
-           // TODO: Replace with actual API call
+           console.log("Fetching managers for company:", companyId);
+           // TODO: Replace with actual API call to fetch Admin/Manager users for this company
            await new Promise(resolve => setTimeout(resolve, 500));
-           setManagers(initialManagers.filter(m => m.id !== userId));
+           setManagers(initialManagers.filter(m => m.id !== userId)); // Filter out self
            setIsLoadingManagers(false);
        };
 
@@ -140,7 +122,7 @@ export default function EditUserPage() {
         if (userId) {
             const loadData = async () => {
                 setIsDataLoading(true);
-                const data = await fetchUserData(userId);
+                const data = await fetchUserData(userId, companyId);
                  if (data) {
                      setUserData(data);
                      form.reset({ // Reset form excluding password
@@ -152,56 +134,57 @@ export default function EditUserPage() {
                          // password: '', // Ensure password is empty
                      });
                  } else {
-                     toast({ title: "Erro", description: "Usuário não encontrado.", variant: "destructive" });
-                     router.replace('/users'); // Redirect if not found
+                     toast({ title: "Erro", description: "Usuário não encontrado ou não pertence a esta empresa.", variant: "destructive" });
+                     router.replace('/settings/admin/users'); // Redirect if not found
                  }
                 setIsDataLoading(false);
             };
             loadData();
         }
-   }, [userId, form, router, toast]);
+   }, [userId, form, router, toast, companyId]);
 
 
-  // Check if the logged-in user can edit the target user based on roles/hierarchy
+  // Check if the logged-in user can edit the target user based on roles/hierarchy within the company
   const canEdit = () => {
       if (!userData) return false;
-      if (loggedInUserRole === 'Administrador') return true;
+      // TODO: Implement proper permission check based on company roles and hierarchy
+      if (loggedInUserRole === 'Administrador') return true; // Admin can edit anyone in their company
       if (loggedInUserRole === 'Gerente') {
-         // TODO: Implement logic to check if target user is a subordinate of the logged-in manager
+         // Check if target user is a subordinate of the logged-in manager (within the same company)
          // For now, let's assume managers can edit anyone except Admins (placeholder)
          return userData.role !== 'Administrador';
       }
       return false; // Technicians/Inventors cannot edit
   };
 
-   // Check if logged-in user can delete the target user
+   // Check if logged-in user can delete the target user within the company
     const canDelete = () => {
         if (!userData) return false;
-        // Only Admins can delete, and not themselves or other Admins
+        // Only Admins can delete, and not themselves or other Admins in the same company
         return loggedInUserRole === 'Administrador' && userData.id !== loggedInUserId && userData.role !== 'Administrador';
     };
 
-    // Check if logged-in user can toggle activation status
+    // Check if logged-in user can toggle activation status within the company
     const canToggleStatus = () => {
         if (!userData) return false;
         // Admins can toggle anyone except themselves
         if (loggedInUserRole === 'Administrador') return userData.id !== loggedInUserId;
-        // Managers can toggle their subordinates (placeholder logic)
+        // Managers can toggle their subordinates (placeholder logic for company)
         if (loggedInUserRole === 'Gerente') {
-            // TODO: Check if target user is subordinate
+            // TODO: Check if target user is subordinate within the same company
             return userData.role !== 'Administrador'; // Example: Manager cannot deactivate Admin
         }
         return false;
     };
 
-    // Check if logged-in user can reset password
+    // Check if logged-in user can reset password within the company
     const canResetPassword = () => {
         if (!userData) return false;
-        // Admins can reset anyone except themselves? (Decide policy)
-        if (loggedInUserRole === 'Administrador') return true; // Admins can reset anyone
-        // Managers can reset subordinates (placeholder logic)
+        // Admins can reset anyone in their company
+        if (loggedInUserRole === 'Administrador') return true;
+        // Managers can reset subordinates (placeholder logic for company)
         if (loggedInUserRole === 'Gerente') {
-             // TODO: Check if target user is subordinate
+             // TODO: Check if target user is subordinate within the same company
              return userData.role !== 'Administrador'; // Example: Manager cannot reset Admin
         }
         return false;
@@ -215,12 +198,13 @@ export default function EditUserPage() {
       }
 
     setIsLoading(true);
-    console.log('Updating user data:', data);
+    console.log('Updating user data:', data, 'for company:', companyId);
 
     // Prepare data: map '__none__' to undefined
     const dataToSave = {
         ...data,
         managerId: data.managerId === '__none__' ? undefined : data.managerId,
+        companyId: companyId, // Ensure company context is maintained
     };
 
     // Simulate API call ( Firestore update)
@@ -229,12 +213,14 @@ export default function EditUserPage() {
     // Replace with actual API call to update user data (Firestore)
     // try {
     //   // Update user details in Firestore (using dataToSave)
+    //   // Ensure Firestore rules check companyId and permissions
     //   toast({
     //     title: 'Sucesso!',
     //     description: `Usuário "${data.name}" atualizado com sucesso.`,
     //     variant: 'default',
     //   });
-    //   router.push('/users'); // Redirect to users list
+        // Redirect to the admin users list
+    //   router.push('/settings/admin/users');
     // } catch (error) {
     //   console.error('Error updating user:', error);
     //   toast({
@@ -250,7 +236,8 @@ export default function EditUserPage() {
         title: 'Sucesso! (Simulado)',
         description: `Usuário "${data.name}" atualizado com sucesso.`,
       });
-      router.push('/users');
+      // Redirect to the admin users list
+      router.push('/settings/admin/users');
     // --- END REMOVE BLOCK ---
   }
 
@@ -278,8 +265,9 @@ export default function EditUserPage() {
     const deleteUserAction = () => {
         if (!canDelete() || !userData) return;
         // Logic is inside the AlertDialog on confirm
-        console.log(`Attempting to delete user ${userData.name}`);
+        console.log(`Attempting to delete user ${userData.name} from company ${companyId}`);
          // TODO: Call actual API inside AlertDialog confirm action
+         // Ensure API deletes user from Auth and Firestore (with company context check)
          // Show confirmation dialog (handled by AlertDialogTrigger/Content)
     }
 
@@ -325,6 +313,8 @@ export default function EditUserPage() {
     }
 
     if (!userData) {
+        // This case should ideally be handled by the redirect in useEffect,
+        // but kept as a fallback.
         return (
              <div className="flex justify-center">
                 <p className="text-destructive">Erro ao carregar dados do usuário.</p>
@@ -335,8 +325,9 @@ export default function EditUserPage() {
 
   return (
     <div className="space-y-6">
+       {/* Ensure back link points to the correct admin path */}
       <Button variant="outline" size="sm" asChild className="mb-4">
-        <Link href="/users">
+        <Link href="/settings/admin/users">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Lista
         </Link>
       </Button>
@@ -388,20 +379,6 @@ export default function EditUserPage() {
               </div>
 
                {/* Password field removed - handled by Reset Password button */}
-               {/* <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nova Senha (Opcional)</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Deixe em branco para manter a senha atual" {...field} />
-                      </FormControl>
-                       <FormDescription>Mínimo 8 caracteres se for alterar.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                /> */}
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <FormField
@@ -542,5 +519,3 @@ export default function EditUserPage() {
     </div>
   );
 }
-
-    

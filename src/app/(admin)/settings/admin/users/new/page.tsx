@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react'; // Added useEffect
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
@@ -15,7 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Loader2 } from 'lucide-react';
-// import { Switch } from '@/components/ui/switch'; // Removed Switch, status is active by default
 
 const userSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
@@ -28,7 +27,7 @@ const userSchema = z.object({
 
 type UserFormData = z.infer<typeof userSchema>;
 
-// Mock data - replace with actual data fetching later
+// Mock data - replace with actual data fetching later (filtered by company)
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
 const initialManagers = [ // Example data
   { id: 'user1', name: 'João Silva (Admin)' },
@@ -36,24 +35,28 @@ const initialManagers = [ // Example data
 ];
 
 
-export default function NewUserPage() {
+export default function AdminNewUserPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [managers, setManagers] = useState<{id: string, name: string}[]>([]); // State for managers list
   const [isLoadingManagers, setIsLoadingManagers] = useState(true);
 
-  // Fetch managers on component mount
+  // TODO: Assume companyId is available from context or props
+  const companyId = 'COMPANY_XYZ';
+
+  // Fetch managers for the specific company
    useEffect(() => {
-       const fetchManagers = async () => {
+       const fetchManagers = async (companyId: string) => {
            setIsLoadingManagers(true);
-           // TODO: Replace with actual API call to fetch users with Admin or Manager roles
+           console.log("Fetching managers for company:", companyId);
+           // TODO: Replace with actual API call to fetch users with Admin or Manager roles for this company
            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
-           setManagers(initialManagers);
+           setManagers(initialManagers); // Use filtered list based on companyId
            setIsLoadingManagers(false);
        };
-       fetchManagers();
-   }, []);
+       fetchManagers(companyId);
+   }, [companyId]);
 
 
   const form = useForm<UserFormData>({
@@ -70,13 +73,14 @@ export default function NewUserPage() {
 
   async function onSubmit(data: UserFormData) {
     setIsLoading(true);
-    console.log('Submitting user data:', data);
+    console.log('Submitting user data:', data, 'for company:', companyId);
 
-    // Prepare data: map '__none__' to undefined for managerId
+    // Prepare data: map '__none__' to undefined for managerId and add companyId
     const dataToSave = {
         ...data,
         managerId: data.managerId === '__none__' ? undefined : data.managerId,
         isActive: true, // Explicitly set status for backend
+        companyId: companyId, // Associate user with the company
     };
 
     // Simulate API call (Firebase Auth + Firestore)
@@ -85,14 +89,15 @@ export default function NewUserPage() {
     // Replace with actual API call to create user (Auth) and save user data (Firestore)
     // try {
     //   // 1. Create user in Firebase Auth
-    //   // 2. Save user details (including role, managerId, status) in Firestore (using dataToSave)
+    //   // 2. Save user details in Firestore (including role, managerId, status, companyId) using dataToSave
     //   // 3. Send welcome email (optional)
     //   toast({
     //     title: 'Sucesso!',
     //     description: `Usuário "${data.name}" cadastrado. Um email de boas-vindas foi enviado.`,
     //     variant: 'default',
     //   });
-    //   router.push('/users'); // Redirect to users list
+       // Redirect to the admin users list
+    //   router.push('/settings/admin/users');
     // } catch (error) {
     //   console.error('Error saving user:', error);
     //   let errorMessage = 'Não foi possível cadastrar o usuário. Tente novamente.';
@@ -111,23 +116,25 @@ export default function NewUserPage() {
      // --- REMOVE THIS BLOCK AFTER API IMPLEMENTATION ---
      toast({
         title: 'Sucesso! (Simulado)',
-        description: `Usuário "${data.name}" cadastrado. Email de boas-vindas enviado (simulado).`,
+        description: `Usuário "${data.name}" cadastrado para ${companyId}. Email enviado (simulado).`,
       });
-      router.push('/users');
+       // Redirect to the admin users list
+      router.push('/settings/admin/users');
     // --- END REMOVE BLOCK ---
   }
 
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild className="mb-4">
-        <Link href="/users">
+        {/* Ensure back link points to the correct admin path */}
+        <Link href="/settings/admin/users">
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Lista
         </Link>
       </Button>
       <Card>
         <CardHeader>
           <CardTitle>Cadastrar Novo Usuário</CardTitle>
-          <CardDescription>Preencha as informações para criar um novo usuário no sistema.</CardDescription>
+          <CardDescription>Preencha as informações para criar um novo usuário nesta empresa.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -229,28 +236,6 @@ export default function NewUserPage() {
                   )}
                 />
                </div>
-               {/* isActive field is removed - handled by default logic */}
-                 {/* <FormField
-                    control={form.control}
-                    name="isActive"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel>Usuário Ativo</FormLabel>
-                        <FormDescription>
-                          Usuários inativos não podem acessar o sistema.
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch
-                          checked={field.value}
-                          onCheckedChange={field.onChange}
-                        />
-                      </FormControl>
-                    </FormItem>
-                    )}
-                /> */}
-
             </CardContent>
             <CardFooter className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => router.back()}>
@@ -274,5 +259,3 @@ export default function NewUserPage() {
     </div>
   );
 }
-
-    
