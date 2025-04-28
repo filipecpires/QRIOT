@@ -14,7 +14,8 @@ export default function SettingsPage() {
       <h1 className="text-3xl font-bold mb-6">Configurações</h1>
 
       <div className="space-y-8">
-        {/* General Settings */}
+        {/* General Settings - Keep this */}
+        {/*
         <Card>
           <CardHeader>
             <CardTitle>Configurações Gerais</CardTitle>
@@ -28,14 +29,14 @@ export default function SettingsPage() {
                 Este nome pode aparecer em relatórios ou páginas públicas.
               </p>
             </div>
-            {/* Add more general settings like default language, timezone etc. if needed */}
           </CardContent>
            <CardFooter className="flex justify-end">
-                <Button disabled> {/* Enable after implementing save logic */}
+                <Button disabled>
                     <Save className="mr-2 h-4 w-4" /> Salvar Gerais
                 </Button>
            </CardFooter>
         </Card>
+        */}
 
         {/* Public Page Settings */}
         <Card>
@@ -92,25 +93,7 @@ export default function SettingsPage() {
            </CardFooter>
         </Card>
 
-        {/* User Management Settings */}
-         <Card>
-          <CardHeader>
-            <CardTitle>Gerenciamento de Usuários</CardTitle>
-            <CardDescription>Configurações relacionadas a perfis e permissões.</CardDescription>
-          </CardHeader>
-          <CardContent>
-             <p className="text-muted-foreground">
-                Configurações avançadas de permissões por perfil serão adicionadas aqui futuramente.
-             </p>
-            {/* Add settings like password policies, session duration etc. */}
-          </CardContent>
-           {/* No footer needed for placeholder */}
-           {/* <CardFooter className="flex justify-end">
-                <Button disabled>
-                    <Save className="mr-2 h-4 w-4" /> Salvar Config. Usuários
-                </Button>
-           </CardFooter> */}
-        </Card>
+        {/* User Management Settings Card Removed */}
 
         {/* Data Management Settings */}
         <Card>
