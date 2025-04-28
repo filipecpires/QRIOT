@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Printer, Search, AlertTriangle, Settings, Check, QrCode, Tag, X, Loader2, Eye } from 'lucide-react'; // Added Eye icon
+import { Printer, Search, AlertTriangle, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react'; // Changed Eye to Edit
 import { Skeleton } from '@/components/ui/skeleton';
 import QRCodeStyling from 'qrcode.react';
 import { jsPDF } from "jspdf";
@@ -298,7 +298,7 @@ export default function PrintLabelsPage() {
         }
 
 
-        doc.save(`etiquetas_qrot_${new Date().toISOString().slice(0,10)}.pdf`);
+        doc.save(`etiquetas_qriot_${new Date().toISOString().slice(0,10)}.pdf`);
         setIsGenerating(false);
         toast({ title: "PDF Gerado", description: `${assetsToPrint.length} etiquetas geradas com sucesso.` });
     };
@@ -501,7 +501,7 @@ export default function PrintLabelsPage() {
                 </CardContent>
                 <CardFooter className="flex justify-between">
                     <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0}>
-                         <Eye className="mr-2 h-4 w-4" /> Visualizar Etiqueta
+                         <Edit className="mr-2 h-4 w-4" /> Editar Etiqueta {/* Changed icon and text */}
                     </Button>
                      <Button onClick={generatePdf} disabled={selectedAssets.size === 0 || isGenerating}>
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
