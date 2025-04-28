@@ -53,8 +53,8 @@ const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
   tag: z.string()
-    .min(1, { message: 'A tag única é obrigatória.' })
-    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'})
+    .length(5, { message: 'A tag deve ter 5 caracteres.' }) // Keep length validation
+    .regex(/^[A-Z0-9]+$/, { message: 'A tag deve conter apenas letras maiúsculas e números.'}) // Keep regex validation
     .describe('A tag é única dentro da empresa e não pode ser alterada após a criação.'), // Clarified description for edit page
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
@@ -116,10 +116,10 @@ const users = [
 async function fetchAssetsForParent(excludeId?: string): Promise<{ id: string; name: string; tag: string }[]> {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate delay
   const allAssets = [
-    { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'TI-NB-001' },
-    { id: 'ASSET002', name: 'Monitor LG 27"', tag: 'TI-MN-005' },
-    { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'MOB-CAD-012' },
-    { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'TI-PROJ-002' },
+    { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'AB12C' },
+    { id: 'ASSET002', name: 'Monitor LG 27"', tag: 'DE34F' },
+    { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'GH56I' },
+    { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'JK78L' },
   ];
   return allAssets.filter(asset => asset.id !== excludeId);
 }
@@ -141,7 +141,7 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
          return {
             name: 'Notebook Dell Latitude 7400',
             category: 'Eletrônicos',
-            tag: 'TI-NB-001',
+            tag: 'AB12C', // Example generated tag
             locationId: 'loc1',
             responsibleUserId: 'user1',
             parentId: undefined,
@@ -170,7 +170,7 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
          return {
             name: 'Cadeira de Escritório',
             category: 'Mobiliário',
-            tag: 'MOB-CAD-012',
+            tag: 'GH56I', // Example generated tag
             locationId: 'loc3',
             responsibleUserId: 'user3',
             parentId: 'ASSET001',
@@ -561,7 +561,8 @@ export default function EditAssetPage() {
               {/* Basic Info Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nome do Ativo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <FormField control={form.control} name="tag" render={({ field }) => (<FormItem><FormLabel>Tag Única</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl><FormDescription>A tag não pode ser alterada.</FormDescription><FormMessage /></FormItem>)} />
+                 {/* Tag field is now read-only */}
+                 <FormField control={form.control} name="tag" render={({ field }) => (<FormItem><FormLabel>Tag Única</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl><FormDescription>A tag única é gerada pelo sistema e não pode ser alterada.</FormDescription><FormMessage /></FormItem>)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                  <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoria</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
@@ -1056,3 +1057,4 @@ export default function EditAssetPage() {
     </div>
   );
 }
+

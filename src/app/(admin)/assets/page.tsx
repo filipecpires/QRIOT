@@ -31,10 +31,10 @@ import { useToast } from '@/hooks/use-toast'; // For delete feedback
 
 // Mock data - replace with actual data fetching later
 const initialAssets = [
-  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'TI-NB-001', location: 'Escritório 1', responsible: 'João Silva', status: 'active', ownership: 'own' }, // Added ownership
-  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'TI-MN-005', location: 'Escritório 2', responsible: 'Maria Oliveira', status: 'active', ownership: 'own' },
-  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'MOB-CAD-012', location: 'Sala de Reuniões', responsible: 'Carlos Pereira', status: 'lost', ownership: 'rented' }, // Example rented
-  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'TI-PROJ-002', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive', ownership: 'own' }, // Example inactive
+  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'AB12C', location: 'Escritório 1', responsible: 'João Silva', status: 'active', ownership: 'own' }, // Added ownership, updated tag
+  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'DE34F', location: 'Escritório 2', responsible: 'Maria Oliveira', status: 'active', ownership: 'own' }, // Updated tag
+  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'GH56I', location: 'Sala de Reuniões', responsible: 'Carlos Pereira', status: 'lost', ownership: 'rented' }, // Example rented, updated tag
+  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'JK78L', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive', ownership: 'own' }, // Example inactive, updated tag
 ];
 
 type Asset = typeof initialAssets[0];
@@ -57,6 +57,7 @@ export default function AssetsPage() {
     // Construct the public URL based on the asset tag
     const getPublicUrl = (tag: string) => {
         if (typeof window !== 'undefined') {
+            // Use the tag directly in the URL path
             return `${window.location.origin}/public/asset/${tag}`;
         }
         return '#'; // Fallback URL
@@ -219,3 +220,4 @@ export default function AssetsPage() {
     </div>
   );
 }
+

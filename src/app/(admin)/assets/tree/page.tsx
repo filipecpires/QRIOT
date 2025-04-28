@@ -56,7 +56,7 @@ interface LocationNodeData extends BaseNodeData {
 
 interface AssetNodeData extends BaseNodeData {
     type: 'asset';
-    tag: string; // Asset tag
+    tag: string; // Asset tag (now 5-char alphanumeric)
     status?: 'active' | 'lost' | 'inactive';
     responsibleUserName?: string; // Added responsible user name
     ownership?: 'own' | 'rented'; // Added ownership type
@@ -83,13 +83,13 @@ async function fetchHierarchicalData(): Promise<TreeNode> {
   ];
 
   const assets: AssetNodeData[] = [
-    { id: 'ASSET001', label: 'Notebook Dell X', type: 'asset', parentId: 'loc1_floor1', tag: 'TI-NB-001', status: 'active', responsibleUserName: 'João Silva', ownership: 'own' },
-    { id: 'ASSET002', label: 'Monitor LG 27"', type: 'asset', parentId: 'ASSET001', tag: 'TI-MN-005', status: 'active', responsibleUserName: 'João Silva', ownership: 'own' }, // Asset child of asset
-    { id: 'ASSET003', label: 'Cadeira Escritório', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'MOB-CAD-012', status: 'lost', responsibleUserName: 'Carlos Pereira', ownership: 'rented' },
-    { id: 'ASSET004', label: 'Projetor Epson', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'TI-PROJ-002', status: 'inactive', responsibleUserName: 'Ana Costa', ownership: 'own' },
-    { id: 'ASSET007', label: 'Mesa Grande', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'MOB-MES-001', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'rented' },
-    { id: 'ASSET008', label: 'Gaveteiro', type: 'asset', parentId: 'ASSET007', tag: 'MOB-GAV-002', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'own' }, // Asset child of asset
-    { id: 'ASSET009', label: 'Paleteira Manual', type: 'asset', parentId: 'loc2', tag: 'ALM-PAL-001', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'own' },
+    { id: 'ASSET001', label: 'Notebook Dell X', type: 'asset', parentId: 'loc1_floor1', tag: 'AB12C', status: 'active', responsibleUserName: 'João Silva', ownership: 'own' }, // Updated tag
+    { id: 'ASSET002', label: 'Monitor LG 27"', type: 'asset', parentId: 'ASSET001', tag: 'DE34F', status: 'active', responsibleUserName: 'João Silva', ownership: 'own' }, // Asset child of asset, updated tag
+    { id: 'ASSET003', label: 'Cadeira Escritório', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'GH56I', status: 'lost', responsibleUserName: 'Carlos Pereira', ownership: 'rented' }, // Updated tag
+    { id: 'ASSET004', label: 'Projetor Epson', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'JK78L', status: 'inactive', responsibleUserName: 'Ana Costa', ownership: 'own' }, // Updated tag
+    { id: 'ASSET007', label: 'Mesa Grande', type: 'asset', parentId: 'loc1_sala_reuniao', tag: 'MN90P', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'rented' }, // Updated tag
+    { id: 'ASSET008', label: 'Gaveteiro', type: 'asset', parentId: 'ASSET007', tag: 'QR12S', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'own' }, // Asset child of asset, updated tag
+    { id: 'ASSET009', label: 'Paleteira Manual', type: 'asset', parentId: 'loc2', tag: 'TU34V', status: 'active', responsibleUserName: 'Carlos Pereira', ownership: 'own' }, // Updated tag
   ];
 
   // Build Tree Structure
@@ -199,12 +199,13 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
     };
 
 
-    // Main container div acts as trigger for assets
     // Click anywhere on the node container to trigger the dropdown if it's an asset
     const NodeContainer = node.type === 'asset' ? DropdownMenuTrigger : 'div';
+    // For assets, use asChild and apply block class
+    // For non-assets, handle expand/collapse and apply cursor-pointer if it has children
     const nodeContainerProps = node.type === 'asset'
-        ? { asChild: true, className: "cursor-pointer w-full block" } // Use asChild and add pointer cursor for assets, ensure it's a block element
-        : { onClick: () => hasChildren && onToggleExpand(node.id), className: cn("w-full", hasChildren ? "cursor-pointer" : "") }; // Keep expand/collapse for non-assets
+        ? { asChild: true, className: "cursor-pointer w-full block" }
+        : { onClick: () => hasChildren && onToggleExpand(node.id), className: cn("w-full", hasChildren ? "cursor-pointer" : "") };
 
 
     return (
@@ -214,11 +215,10 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                  <div
                      className={cn(
                          "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 group",
-                         // Removed text color class - handled by icons
                      )}
                      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
-                      // REMOVED onClick handler here for assets to prevent conflict with DropdownMenuTrigger
-                      // onClick={node.type !== 'asset' && hasChildren ? () => onToggleExpand(node.id) : undefined}
+                     // Click handler removed for assets, handled by DropdownMenuTrigger
+                     // For non-assets, it's handled by the NodeContainer's onClick
                  >
                       {/* Toggle Button */}
                      <div className="w-4 flex-shrink-0">
@@ -226,8 +226,8 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                              <Button
                                  variant="ghost"
                                  size="icon"
-                                 className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground" // Icon inherits text color
-                                 // Prevent dropdown from triggering when clicking expand/collapse icon itself
+                                 className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                                 // Prevent dropdown trigger, only expand/collapse
                                  onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
                                  aria-label={isExpanded ? 'Recolher' : 'Expandir'}
                              >
@@ -501,3 +501,4 @@ export default function AssetTreePage() {
      </TooltipProvider>
   );
 }
+

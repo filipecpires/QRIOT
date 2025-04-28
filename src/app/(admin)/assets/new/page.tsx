@@ -20,7 +20,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign, Link as LinkIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { cn } from '@/lib/utils';
+import { cn, generateAssetTag } from '@/lib/utils'; // Import generateAssetTag
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
@@ -39,10 +39,11 @@ const attachmentSchema = z.object({
 const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
+  // Tag is now generated, schema primarily for validation if needed later or for type inference
   tag: z.string()
-    .min(1, { message: 'A tag única é obrigatória.' })
-    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Use apenas letras, números, _ ou -.'})
-    .describe('A tag deve ser única dentro da sua empresa. A validação de unicidade ocorre no servidor.'), // Updated description
+    .length(5, { message: 'A tag deve ter 5 caracteres.' }) // Keep length validation if desired
+    .regex(/^[A-Z0-9]+$/, { message: 'A tag deve conter apenas letras maiúsculas e números.'}) // Keep regex if desired
+    .describe('A tag única é gerada automaticamente pelo sistema.'), // Updated description
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
   parentId: z.string().optional(),
@@ -127,7 +128,7 @@ export default function NewAssetPage() {
     defaultValues: {
       name: '',
       category: '',
-      tag: '',
+      tag: '', // Tag will be generated on submit, keep default empty
       locationId: '',
       responsibleUserId: '',
       parentId: '__none__',
@@ -239,6 +240,10 @@ export default function NewAssetPage() {
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
 
+    // Generate the unique tag
+    const generatedTag = generateAssetTag(); // Use the utility function
+    console.log(`Generated Tag: ${generatedTag}`);
+
     // Clean up rental data if ownership is 'own'
     const cleanedData = data.ownershipType === 'own'
         ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
@@ -246,8 +251,10 @@ export default function NewAssetPage() {
 
 
     // Ensure parentId is either a valid ID or undefined if '__none__' is selected
+    // Add the generated tag to the data being saved
     const dataToSave = {
         ...cleanedData,
+        tag: generatedTag, // Include the generated tag
         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
         // Attachments are already part of 'data' due to useFieldArray
     };
@@ -266,9 +273,8 @@ export default function NewAssetPage() {
     // try {
     //   // Assume companyId is available (e.g., from user context)
     //   const companyId = 'YOUR_COMPANY_ID'; // Replace with actual company ID
-    //   // Check tag uniqueness within the company before saving (server-side)
-    //   // const isTagUnique = await checkTagUniqueness(companyId, dataToSave.tag);
-    //   // if (!isTagUnique) throw new Error('Tag já existe nesta empresa.');
+    //   // Validation for uniqueness might need to happen on the backend before inserting
+    //   // This generation method has a small chance of collision, backend should handle retries or checks
     //
     //   const photoUrls = await uploadFiles(selectedFiles); // Your upload function
     //   const finalData = { ...dataToSave, photoUrls, companyId };
@@ -281,7 +287,7 @@ export default function NewAssetPage() {
     //   const result = await response.json();
        toast({
          title: 'Sucesso!',
-         description: `Ativo "${data.name}" cadastrado com sucesso.`,
+         description: `Ativo "${data.name}" cadastrado com a tag ${generatedTag}.`, // Show generated tag
          variant: 'default',
        });
        router.push('/assets'); // Redirect to assets list
@@ -307,13 +313,13 @@ export default function NewAssetPage() {
       <Card>
         <CardHeader>
           <CardTitle>Cadastrar Novo Ativo</CardTitle>
-          <CardDescription>Preencha as informações detalhadas do ativo.</CardDescription>
+          <CardDescription>Preencha as informações detalhadas do ativo. A tag será gerada automaticamente.</CardDescription>
         </CardHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
               {/* Basic Info Fields */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6"> {/* Simplified layout, removed tag input */}
                 <FormField
                   control={form.control}
                   name="name"
@@ -327,20 +333,7 @@ export default function NewAssetPage() {
                     </FormItem>
                   )}
                 />
-                 <FormField
-                  control={form.control}
-                  name="tag"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tag Única (Identificação)</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: TI-NB-001" {...field} />
-                      </FormControl>
-                      <FormDescription>Use um código único para identificar o ativo <span className="font-semibold">dentro da sua empresa</span>.</FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                 {/* Tag field removed from UI */}
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -869,4 +862,5 @@ export default function NewAssetPage() {
     </div>
   );
 }
+
 

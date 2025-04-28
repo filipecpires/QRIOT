@@ -34,7 +34,7 @@ interface PublicAssetData {
     id: string;
     name: string;
     category?: string; // Make optional if not always public
-    tag: string;
+    tag: string; // Tag is now 5-char alphanumeric
     location?: { // Make optional if not always public
         name: string;
         lat?: number;
@@ -62,12 +62,13 @@ async function fetchPublicAssetData(tag: string): Promise<PublicAssetData | null
     // Filter characteristics, photos, attachments based on public visibility settings
     // Only return data if the asset exists and is not 'inactive' (or based on your rules)
 
-    if (tag === 'TI-NB-001') {
+    // Use the new 5-character tags
+    if (tag === 'AB12C') { // Example: TI-NB-001 became AB12C
         return {
             id: 'ASSET001',
             name: 'Notebook Dell Latitude 7400',
             category: 'Eletrônicos',
-            tag: 'TI-NB-001',
+            tag: 'AB12C', // Use the new tag
             location: { name: 'Escritório 1' },
             responsible: { name: 'João Silva' },
             description: 'Notebook corporativo para desenvolvimento.',
@@ -90,12 +91,12 @@ async function fetchPublicAssetData(tag: string): Promise<PublicAssetData | null
             status: 'active',
             lastInventoryDate: '2024-05-10'
         };
-    } else if (tag === 'MOB-CAD-012') {
+    } else if (tag === 'GH56I') { // Example: MOB-CAD-012 became GH56I
          return {
             id: 'ASSET003',
             name: 'Cadeira de Escritório',
             category: 'Mobiliário',
-            tag: 'MOB-CAD-012',
+            tag: 'GH56I', // Use the new tag
             location: { name: 'Sala de Reuniões' },
             responsible: { name: 'Carlos Pereira' },
             description: 'Cadeira ergonômica.',
@@ -124,7 +125,7 @@ async function logAccess(tag: string, ip: string | undefined, userAgent: string 
 
 export default function PublicAssetPage() {
     const params = useParams();
-    const tag = params.tag as string;
+    const tag = params.tag as string; // The tag should now be the 5-char ID from the URL
     const [asset, setAsset] = useState<PublicAssetData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -135,6 +136,11 @@ export default function PublicAssetPage() {
                 setLoading(true);
                 setError(null);
                 try {
+                    // Validate tag format (optional but recommended client-side check)
+                     if (!/^[A-Z0-9]{5}$/.test(tag)) {
+                         throw new Error('Tag inválida.');
+                     }
+
                     const data = await fetchPublicAssetData(tag);
                     setAsset(data);
                     if (data) {
@@ -147,9 +153,9 @@ export default function PublicAssetPage() {
                     } else {
                          setError('Ativo não encontrado ou não disponível publicamente.');
                     }
-                } catch (err) {
+                } catch (err: any) { // Catch specific errors or general error
                     console.error('Error fetching asset data:', err);
-                    setError('Ocorreu um erro ao carregar as informações do ativo.');
+                    setError(err.message || 'Ocorreu um erro ao carregar as informações do ativo.');
                 } finally {
                     setLoading(false);
                 }
@@ -347,3 +353,4 @@ export default function PublicAssetPage() {
          </div>
     );
 }
+
