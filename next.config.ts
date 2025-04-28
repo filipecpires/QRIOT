@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
+            // Removed service worker related CSP directives if they were added by PWA plugin
             value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self'; connect-src 'self';", // Adjust based on needs
           },
           {
@@ -52,6 +53,7 @@ const nextConfig: NextConfig = {
          headers: [
            {
              key: 'Content-Security-Policy',
+             // Removed service worker related CSP directives if they were added by PWA plugin
              value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self';", // More restrictive for public pages
            },
          ],
@@ -60,4 +62,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default nextConfig; // Export the plain config without PWA wrapper
