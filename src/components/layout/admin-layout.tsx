@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase } from 'lucide-react'; // Added Briefcase for Admin
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon } from 'lucide-react'; // Added MaintenanceIcon
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -101,16 +101,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-             {/* Users - REMOVED */}
-            {/* <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Usuários">
-                <Link href="/users">
-                  <Users />
-                  <span className="group-data-[collapsible=icon]:hidden">Usuários</span>
+            {/* Maintenance */}
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Manutenção">
+                <Link href="/maintenance/work-orders">
+                  <MaintenanceIcon />
+                  <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
                 </Link>
               </SidebarMenuButton>
-            </SidebarMenuItem> */}
-            {/* Print Labels */}
+            </SidebarMenuItem>
+             {/* Print Labels */}
              <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
                 <Link href="/labels/print">
@@ -128,29 +128,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-
-            {/* Settings (General) */}
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Configurações">
-                <Link href="/settings">
-                  <Settings />
-                   <span className="group-data-[collapsible=icon]:hidden">Configurações</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-             {/* Admin Section (Conditional) */}
-             {/* TODO: Replace 'Administrador' with actual role check */}
-            {userRole === 'Administrador' && (
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Administração">
-                        <Link href="/settings/admin">
-                            <Briefcase />
-                             <span className="group-data-[collapsible=icon]:hidden">Administração</span>
-                        </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            )}
           </SidebarMenu>
         </SidebarContent>
          {/* Footer is empty, links moved to top dropdown */}
