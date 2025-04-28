@@ -1,11 +1,10 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react'; // Added useMemo and useCallback
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   BarChart,
@@ -42,11 +41,11 @@ import {
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from '@/components/ui/chart'; // Added ChartLegend, ChartLegendContent
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { StatsCard } from '@/components/feature/stats-card';
-import { Badge } from '@/components/ui/badge'; // Added Badge import
+import { Badge } from '@/components/ui/badge';
 
 // --- Mock Data Structures ---
 interface AssetSummary {
@@ -97,13 +96,13 @@ interface LostAsset {
 interface AssetCountByCategory {
     category: string;
     count: number;
-    fill: string; // Color for the chart
+    fill?: string; // Make fill optional, can be derived from config
 }
 
 interface AssetStatusCount {
     status: 'active' | 'lost' | 'inactive';
     count: number;
-    fill: string;
+    fill?: string; // Make fill optional
 }
 
 // --- Mock Fetch Functions ---
@@ -141,19 +140,19 @@ async function fetchDashboardData(): Promise<{
     { locationName: 'Outros Locais', count: 349 },
   ].sort((a, b) => b.count - a.count).slice(0, 5);
 
-   const categoryColors = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)'];
+   // Assign colors in the fetch or derive later using config
    const byCategory: AssetCountByCategory[] = [
-       { category: 'Eletrônicos', count: 600, fill: categoryColors[0] },
-       { category: 'Mobiliário', count: 300, fill: categoryColors[1] },
-       { category: 'Ferramentas', count: 150, fill: categoryColors[2] },
-       { category: 'Veículos', count: 34, fill: categoryColors[3] },
-       { category: 'Outros', count: 150, fill: categoryColors[4] },
+       { category: 'Eletrônicos', count: 600 },
+       { category: 'Mobiliário', count: 300 },
+       { category: 'Ferramentas', count: 150 },
+       { category: 'Veículos', count: 34 },
+       { category: 'Outros', count: 150 },
    ].sort((a,b) => b.count - a.count);
 
    const byStatus: AssetStatusCount[] = [
-        { status: 'active', count: summary.active, fill: 'var(--chart-1)' }, // Use a chart color (e.g., green-like)
-        { status: 'lost', count: summary.lost, fill: 'var(--chart-5)' },   // Use a chart color (e.g., red-like)
-        { status: 'inactive', count: summary.inactive, fill: 'var(--chart-3)' }, // Use a chart color (e.g., gray/yellow-like)
+        { status: 'active', count: summary.active }, // Fill derived from config
+        { status: 'lost', count: summary.lost },   // Fill derived from config
+        { status: 'inactive', count: summary.inactive }, // Fill derived from config
     ];
 
    const assetHistory: AssetTimeSeries[] = Array.from({ length: 30 }).map((_, i) => {
@@ -216,17 +215,28 @@ const getActionDetails = (log: RecentActivityLog) => {
 
 
 // Chart Configs
+const pastelColors = [
+  'hsl(38, 95%, 80%)', // Pastel Yellow
+  'hsl(160, 70%, 80%)', // Pastel Mint
+  'hsl(210, 100%, 85%)', // Pastel Blue
+  'hsl(300, 80%, 85%)', // Pastel Purple
+  'hsl(0, 80%, 85%)', // Pastel Red/Pink
+  'hsl(25, 85%, 80%)', // Pastel Orange
+];
+
+
 const statusChartConfig = {
     count: { label: "Ativos" },
-    active: { label: "Ativos", color: "hsl(var(--chart-1))" },
-    lost: { label: "Perdidos", color: "hsl(var(--chart-5))" },
-    inactive: { label: "Inativos", color: "hsl(var(--chart-3))" },
+    active: { label: "Ativos", color: "hsl(140 60% 70%)" }, // Pastel Green
+    lost: { label: "Perdidos", color: "hsl(0 80% 85%)" },   // Pastel Red/Pink
+    inactive: { label: "Inativos", color: "hsl(45 80% 80%)" }, // Pastel Gray/Yellow
 } satisfies ChartConfig;
 
-const categoryChartConfig = {
+// Base config for categories, colors will be added dynamically
+const baseCategoryChartConfig = {
     count: { label: "Ativos" },
-    // Define labels dynamically or ensure config keys match `data?.byCategory.category`
-} satisfies ChartConfig; // Extend this as needed
+    // Labels will be added dynamically
+} satisfies ChartConfig;
 
 // Pie Chart Active Index State Handler
 const renderActiveShape = (props: any) => {
@@ -241,13 +251,11 @@ const renderActiveShape = (props: any) => {
     const ex = mx + (cos >= 0 ? 1 : -1) * 12; // Adjusted length
     const ey = my;
     const textAnchor = cos >= 0 ? 'start' : 'end';
+    const categoryLabel = payload.category || 'Desconhecido'; // Use payload.category
 
     return (
       <g>
-        {/* Keep center text simple or remove */}
-        {/* <text x={cx} y={cy} dy={8} textAnchor="middle" fill={fill} className="font-bold text-sm">
-          {payload.name}
-        </text> */}
+        {/* Center text removed for cleaner look */}
         <Sector
           cx={cx}
           cy={cy}
@@ -270,9 +278,11 @@ const renderActiveShape = (props: any) => {
         {/* Connector line and text */}
         <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
         <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-        <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs">{`${payload.name} (${value})`}</text>
+         {/* Display category name and count */}
+         <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs font-medium">{categoryLabel}</text>
+        {/* Display percentage below */}
         <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} dy={12} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))" className="text-xs">
-          {`(${(percent * 100).toFixed(1)}%)`}
+          {`${value} (${(percent * 100).toFixed(1)}%)`}
         </text>
       </g>
     );
@@ -319,20 +329,37 @@ export default function DashboardPage() {
     // Memoize chart data and configs to prevent unnecessary recalculations
     const assetHistoryChartData = useMemo(() => data?.assetHistory || [], [data?.assetHistory]);
     const assetHistoryChartConfig = useMemo(() => ({
-        count: { label: "Ativos", color: "hsl(var(--primary))" },
+        count: { label: "Ativos", color: "hsl(210, 100%, 85%)" }, // Use a pastel color
     }), []);
 
-    const categoryChartData = useMemo(() => data?.byCategory || [], [data?.byCategory]);
-    // Create dynamic config for categories based on fetched data
-    const dynamicCategoryChartConfig = useMemo(() => {
-        const config: ChartConfig = { count: { label: "Ativos" } };
-        data?.byCategory.forEach(cat => {
-            config[cat.category] = { label: cat.category, color: cat.fill };
-        });
-        return config;
+    // Memoize category data and dynamic config
+    const categoryChartData = useMemo(() => {
+        return (data?.byCategory || []).map((cat, index) => ({
+            ...cat,
+            fill: cat.fill || pastelColors[index % pastelColors.length], // Assign pastel color if not present
+        }));
     }, [data?.byCategory]);
 
-    const statusChartData = useMemo(() => data?.byStatus || [], [data?.byStatus]);
+    const dynamicCategoryChartConfig = useMemo(() => {
+        const config: ChartConfig = { ...baseCategoryChartConfig };
+        categoryChartData.forEach(cat => {
+            // Use the 'category' field from the data as the key
+            if (cat.category) {
+                 config[cat.category] = { label: cat.category, color: cat.fill };
+            }
+        });
+        return config;
+    }, [categoryChartData]); // Depend on the processed categoryChartData
+
+
+    // Memoize status data and use config colors
+     const statusChartData = useMemo(() => {
+        return (data?.byStatus || []).map(stat => ({
+             ...stat,
+             // Get color from the static config, falling back to gray if status not found
+             fill: statusChartConfig[stat.status]?.color || 'hsl(0, 0%, 80%)',
+        }));
+     }, [data?.byStatus]);
 
 
     const assetTrend = useMemo(() => {
@@ -438,7 +465,7 @@ export default function DashboardPage() {
                 value={userCount.toLocaleString()}
                 icon={Users}
                  description={
-                   <Link href="/users" className="text-primary hover:underline flex items-center text-xs">
+                   <Link href="/settings/admin/users" className="text-primary hover:underline flex items-center text-xs"> {/* Updated link */}
                         Gerenciar Usuários <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
@@ -534,14 +561,16 @@ export default function DashboardPage() {
                         <CardDescription>Distribuição dos ativos por categoria principal.</CardDescription>
                     </CardHeader>
                      <CardContent className="flex items-center justify-center aspect-auto h-[250px]">
-                         <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
+                         {/* Ensure config has keys matching the data's 'category' field */}
+                          <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                    <Pie
+                                     {/* Use nameKey="category" to match data structure */}
+                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="category" />} />
+                                     <Pie
                                         data={categoryChartData}
                                         dataKey="count"
-                                        nameKey="category"
+                                        nameKey="category" // Map to the category name in your data
                                         cx="50%"
                                         cy="50%"
                                         innerRadius={60}
@@ -551,33 +580,32 @@ export default function DashboardPage() {
                                         onMouseEnter={onPieEnter}
                                      >
                                         {categoryChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} />
+                                            <Cell key={`cell-${index}`} fill={entry.fill} name={entry.category}/> // Add name prop here
                                         ))}
                                     </Pie>
-                                    {/* Consider adding Legend if needed */}
-                                     {/* <ChartLegend content={<ChartLegendContent nameKey="category" />} /> */}
+                                    <ChartLegend content={<ChartLegendContent nameKey="category" />} />
                                 </PieChart>
                             </ResponsiveContainer>
                         </ChartContainer>
                     </CardContent>
                 </Card>
 
-                 {/* Assets by Location (already done above, maybe replace with something else?) */}
-                 {/* Example: Placeholder for another chart */}
+                 {/* Assets by Location (Top 5) */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Ativos por Localização (Top 5)</CardTitle>
                          <CardDescription>Concentração de ativos nos principais locais.</CardDescription>
                     </CardHeader>
                     <CardContent className="h-[250px]">
-                         <ChartContainer config={{ count: { label: "Ativos" } }} className="w-full h-full">
+                         {/* Create a simple config just for the color */}
+                          <ChartContainer config={{ count: { label: "Ativos", color: "hsl(210, 100%, 85%)" } }} className="w-full h-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="locationName" hide/>
                                     <YAxis dataKey="locationName" type="category" width={100} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
-                                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={4} />
+                                    <Bar dataKey="count" fill="var(--color-count)" radius={4} />
                                 </BarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
@@ -586,9 +614,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Rentals & Lost Assets - Row */}
-            <div className="grid gap-6 lg:grid-cols-2"> {/* Changed to lg:grid-cols-2 */}
+            <div className="grid gap-6 lg:grid-cols-2">
                  {/* Expiring Rentals */}
-                 <Card className="lg:col-span-1 flex flex-col h-full"> {/* Ensure takes full height */}
+                 <Card className="lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo</CardTitle>
                        <CardDescription>Contratos terminando nos próximos 30 dias.</CardDescription>
@@ -633,7 +661,7 @@ export default function DashboardPage() {
                 </Card>
 
                 {/* Lost Assets */}
-                 <Card className="border-destructive lg:col-span-1 flex flex-col h-full"> {/* Ensure takes full height */}
+                 <Card className="border-destructive lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Perdidos</CardTitle>
                        <CardDescription>Ativos marcados como perdidos.</CardDescription>
@@ -669,7 +697,7 @@ export default function DashboardPage() {
 
              {/* Recent Activity - Full Width Row */}
              <div className="grid gap-6">
-                 <Card className="flex flex-col h-full"> {/* Ensure takes full height */}
+                 <Card className="flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
                        <CardDescription>Últimas 5 ações realizadas no sistema.</CardDescription>
