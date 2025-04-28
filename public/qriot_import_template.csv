@@ -1,0 +1,9 @@
+id,tag,name,category,locationId,responsibleUserId,parentId,ownershipType,rentalCompany,rentalStartDate,rentalEndDate,rentalCost,status,description
+,TI-NB-001,Notebook Dell Latitude 7400,Eletrônicos,loc1,user1,,own,,,,active,"Notebook corporativo para desenvolvimento."
+,TI-MN-005,Monitor LG 27",Eletrônicos,loc2,user2,,own,,,,active,
+,MOB-CAD-012,Cadeira de Escritório,Mobiliário,loc3,user3,ASSET007,rented,"LocaTudo Móveis","2024-01-15","2025-01-14",50.00,lost,"Cadeira ergonômica."
+,TI-PROJ-002,Projetor Epson PowerLite,Eletrônicos,loc4,user4,,own,,,,inactive,
+# Exemplo de linha para ativo novo (sem ID) - O ID será gerado pelo sistema. A TAG deve ser única.
+,TI-TEC-015,Teclado Mecânico Gamer,Eletrônicos,loc1,user1,,own,,,,active,"Teclado novo para equipe de design"
+# Linha apenas com campos obrigatórios mínimos (tag, name, category, locationId, responsibleUserId, ownershipType, status)
+,MOB-ARM-010,Armário Baixo,Mobiliário,loc5,user2,,own,,,,active,
