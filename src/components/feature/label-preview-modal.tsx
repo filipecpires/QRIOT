@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useRef, ChangeEvent } from 'react'; // Added useRef, ChangeEvent
+import React, { useState, useRef, ChangeEvent, useEffect } from 'react';
 import QRCodeStyling from 'qrcode.react';
 import {
   Dialog,
@@ -18,7 +18,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { ImageIcon } from 'lucide-react'; // For logo placeholder
+import { ImageIcon, Trash2 } from 'lucide-react'; // For logo placeholder
+import { Separator } from '../ui/separator';
 
 interface AssetForLabel {
     id: string;
@@ -35,7 +36,7 @@ interface LabelPreviewModalProps {
   labelConfig: LabelConfig;
   qrSize: number; // This is the initial QR size from parent
   qrValue: string;
-  // onSave: (newConfig: LabelEditConfig) => void; // Optional: For saving settings
+  // onSave: (newConfig: LabelLayoutSettings) => void; // Optional: For saving settings
 }
 
 // Optional: Define a type for editable settings to be saved
@@ -43,16 +44,16 @@ export interface LabelLayoutSettings {
     includeName: boolean;
     includeTag: boolean;
     customText: string;
-    qrSize: number;
-    nameFontSize: number;
-    tagFontSize: number;
-    customTextFontSize: number;
+    qrSizeMm: number;
+    nameFontSizePt: number;
+    tagFontSizePt: number;
+    customTextFontSizePt: number;
     textAlignment: 'left' | 'center' | 'right';
     qrPosition: 'left' | 'right' | 'center';
     includeLogo: boolean;
-    companyLogo: string | null;
-    logoSizeRatio: number; // Ratio of label height
-    logoPosition: 'top-left' | 'top-right' | 'top-center';
+    companyLogoDataUrl: string | null;
+    logoHeightMm: number;
+    logoPosition: 'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center';
 }
 
 
@@ -61,39 +62,56 @@ export function LabelPreviewModal({
   onClose,
   asset,
   labelConfig,
-  qrSize: initialQrSize, // Rename prop to avoid conflict with state
+  qrSize: initialQrSizeMm,
   qrValue,
 }: LabelPreviewModalProps) {
+  // General Content
   const [includeName, setIncludeName] = useState(true);
   const [includeTag, setIncludeTag] = useState(true);
   const [customText, setCustomText] = useState('');
-  const [currentQrSize, setCurrentQrSize] = useState(initialQrSize);
-  const [nameFontSize, setNameFontSize] = useState(7);
-  const [tagFontSize, setTagFontSize] = useState(6);
-  const [customTextFontSize, setCustomTextFontSize] = useState(6);
-  const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
+
+  // QR Code
+  const [currentQrSizeMm, setCurrentQrSizeMm] = useState(initialQrSizeMm);
   const [qrPosition, setQrPosition] = useState<'left' | 'right' | 'center'>('left');
 
-  // New states for logo
+  // Text Styling
+  const [nameFontSizePt, setNameFontSizePt] = useState(7);
+  const [tagFontSizePt, setTagFontSizePt] = useState(6);
+  const [customTextFontSizePt, setCustomTextFontSizePt] = useState(6);
+  const [textAlignment, setTextAlignment] = useState<'left' | 'center' | 'right'>('left');
+
+  // Logo
   const [includeLogo, setIncludeLogo] = useState(false);
-  const [companyLogo, setCompanyLogo] = useState<string | null>(null);
-  const [logoSizeRatio, setLogoSizeRatio] = useState(0.2); // Logo height as 20% of label height
-  const [logoPosition, setLogoPosition] = useState<'top-left' | 'top-right' | 'top-center'>('top-right');
+  const [companyLogoDataUrl, setCompanyLogoDataUrl] = useState<string | null>(null);
+  const [logoHeightMm, setLogoHeightMm] = useState(5); // Default logo height 5mm
+  const [logoPosition, setLogoPosition] = useState<'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center'>('top-right');
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const logoImageRef = useRef<HTMLImageElement>(null); // Ref for the actual image element to get its dimensions
+
+  const [actualLogoWidthPx, setActualLogoWidthPx] = useState(0);
+  const [actualLogoHeightPx, setActualLogoHeightPx] = useState(0);
 
 
+  const scale = 3.78; // Approx pixels per mm (for 96 DPI display simulation)
   const labelW_mm = labelConfig.width;
   const labelH_mm = labelConfig.height;
-  const scale = 3.78; // Approx pixels per mm (for 96 DPI)
-
   const labelW_px = labelW_mm * scale;
   const labelH_px = labelH_mm * scale;
   
-  // QR Code dimensions
-  const actualQrSize_px = Math.min(currentQrSize * scale, labelH_px * 0.9, labelW_px * 0.9);
+  const currentQrSize_px = Math.min(currentQrSizeMm * scale, labelH_px * 0.95, labelW_px * 0.95); // QR size in pixels
 
-  // Logo dimensions
-  const actualLogoSize_px = labelH_px * logoSizeRatio;
+  useEffect(() => {
+    if (companyLogoDataUrl && logoImageRef.current) {
+        const img = logoImageRef.current;
+        const desiredHeightPx = logoHeightMm * scale;
+        const aspectRatio = img.naturalWidth / img.naturalHeight;
+        setActualLogoHeightPx(desiredHeightPx);
+        setActualLogoWidthPx(desiredHeightPx * aspectRatio);
+    } else {
+        setActualLogoHeightPx(0);
+        setActualLogoWidthPx(0);
+    }
+  }, [companyLogoDataUrl, logoHeightMm, scale]);
 
 
   const handleLogoChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -101,13 +119,20 @@ export function LabelPreviewModal({
     if (file) {
         const reader = new FileReader();
         reader.onloadend = () => {
-            setCompanyLogo(reader.result as string);
-            setIncludeLogo(true); // Automatically check include when logo is selected
+            setCompanyLogoDataUrl(reader.result as string);
+            setIncludeLogo(true); 
         };
         reader.readAsDataURL(file);
     } else {
-        setCompanyLogo(null);
-        // setIncludeLogo(false); // Optional: uncheck if file is cleared
+        setCompanyLogoDataUrl(null);
+    }
+  };
+
+  const handleRemoveLogo = () => {
+    setCompanyLogoDataUrl(null);
+    setIncludeLogo(false);
+    if (logoInputRef.current) {
+        logoInputRef.current.value = '';
     }
   };
 
@@ -116,107 +141,126 @@ export function LabelPreviewModal({
         includeName,
         includeTag,
         customText,
-        qrSize: currentQrSize,
-        nameFontSize,
-        tagFontSize,
-        customTextFontSize,
+        qrSizeMm: currentQrSizeMm,
+        nameFontSizePt,
+        tagFontSizePt,
+        customTextFontSizePt,
         textAlignment,
         qrPosition,
         includeLogo,
-        companyLogo,
-        logoSizeRatio,
+        companyLogoDataUrl,
+        logoHeightMm,
         logoPosition,
     };
-    // TODO: Implement saving these settings, e.g., to localStorage or pass to parent
-    console.log("Saving label layout settings (not implemented yet):", currentLayoutSettings);
+    console.log("Saving label layout settings (simulated):", currentLayoutSettings);
+    // TODO: Implement saving these settings (e.g., to localStorage or pass to parent for global state)
     onClose();
   };
 
-  // --- Simplified Preview Layout Logic ---
-  // This is a basic representation. Complex layouts would require a more robust rendering approach.
-  let qrX_preview = 2 * scale;
-  let textX_preview = qrX_preview + actualQrSize_px + 2 * scale;
-  let textWidth_preview = labelW_px - textX_preview - (2 * scale);
-  let qrY_preview = (labelH_px - actualQrSize_px) / 2;
-  let textY_preview = 3 * scale;
-  let logoX_preview = 0;
-  let logoY_preview = 2 * scale;
+  // --- Preview Layout Logic ---
+  // Simplified, assumes elements flow and might overlap without complex collision detection
+  const padding = 1 * scale; // 1mm padding
+  let qrX = padding;
+  let qrY = padding;
+  let textX = padding;
+  let textY = padding;
+  let textBlockWidth = labelW_px - 2 * padding;
+  let logoX = padding;
+  let logoY = padding;
 
+  const logoSpaceWidth = includeLogo && companyLogoDataUrl ? actualLogoWidthPx + padding : 0;
+  const logoSpaceHeight = includeLogo && companyLogoDataUrl ? actualLogoHeightPx + padding : 0;
 
-  if (qrPosition === 'right') {
-    textX_preview = 2 * scale;
-    qrX_preview = textX_preview + textWidth_preview + 2 * scale; // Text width needs to be defined first or QR X
-    // This is tricky, let's assume text takes up to a certain point if QR is right
-    textWidth_preview = labelW_px * 0.55; // Example: text takes 55% width
-    qrX_preview = textX_preview + textWidth_preview + (2 * scale);
-  } else if (qrPosition === 'center') {
-    qrX_preview = (labelW_px - actualQrSize_px) / 2;
-    textX_preview = 2 * scale;
-    textWidth_preview = labelW_px - (4 * scale);
-    textY_preview = qrY_preview + actualQrSize_px + (2 * scale); // Text below QR
-  }
-  
-  if (includeLogo && companyLogo) {
+  // Logo Positioning
+  if (includeLogo && companyLogoDataUrl) {
     switch (logoPosition) {
-        case 'top-left':
-            logoX_preview = 2 * scale;
-            // Naive push: if QR is also left, it might get pushed by logo
-            if (qrPosition === 'left') qrX_preview = Math.max(qrX_preview, logoX_preview + actualLogoSize_px + 2*scale);
-            break;
-        case 'top-right':
-            logoX_preview = labelW_px - actualLogoSize_px - (2*scale);
-             // Naive push: if QR is also right, it might get pushed by logo
-            if (qrPosition === 'right') qrX_preview = Math.min(qrX_preview, logoX_preview - actualLogoSize_px - 2*scale);
-            break;
-        case 'top-center':
-            logoX_preview = (labelW_px - actualLogoSize_px) / 2;
-            // Push QR and text down
-            const logoBottomY = logoY_preview + actualLogoSize_px + 2*scale;
-            qrY_preview = Math.max(qrY_preview, logoBottomY);
-            textY_preview = Math.max(textY_preview, logoBottomY);
-             if (qrPosition === 'center') textY_preview = qrY_preview + actualQrSize_px + (2 * scale); // if QR is center, text is below QR
-            break;
+        case 'top-left': logoX = padding; logoY = padding; break;
+        case 'top-right': logoX = labelW_px - actualLogoWidthPx - padding; logoY = padding; break;
+        case 'top-center': logoX = (labelW_px - actualLogoWidthPx) / 2; logoY = padding; break;
+        case 'bottom-left': logoX = padding; logoY = labelH_px - actualLogoHeightPx - padding; break;
+        case 'bottom-right': logoX = labelW_px - actualLogoWidthPx - padding; logoY = labelH_px - actualLogoHeightPx - padding; break;
+        case 'bottom-center': logoX = (labelW_px - actualLogoWidthPx) / 2; logoY = labelH_px - actualLogoHeightPx - padding; break;
     }
   }
-  // --- End Simplified Preview Layout Logic ---
+  
+  // QR Code Positioning (relative to logo or edges)
+  switch (qrPosition) {
+    case 'left':
+      qrX = padding;
+      // If logo is top-left, position QR below it, otherwise align top
+      qrY = (includeLogo && (logoPosition === 'top-left' || logoPosition === 'top-center')) ? logoY + logoSpaceHeight : padding;
+      textX = qrX + currentQrSize_px + padding;
+      textY = qrY; // Align text top with QR generally
+      textBlockWidth = labelW_px - textX - padding;
+      break;
+    case 'right':
+      qrX = labelW_px - currentQrSize_px - padding;
+      qrY = (includeLogo && (logoPosition === 'top-right' || logoPosition === 'top-center')) ? logoY + logoSpaceHeight : padding;
+      textX = padding;
+      textY = qrY;
+      textBlockWidth = qrX - textX - padding;
+      break;
+    case 'center': // QR centered, text usually below
+      qrX = (labelW_px - currentQrSize_px) / 2;
+      qrY = (includeLogo && (logoPosition === 'top-left' || logoPosition === 'top-center' || logoPosition === 'top-right')) ? logoY + logoSpaceHeight : padding;
+      textX = padding;
+      textY = qrY + currentQrSize_px + padding;
+      textBlockWidth = labelW_px - 2 * padding;
+      break;
+  }
+  // Ensure QR is not placed over a bottom-aligned logo if QR is also somewhat bottom
+  if (includeLogo && (logoPosition.startsWith('bottom-')) && (qrY + currentQrSize_px > logoY)) {
+    qrY = Math.max(padding, logoY - currentQrSize_px - padding);
+  }
+   // Ensure text is not placed over a bottom-aligned logo
+  if (includeLogo && (logoPosition.startsWith('bottom-')) && (textY + (nameFontSizePt * scale / 2) > logoY)) { // Approximate text height
+    textY = Math.max(padding, logoY - (nameFontSizePt * scale / 2) - padding);
+  }
 
+
+  // --- End Preview Layout Logic ---
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-3xl">
+      <DialogContent className="sm:max-w-4xl md:max-w-5xl lg:max-w-6xl"> {/* Wider dialog */}
         <DialogHeader>
-          <DialogTitle>Editar Etiqueta</DialogTitle>
+          <DialogTitle>Editar Layout da Etiqueta</DialogTitle>
           <DialogDescription>
-            Ajuste os elementos e o tamanho do QR Code para a etiqueta de "{asset.name}" ({asset.tag}).
+            Personalize os elementos da etiqueta para "{asset.name}" ({asset.tag}).
+            As dimensões da etiqueta são {labelConfig.width}mm x {labelConfig.height}mm.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-          {/* Left Side: Preview */}
-          <div className="flex flex-col items-center">
-              <Label className="mb-2 text-sm font-medium">Pré-visualização</Label>
-               <div className="flex justify-center items-center p-4 my-4 border rounded-md overflow-hidden bg-white shadow-inner w-fit">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4 max-h-[75vh] ">
+          {/* Left Side: Preview Area (takes 2/3 on large screens) */}
+          <div className="lg:col-span-2 flex flex-col items-center justify-center p-4 border rounded-md bg-gray-100 dark:bg-gray-800 overflow-auto">
+              <Label className="mb-2 text-sm font-medium text-center">Pré-visualização da Etiqueta</Label>
+               <div className="flex justify-center items-center my-2 w-full h-full">
                   <div
                     style={{
                       width: `${labelW_px}px`,
                       height: `${labelH_px}px`,
                       position: 'relative',
                       overflow: 'hidden',
-                      fontFamily: 'Helvetica, Arial, sans-serif',
+                      fontFamily: 'Arial, sans-serif', // Generic font for preview
                       backgroundColor: 'white',
-                      border: '1px dashed #ccc',
+                      border: '1px dashed #999',
+                      boxShadow: '0 0 5px rgba(0,0,0,0.1)',
                     }}
                   >
+                    {/* Hidden image for aspect ratio calculation */}
+                    {companyLogoDataUrl && <img ref={logoImageRef} src={companyLogoDataUrl} alt="logo loaded" style={{position: 'absolute', opacity: 0, pointerEvents: 'none'}}/> }
+
                     {/* Logo */}
-                    {includeLogo && companyLogo && (
+                    {includeLogo && companyLogoDataUrl && actualLogoWidthPx > 0 && actualLogoHeightPx > 0 && (
                         <div style={{
                             position: 'absolute',
-                            left: `${logoX_preview}px`,
-                            top: `${logoY_preview}px`,
-                            width: `${actualLogoSize_px}px`,
-                            height: `${actualLogoSize_px}px`,
+                            left: `${logoX}px`,
+                            top: `${logoY}px`,
+                            width: `${actualLogoWidthPx}px`,
+                            height: `${actualLogoHeightPx}px`,
                         }}>
-                            <img src={companyLogo} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            <img src={companyLogoDataUrl} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         </div>
                     )}
 
@@ -224,42 +268,42 @@ export function LabelPreviewModal({
                     <div
                       style={{
                         position: 'absolute',
-                        left: `${qrX_preview}px`,
-                        top: `${qrY_preview}px`,
+                        left: `${qrX}px`,
+                        top: `${qrY}px`,
                       }}
                     >
                       <QRCodeStyling
                         value={qrValue || asset.tag}
-                        size={actualQrSize_px}
+                        size={currentQrSize_px}
                         level={"H"}
-                        includeMargin={false}
+                        includeMargin={false} // Margin handled by padding constants
                       />
                     </div>
 
-                    {/* Text Content */}
+                    {/* Text Content Block */}
                     <div
                       style={{
                         position: 'absolute',
-                        left: `${textX_preview}px`,
-                        top: `${textY_preview}px`,
-                        width: `${textWidth_preview}px`,
-                        height: `${labelH_px - textY_preview - (2*scale)}px`, // Approximate height
+                        left: `${textX}px`,
+                        top: `${textY}px`,
+                        width: `${textBlockWidth}px`,
+                        maxHeight: `${labelH_px - textY - padding}px`, // Ensure text fits
                         display: 'flex',
                         flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        lineHeight: '1.2',
+                        justifyContent: 'flex-start', // Align items to top
+                        lineHeight: '1.1', // Tighter line height
                         color: 'black',
                         textAlign: textAlignment,
-                        overflow: 'hidden', // Prevent text overflow
+                        overflow: 'hidden',
                       }}
                     >
-                       <div>
                          {includeName && (
                            <div
                              style={{
                                fontWeight: 'bold',
+                               fontSize: `${nameFontSizePt * 0.8 * scale / 3.78}px`, // Adjusted scaling for pt
+                               marginBottom: '0.5mm',
                                wordBreak: 'break-word',
-                               fontSize: `${nameFontSize * (scale / 3.78)}px`,
                              }}
                            >
                              {asset.name}
@@ -268,20 +312,21 @@ export function LabelPreviewModal({
                          {customText && (
                            <div
                              style={{
+                               fontSize: `${customTextFontSizePt * 0.8 * scale / 3.78}px`,
+                               marginBottom: '0.5mm',
                                wordBreak: 'break-word',
-                               marginTop: includeName ? `${1 * scale}px` : '0',
-                               fontSize: `${customTextFontSize * (scale / 3.78)}px`,
                              }}
                            >
                              {customText}
                            </div>
                          )}
-                       </div>
                        {includeTag && (
                          <div
                            style={{
-                             marginTop: 'auto',
-                             fontSize: `${tagFontSize * (scale / 3.78)}px`,
+                             fontSize: `${tagFontSizePt * 0.8 * scale / 3.78}px`,
+                             marginTop: 'auto', // Pushes tag to bottom if other elements allow
+                             paddingTop: '0.5mm', // Space before tag if it's at bottom
+                             wordBreak: 'break-word',
                            }}
                          >
                            TAG: {asset.tag}
@@ -292,76 +337,66 @@ export function LabelPreviewModal({
                 </div>
             </div>
 
-            {/* Right Side: Editor Controls */}
-            <div className="space-y-4 overflow-y-auto max-h-[60vh] pr-2">
-                <Label className="text-sm font-medium">Opções da Etiqueta</Label>
-                <div className="space-y-3 border p-4 rounded-md bg-muted/50">
+            {/* Right Side: Editor Controls (takes 1/3 on large screens) */}
+            <div className="space-y-4 overflow-y-auto pr-2 lg:max-h-[calc(75vh-3rem)]"> {/* Adjust max height */}
+                {/* General Content Section */}
+                <div className="space-y-3 border p-3 rounded-md bg-muted/30">
+                    <Label className="text-sm font-semibold">Conteúdo Geral</Label>
                      <div className="flex items-center space-x-2">
-                        <Checkbox
-                             id="includeName"
-                             checked={includeName}
-                             onCheckedChange={(checked) => setIncludeName(!!checked)}
-                        />
-                         <Label htmlFor="includeName" className="text-sm font-normal">Incluir Nome do Ativo</Label>
+                        <Checkbox id="includeName" checked={includeName} onCheckedChange={(checked) => setIncludeName(!!checked)} />
+                         <Label htmlFor="includeName" className="text-xs font-normal">Nome do Ativo</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <Checkbox
-                             id="includeTag"
-                             checked={includeTag}
-                             onCheckedChange={(checked) => setIncludeTag(!!checked)}
-                        />
-                         <Label htmlFor="includeTag" className="text-sm font-normal">Incluir TAG do Ativo</Label>
+                        <Checkbox id="includeTag" checked={includeTag} onCheckedChange={(checked) => setIncludeTag(!!checked)} />
+                         <Label htmlFor="includeTag" className="text-xs font-normal">TAG do Ativo</Label>
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="customText" className="text-sm font-normal">Texto Adicional</Label>
-                        <Input
-                             id="customText"
-                             value={customText}
-                             onChange={(e) => setCustomText(e.target.value)}
-                             placeholder="Ex: Contato Suporte"
-                        />
+                    <div>
+                        <Label htmlFor="customText" className="text-xs font-normal">Texto Adicional</Label>
+                        <Input id="customText" value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Ex: Depto. TI" className="text-xs h-8 mt-1" />
                     </div>
-                     <div className="space-y-1">
-                        <Label htmlFor="qrSizeEdit" className="text-sm font-normal">Tamanho QR Code (mm) [{currentQrSize}]</Label>
-                         <Slider
-                             id="qrSizeEdit"
-                             min={5}
-                             max={Math.min(50, labelW_mm * 0.8, labelH_mm * 0.8)}
-                             step={1}
-                             value={[currentQrSize]}
-                             onValueChange={(value) => setCurrentQrSize(value[0])}
-                             className="my-2"
-                         />
+                </div>
+                <Separator />
+                {/* QR Code Settings Section */}
+                <div className="space-y-3 border p-3 rounded-md bg-muted/30">
+                    <Label className="text-sm font-semibold">QR Code</Label>
+                    <div>
+                        <Label htmlFor="qrSizeEdit" className="text-xs font-normal">Tamanho (mm) [{currentQrSizeMm}]</Label>
+                         <Slider id="qrSizeEdit" min={5} max={Math.min(50, labelW_mm * 0.9, labelH_mm * 0.9)} step={1} value={[currentQrSizeMm]} onValueChange={(value) => setCurrentQrSizeMm(value[0])} className="my-1" />
                     </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="qrPosition" className="text-sm font-normal">Posição QR Code</Label>
+                    <div>
+                        <Label htmlFor="qrPosition" className="text-xs font-normal">Posição</Label>
                         <Select value={qrPosition} onValueChange={(v: 'left' | 'right' | 'center') => setQrPosition(v)}>
-                            <SelectTrigger id="qrPosition"><SelectValue /></SelectTrigger>
+                            <SelectTrigger id="qrPosition" className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="left">Esquerda</SelectItem>
                                 <SelectItem value="right">Direita</SelectItem>
-                                <SelectItem value="center">Centro (Texto abaixo)</SelectItem>
+                                <SelectItem value="center">Centralizado (Texto abaixo)</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
-                     <div className="grid grid-cols-3 gap-2">
-                        <div className="space-y-1">
-                             <Label htmlFor="nameFontSize" className="text-xs font-normal">Fonte Nome [{nameFontSize}pt]</Label>
-                             <Slider id="nameFontSize" min={4} max={12} step={1} value={[nameFontSize]} onValueChange={v => setNameFontSize(v[0])} />
+                </div>
+                <Separator />
+                {/* Text Styling Section */}
+                <div className="space-y-3 border p-3 rounded-md bg-muted/30">
+                    <Label className="text-sm font-semibold">Estilo do Texto</Label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div>
+                             <Label htmlFor="nameFontSize" className="text-xs font-normal">Nome [{nameFontSizePt}pt]</Label>
+                             <Slider id="nameFontSize" min={4} max={12} step={0.5} value={[nameFontSizePt]} onValueChange={v => setNameFontSizePt(v[0])} className="my-1" />
                         </div>
-                         <div className="space-y-1">
-                             <Label htmlFor="tagFontSize" className="text-xs font-normal">Fonte TAG [{tagFontSize}pt]</Label>
-                            <Slider id="tagFontSize" min={4} max={10} step={1} value={[tagFontSize]} onValueChange={v => setTagFontSize(v[0])} />
+                         <div>
+                             <Label htmlFor="tagFontSize" className="text-xs font-normal">TAG [{tagFontSizePt}pt]</Label>
+                            <Slider id="tagFontSize" min={4} max={10} step={0.5} value={[tagFontSizePt]} onValueChange={v => setTagFontSizePt(v[0])} className="my-1"/>
                         </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="customTextFontSize" className="text-xs font-normal">Fonte Adicional [{customTextFontSize}pt]</Label>
-                            <Slider id="customTextFontSize" min={4} max={10} step={1} value={[customTextFontSize]} onValueChange={v => setCustomTextFontSize(v[0])} />
+                        <div>
+                            <Label htmlFor="customTextFontSize" className="text-xs font-normal">Adicional [{customTextFontSizePt}pt]</Label>
+                            <Slider id="customTextFontSize" min={4} max={10} step={0.5} value={[customTextFontSizePt]} onValueChange={v => setCustomTextFontSizePt(v[0])} className="my-1"/>
                         </div>
                      </div>
-                    <div className="space-y-1">
-                        <Label htmlFor="textAlignment" className="text-sm font-normal">Alinhamento Texto</Label>
+                    <div>
+                        <Label htmlFor="textAlignment" className="text-xs font-normal">Alinhamento Geral</Label>
                         <Select value={textAlignment} onValueChange={(v: 'left' | 'center' | 'right') => setTextAlignment(v)}>
-                            <SelectTrigger id="textAlignment"><SelectValue /></SelectTrigger>
+                            <SelectTrigger id="textAlignment" className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="left">Esquerda</SelectItem>
                                 <SelectItem value="center">Centro</SelectItem>
@@ -369,58 +404,48 @@ export function LabelPreviewModal({
                             </SelectContent>
                         </Select>
                     </div>
-
-                    {/* Logo Controls */}
-                    <div className="pt-3 border-t mt-3">
-                        <Label className="text-sm font-medium mb-2 block">Opções do Logo</Label>
-                        <div className="flex items-center space-x-2 mb-2">
-                            <Checkbox
-                                id="includeLogo"
-                                checked={includeLogo}
-                                onCheckedChange={(checked) => setIncludeLogo(!!checked)}
-                            />
-                            <Label htmlFor="includeLogo" className="text-sm font-normal">Incluir Logo da Empresa</Label>
-                        </div>
-                        {includeLogo && (
-                            <>
-                                <div className="space-y-1 mb-2">
-                                    <Label htmlFor="companyLogoUpload" className="text-sm font-normal">Arquivo do Logo</Label>
-                                    <Input
-                                        id="companyLogoUpload"
-                                        type="file"
-                                        accept="image/png, image/jpeg, image/svg+xml"
-                                        onChange={handleLogoChange}
-                                        ref={logoInputRef}
-                                        className="text-xs"
-                                    />
-                                     {companyLogo && (
-                                        <Button variant="link" size="sm" className="text-xs p-0 h-auto" onClick={() => {setCompanyLogo(null); if(logoInputRef.current) logoInputRef.current.value = '';}}>Remover logo</Button>
-                                     )}
-                                </div>
-                                <div className="space-y-1 mb-2">
-                                    <Label htmlFor="logoSizeRatio" className="text-sm font-normal">Tamanho Logo (relativo à altura da etiqueta) [{Math.round(logoSizeRatio * 100)}%]</Label>
-                                    <Slider
-                                        id="logoSizeRatio"
-                                        min={0.1} max={0.5} step={0.05}
-                                        value={[logoSizeRatio]}
-                                        onValueChange={(value) => setLogoSizeRatio(value[0])}
-                                        className="my-2"
-                                    />
-                                </div>
-                                <div className="space-y-1">
-                                    <Label htmlFor="logoPosition" className="text-sm font-normal">Posição do Logo</Label>
-                                    <Select value={logoPosition} onValueChange={(v: 'top-left' | 'top-right' | 'top-center') => setLogoPosition(v)}>
-                                        <SelectTrigger id="logoPosition"><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="top-left">Topo Esquerda</SelectItem>
-                                            <SelectItem value="top-right">Topo Direita</SelectItem>
-                                            <SelectItem value="top-center">Topo Centro</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </>
-                        )}
+                </div>
+                <Separator />
+                {/* Logo Options Section */}
+                <div className="space-y-3 border p-3 rounded-md bg-muted/30">
+                    <Label className="text-sm font-semibold">Logo da Empresa</Label>
+                    <div className="flex items-center space-x-2">
+                        <Checkbox id="includeLogo" checked={includeLogo} onCheckedChange={(checked) => setIncludeLogo(!!checked)} />
+                        <Label htmlFor="includeLogo" className="text-xs font-normal">Incluir Logo</Label>
                     </div>
+                    {includeLogo && (
+                        <>
+                            <div className="space-y-1">
+                                <Label htmlFor="companyLogoUpload" className="text-xs font-normal">Arquivo (PNG, JPG, SVG)</Label>
+                                <div className="flex items-center gap-2">
+                                    <Input id="companyLogoUpload" type="file" accept="image/png, image/jpeg, image/svg+xml" onChange={handleLogoChange} ref={logoInputRef} className="text-xs h-8 flex-grow" />
+                                    {companyLogoDataUrl && (
+                                        <Button variant="ghost" size="icon" onClick={handleRemoveLogo} className="h-8 w-8">
+                                            <Trash2 className="h-4 w-4 text-destructive"/>
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="logoHeightMm" className="text-xs font-normal">Altura do Logo (mm) [{logoHeightMm}]</Label>
+                                <Slider id="logoHeightMm" min={2} max={Math.min(20, labelH_mm * 0.5)} step={0.5} value={[logoHeightMm]} onValueChange={(value) => setLogoHeightMm(value[0])} className="my-1" />
+                            </div>
+                            <div className="space-y-1">
+                                <Label htmlFor="logoPosition" className="text-xs font-normal">Posição do Logo</Label>
+                                <Select value={logoPosition} onValueChange={(v: 'top-left' | 'top-right' | 'top-center' | 'bottom-left' | 'bottom-right' | 'bottom-center') => setLogoPosition(v)}>
+                                    <SelectTrigger id="logoPosition" className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="top-left">Superior Esquerda</SelectItem>
+                                        <SelectItem value="top-right">Superior Direita</SelectItem>
+                                        <SelectItem value="top-center">Superior Centro</SelectItem>
+                                        <SelectItem value="bottom-left">Inferior Esquerda</SelectItem>
+                                        <SelectItem value="bottom-right">Inferior Direita</SelectItem>
+                                        <SelectItem value="bottom-center">Inferior Centro</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>
@@ -435,3 +460,5 @@ export function LabelPreviewModal({
     </Dialog>
   );
 }
+
+    
