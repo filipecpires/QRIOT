@@ -43,6 +43,8 @@ interface LabelPreviewModalProps {
 export interface LabelLayoutSettings {
     // Column Layout
     column1Proportion: number; // Percentage for column 1
+    col1HorizontalAlign: 'flex-start' | 'center' | 'flex-end';
+    col2HorizontalAlign: 'flex-start' | 'center' | 'flex-end';
 
     // Element Visibility & Assignment
     includeName: boolean;
@@ -62,10 +64,13 @@ export interface LabelLayoutSettings {
     nameFontSizePt: number;
     tagFontSizePt: number;
     customTextFontSizePt: number;
-    textAlignment: 'left' | 'center' | 'right'; // General text alignment for blocks
+    textAlignment: 'left' | 'center' | 'right'; // General text alignment for text within elements
     companyLogoDataUrl: string | null;
     logoHeightMm: number;
 }
+
+const elementRenderOrder = ['logo', 'name', 'customText', 'tag', 'qr'] as const;
+type ElementType = typeof elementRenderOrder[number];
 
 
 export function LabelPreviewModal({
@@ -78,12 +83,14 @@ export function LabelPreviewModal({
 }: LabelPreviewModalProps) {
   // Column Layout
   const [column1Proportion, setColumn1Proportion] = useState(50);
+  const [col1HorizontalAlign, setCol1HorizontalAlign] = useState<'flex-start' | 'center' | 'flex-end'>('center');
+  const [col2HorizontalAlign, setCol2HorizontalAlign] = useState<'flex-start' | 'center' | 'flex-end'>('center');
 
   // Element Visibility & Assignment
   const [includeName, setIncludeName] = useState(true);
-  const [nameAssignment, setNameAssignment] = useState<'col1' | 'col2' | 'none'>('col1');
+  const [nameAssignment, setNameAssignment] = useState<'col1' | 'col2' | 'none'>('col2');
   const [includeTag, setIncludeTag] = useState(true);
-  const [tagAssignment, setTagAssignment] = useState<'col1' | 'col2' | 'none'>('col1');
+  const [tagAssignment, setTagAssignment] = useState<'col1' | 'col2' | 'none'>('col2');
   const [includeCustomText, setIncludeCustomText] = useState(false);
   const [customText, setCustomText] = useState('');
   const [customTextAssignment, setCustomTextAssignment] = useState<'col1' | 'col2' | 'none'>('none');
@@ -112,7 +119,8 @@ export function LabelPreviewModal({
   const labelH_mm = labelConfig.height;
   const labelW_px = labelW_mm * scale;
   const labelH_px = labelH_mm * scale;
-  const padding = 1 * scale; // 1mm padding
+  const mainPaddingMm = 1; // 1mm padding on all sides of the label content area
+  const mainPaddingPx = mainPaddingMm * scale; 
   const columnGapPx = 1 * scale; // 1mm gap between columns
 
   useEffect(() => {
@@ -134,6 +142,7 @@ export function LabelPreviewModal({
             calculateSize();
         } else {
             img.onload = calculateSize;
+            img.onerror = () => console.error("Logo image failed to load for dimension calculation.");
         }
     } else {
         setActualLogoHeightPx(0);
@@ -149,7 +158,8 @@ export function LabelPreviewModal({
         reader.onloadend = () => {
             setCompanyLogoDataUrl(reader.result as string);
             setIncludeLogo(true); 
-            if(logoAssignment === 'none') setLogoAssignment('col1'); // Default to col1 if auto-including
+            if(logoAssignment === 'none' && column1Proportion > 0) setLogoAssignment('col1');
+            else if (logoAssignment === 'none') setLogoAssignment('col2');
         };
         reader.readAsDataURL(file);
     } else {
@@ -168,7 +178,7 @@ export function LabelPreviewModal({
 
   const handleSave = () => {
     const currentLayoutSettings: LabelLayoutSettings = {
-        column1Proportion,
+        column1Proportion, col1HorizontalAlign, col2HorizontalAlign,
         includeName, nameAssignment,
         includeTag, tagAssignment,
         includeCustomText, customText, customTextAssignment,
@@ -183,71 +193,61 @@ export function LabelPreviewModal({
         logoHeightMm,
     };
     console.log("Saving label layout settings (simulated):", currentLayoutSettings);
-    // TODO: Implement saving these settings
+    // TODO: Implement saving these settings to user preferences or a global config
     onClose();
   };
-
-  // --- Preview Rendering Logic ---
-  const col1WidthPx = labelW_px * (column1Proportion / 100);
-  const col2WidthPx = labelW_px - col1WidthPx;
-  
-  const effectiveCol1Width = Math.max(0, col1WidthPx - (column1Proportion > 0 && column1Proportion < 100 ? columnGapPx / 2 : 0) - padding * (column1Proportion > 0 ? 2 : 0) );
-  const effectiveCol2Width = Math.max(0, col2WidthPx - (column1Proportion > 0 && column1Proportion < 100 ? columnGapPx / 2 : 0) - padding * (column1Proportion < 100 ? 2 : 0) );
-
-  const col1X = padding;
-  const col2X = col1WidthPx + (column1Proportion > 0 && column1Proportion < 100 ? columnGapPx / 2 : 0) + padding;
 
   const elementsConfig = [
     { type: 'logo', assignment: logoAssignment, included: includeLogo, content: companyLogoDataUrl, settings: { heightMm: logoHeightMm, actualHPx: actualLogoHeightPx, actualWPx: actualLogoWidthPx } },
     { type: 'name', assignment: nameAssignment, included: includeName, content: asset.name, settings: { fontSizePt: nameFontSizePt, fontWeight: 'bold' } },
-    { type: 'customText', assignment: customTextAssignment, included: includeCustomText && !!customText, content: customText, settings: { fontSizePt: customTextFontSizePt } },
+    { type: 'customText', assignment: customTextAssignment, included: includeCustomText && !!customText.trim(), content: customText, settings: { fontSizePt: customTextFontSizePt } },
     { type: 'tag', assignment: tagAssignment, included: includeTag, content: `TAG: ${asset.tag}`, settings: { fontSizePt: tagFontSizePt } },
     { type: 'qr', assignment: qrAssignment, included: includeQr, content: qrValue, settings: { sizeMm: currentQrSizeMm } },
-  ];
+  ] as const;
 
-  const renderElement = (el: typeof elementsConfig[0], availableWidth: number) => {
-    let elHeightPx = 0;
-    let elJsx = null;
-    
+
+  const renderElement = (el: typeof elementsConfig[number], columnContentWidthPx: number) => {
     const commonTextStyle: React.CSSProperties = {
-        fontSize: `${el.settings.fontSizePt * 0.8 * scale / 3.78}px`,
-        lineHeight: '1.1', // Tightened line height
+        fontSize: `${el.settings.fontSizePt * 0.75}px`, // pt to px approx for web
+        lineHeight: '1.2',
         color: 'black',
         textAlign: textAlignment,
         wordBreak: 'break-word',
-        width: '100%',
-        fontWeight: el.settings.fontWeight || 'normal',
-        marginBottom: `${0.25 * scale}px`, // Small gap after text elements
+        width: '100%', // Take full width of its direct container (the flex item)
+        fontWeight: (el.settings as any).fontWeight || 'normal',
     };
 
     switch (el.type) {
         case 'logo':
             if (el.included && el.content && el.settings.actualWPx > 0 && el.settings.actualHPx > 0) {
-                const maxWidth = Math.min(el.settings.actualWPx, availableWidth);
-                const maxHeight = el.settings.actualHPx * (maxWidth / el.settings.actualWPx);
-                elHeightPx = maxHeight;
-                elJsx = (
-                    <div style={{ width: `${maxWidth}px`, height: `${elHeightPx}px`, display: 'flex', justifyContent: textAlignment }}>
-                        <img src={el.content} alt="Logo" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                return (
+                    <div style={{ display: 'flex', justifyContent: textAlignment, width: '100%' }}>
+                        <img 
+                            src={el.content} 
+                            alt="Logo" 
+                            style={{ 
+                                maxWidth: `${Math.min(el.settings.actualWPx, columnContentWidthPx)}px`,
+                                maxHeight: `${el.settings.actualHPx}px`,
+                                height: `${el.settings.actualHPx}px`,
+                                width: 'auto',
+                                objectFit: 'contain',
+                            }} 
+                        />
                     </div>
                 );
             }
             break;
         case 'name': case 'customText': case 'tag':
             if (el.included && el.content) {
-                // Basic height estimation:
-                const charWidthApprox = el.settings.fontSizePt * 0.3; // Very rough
-                const charsPerLine = Math.max(1, Math.floor(availableWidth / charWidthApprox));
-                const numLines = Math.ceil(el.content.length / charsPerLine);
-                elHeightPx = (el.settings.fontSizePt * scale / 3.78 * 1.1) * numLines;
-                elJsx = <div style={commonTextStyle}>{el.content}</div>;
+                return <div style={commonTextStyle}>{el.content}</div>;
             }
             break;
         case 'qr':
             if (el.included) {
-                const qrSizePx = Math.min(el.settings.sizeMm * scale, availableWidth * 0.98, labelH_px * 0.98);
-                elHeightPx = qrSizePx;
-                 elJsx = (
+                // QR size constrained by its column's content width and overall label height
+                const maxQrDimBasedOnLabel = Math.min(labelH_px - 2 * mainPaddingPx, labelW_px - 2 * mainPaddingPx);
+                const qrSizePx = Math.min(el.settings.sizeMm * scale, columnContentWidthPx, maxQrDimBasedOnLabel * 0.95);
+                return (
                     <div style={{display: 'flex', justifyContent: textAlignment, width: '100%'}}>
                          <QRCodeStyling value={el.content} size={qrSizePx} level="H" includeMargin={false} />
                     </div>
@@ -255,42 +255,31 @@ export function LabelPreviewModal({
             }
             break;
     }
-    return { jsx: elJsx, height: elHeightPx };
-  };
-
-  const renderColumn = (columnId: 'col1' | 'col2') => {
-    let currentY = padding;
-    const columnX = columnId === 'col1' ? col1X : col2X;
-    const columnWidth = columnId === 'col1' ? effectiveCol1Width : effectiveCol2Width;
-    if (columnWidth <=0) return [];
-
-    const columnElementsJsx: JSX.Element[] = [];
-
-    elementsConfig
-      .filter(el => el.assignment === columnId && el.included)
-      // Simple fixed order: Logo, Name, CustomText, Tag, QR
-      .sort((a, b) => {
-          const order = { logo: 0, name: 1, customText: 2, tag: 3, qr: 4 };
-          return order[a.type as keyof typeof order] - order[b.type as keyof typeof order];
-      })
-      .forEach((elConf, idx) => {
-        const { jsx, height } = renderElement(elConf, columnWidth);
-        if (jsx && currentY + height <= labelH_px - padding) { // Check if element fits
-          columnElementsJsx.push(
-            <div key={`${columnId}-${elConf.type}-${idx}`} style={{ position: 'absolute', left: `${columnX}px`, top: `${currentY}px`, width: `${columnWidth}px` }}>
-              {jsx}
-            </div>
-          );
-          currentY += height + (0.25 * scale); // Small gap after each element
-        }
-      });
-    return columnElementsJsx;
+    return null;
   };
   
-  const col1Content = column1Proportion > 0 ? renderColumn('col1') : [];
-  const col2Content = (100 - column1Proportion) > 0 ? renderColumn('col2') : [];
+  const renderColumnContent = (elements: Array<ReturnType<typeof renderElement>>) => {
+    return elements.filter(Boolean).map((elJsx, index) => (
+        <div key={index} style={{ marginBottom: `${0.5 * scale}px`, width: '100%' }}> {/* Ensure items try to take width */}
+            {elJsx}
+        </div>
+    ));
+  };
+  
+  const col1ContentWidth = labelW_px * (column1Proportion / 100) - (column1Proportion > 0 && column1Proportion < 100 ? columnGapPx / 2 : 0) - (column1Proportion > 0 ? 2*mainPaddingPx : 0) ;
+  const col2ContentWidth = labelW_px * ((100 - column1Proportion) / 100) - (column1Proportion > 0 && column1Proportion < 100 ? columnGapPx / 2 : 0) - ((100-column1Proportion) > 0 ? 2*mainPaddingPx : 0);
 
-  // --- End Preview Rendering Logic ---
+
+  const sortedCol1Elements = elementsConfig
+    .filter(el => el.assignment === 'col1' && el.included)
+    .sort((a, b) => elementRenderOrder.indexOf(a.type) - elementRenderOrder.indexOf(b.type))
+    .map(elConf => renderElement(elConf, labelW_px * (column1Proportion/100) - (column1Proportion > 0 && (100-column1Proportion) > 0 ? columnGapPx/2 : 0) ));
+
+  const sortedCol2Elements = elementsConfig
+    .filter(el => el.assignment === 'col2' && el.included)
+    .sort((a, b) => elementRenderOrder.indexOf(a.type) - elementRenderOrder.indexOf(b.type))
+    .map(elConf => renderElement(elConf, labelW_px * ((100-column1Proportion)/100) - (column1Proportion > 0 && (100-column1Proportion) > 0 ? columnGapPx/2 : 0) ));
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -311,28 +300,87 @@ export function LabelPreviewModal({
                     style={{
                       width: `${labelW_px}px`,
                       height: `${labelH_px}px`,
+                      display: 'flex',
+                      flexDirection: 'row',
                       position: 'relative',
-                      overflow: 'hidden',
+                      overflow: 'visible', // Allow content to be visible for debugging, set to hidden for final
                       fontFamily: 'Arial, sans-serif',
                       backgroundColor: 'white',
                       border: '1px dashed #999',
-                      boxShadow: '0 0 5px rgba(0,0,0,0.1)',
+                      boxSizing: 'border-box',
+                      padding: `${mainPaddingPx}px`,
                     }}
                   >
-                    {companyLogoDataUrl && <img ref={logoImageRef} src={companyLogoDataUrl} alt="logo loaded" style={{position: 'absolute', opacity: 0, pointerEvents: 'none', width: 'auto', height: 'auto'}}/> }
-                    {col1Content}
-                    {col2Content}
+                    {companyLogoDataUrl && <img ref={logoImageRef} src={companyLogoDataUrl} alt="logo preloader" style={{position: 'absolute', opacity: 0, pointerEvents: 'none', width: 'auto', height: 'auto'}}/> }
+                    
+                    {/* Column 1 */}
+                    {column1Proportion > 0 && (
+                        <div style={{
+                            width: `calc(${column1Proportion}% - ${column1Proportion < 100 ? `${columnGapPx / 2}px` : '0px'})`,
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: col1HorizontalAlign,
+                            justifyContent: 'flex-start', // Stack from top
+                            marginRight: column1Proportion < 100 ? `${columnGapPx / 2}px` : '0px',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
+                        }}>
+                            {renderColumnContent(sortedCol1Elements)}
+                        </div>
+                    )}
+
+                    {/* Column 2 */}
+                    {(100 - column1Proportion) > 0 && (
+                         <div style={{
+                            width: `calc(${(100 - column1Proportion)}% - ${column1Proportion > 0 ? `${columnGapPx / 2}px` : '0px'})`,
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: col2HorizontalAlign,
+                            justifyContent: 'flex-start', // Stack from top
+                            marginLeft: column1Proportion > 0 ? `${columnGapPx / 2}px` : '0px',
+                            boxSizing: 'border-box',
+                            overflow: 'hidden',
+                        }}>
+                            {renderColumnContent(sortedCol2Elements)}
+                        </div>
+                    )}
                   </div>
                 </div>
             </div>
 
-            <div className="space-y-4 overflow-y-auto pr-2 lg:max-h-[calc(75vh-3rem)]">
+            <div className="space-y-3 overflow-y-auto pr-2 lg:max-h-[calc(75vh-3rem)]">
                 {/* Column Layout */}
                 <div className="space-y-3 border p-3 rounded-md bg-muted/30">
                     <Label className="text-sm font-semibold">Layout das Colunas</Label>
                     <div>
                         <Label htmlFor="col1Proportion" className="text-xs font-normal">Coluna 1: {column1Proportion}% / Coluna 2: {100-column1Proportion}%</Label>
                         <Slider id="col1Proportion" min={0} max={100} step={5} value={[column1Proportion]} onValueChange={(value) => setColumn1Proportion(value[0])} className="my-1" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                        <div>
+                            <Label htmlFor="col1HAlign" className="text-xs font-normal">Alinh. Col. 1</Label>
+                             <Select value={col1HorizontalAlign} onValueChange={(v: any) => setCol1HorizontalAlign(v)}>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="flex-start">Esquerda</SelectItem>
+                                    <SelectItem value="center">Centro</SelectItem>
+                                    <SelectItem value="flex-end">Direita</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div>
+                            <Label htmlFor="col2HAlign" className="text-xs font-normal">Alinh. Col. 2</Label>
+                            <Select value={col2HorizontalAlign} onValueChange={(v: any) => setCol2HorizontalAlign(v)}>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="flex-start">Esquerda</SelectItem>
+                                    <SelectItem value="center">Centro</SelectItem>
+                                    <SelectItem value="flex-end">Direita</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                 </div>
                 <Separator />
@@ -348,7 +396,7 @@ export function LabelPreviewModal({
                         </div>
                         {includeName && (
                             <Select value={nameAssignment} onValueChange={(v: any) => setNameAssignment(v)}>
-                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue placeholder="Atribuir à coluna..." /></SelectTrigger>
                                 <SelectContent><SelectItem value="col1">Coluna 1</SelectItem><SelectItem value="col2">Coluna 2</SelectItem><SelectItem value="none">Não Mostrar</SelectItem></SelectContent>
                             </Select>
                         )}
@@ -361,7 +409,7 @@ export function LabelPreviewModal({
                         </div>
                         {includeTag && (
                              <Select value={tagAssignment} onValueChange={(v: any) => setTagAssignment(v)}>
-                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue placeholder="Atribuir à coluna..." /></SelectTrigger>
                                 <SelectContent><SelectItem value="col1">Coluna 1</SelectItem><SelectItem value="col2">Coluna 2</SelectItem><SelectItem value="none">Não Mostrar</SelectItem></SelectContent>
                             </Select>
                         )}
@@ -376,7 +424,7 @@ export function LabelPreviewModal({
                             <>
                                 <Input id="customText" value={customText} onChange={(e) => setCustomText(e.target.value)} placeholder="Ex: Depto. TI" className="text-xs h-8 mt-1" />
                                 <Select value={customTextAssignment} onValueChange={(v: any) => setCustomTextAssignment(v)}>
-                                    <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="text-xs h-8 mt-1"><SelectValue placeholder="Atribuir à coluna..." /></SelectTrigger>
                                     <SelectContent><SelectItem value="col1">Coluna 1</SelectItem><SelectItem value="col2">Coluna 2</SelectItem><SelectItem value="none">Não Mostrar</SelectItem></SelectContent>
                                 </Select>
                             </>
@@ -390,7 +438,7 @@ export function LabelPreviewModal({
                         </div>
                          {includeQr && (
                             <Select value={qrAssignment} onValueChange={(v: any) => setQrAssignment(v)}>
-                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue placeholder="Atribuir à coluna..." /></SelectTrigger>
                                 <SelectContent><SelectItem value="col1">Coluna 1</SelectItem><SelectItem value="col2">Coluna 2</SelectItem><SelectItem value="none">Não Mostrar</SelectItem></SelectContent>
                             </Select>
                         )}
@@ -403,7 +451,7 @@ export function LabelPreviewModal({
                         </div>
                         {includeLogo && (
                            <Select value={logoAssignment} onValueChange={(v: any) => setLogoAssignment(v)}>
-                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
+                                <SelectTrigger className="text-xs h-8 mt-1"><SelectValue placeholder="Atribuir à coluna..." /></SelectTrigger>
                                 <SelectContent><SelectItem value="col1">Coluna 1</SelectItem><SelectItem value="col2">Coluna 2</SelectItem><SelectItem value="none">Não Mostrar</SelectItem></SelectContent>
                             </Select>
                         )}
@@ -446,14 +494,14 @@ export function LabelPreviewModal({
 
                 {/* Text Styling Section */}
                 <div className="space-y-3 border p-3 rounded-md bg-muted/30">
-                    <Label className="text-sm font-semibold">Estilo do Texto</Label>
+                    <Label className="text-sm font-semibold">Estilo do Texto (para elementos de texto)</Label>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {includeName && <div> <Label htmlFor="nameFontSize" className="text-xs font-normal">Nome [{nameFontSizePt}pt]</Label> <Slider id="nameFontSize" min={4} max={12} step={0.5} value={[nameFontSizePt]} onValueChange={v => setNameFontSizePt(v[0])} className="my-1" /> </div>}
                         {includeTag && <div> <Label htmlFor="tagFontSize" className="text-xs font-normal">TAG [{tagFontSizePt}pt]</Label> <Slider id="tagFontSize" min={4} max={10} step={0.5} value={[tagFontSizePt]} onValueChange={v => setTagFontSizePt(v[0])} className="my-1"/> </div>}
-                        {includeCustomText && customText && <div> <Label htmlFor="customTextFontSize" className="text-xs font-normal">Adicional [{customTextFontSizePt}pt]</Label> <Slider id="customTextFontSize" min={4} max={10} step={0.5} value={[customTextFontSizePt]} onValueChange={v => setCustomTextFontSizePt(v[0])} className="my-1"/> </div>}
+                        {includeCustomText && customText.trim() && <div> <Label htmlFor="customTextFontSize" className="text-xs font-normal">Adicional [{customTextFontSizePt}pt]</Label> <Slider id="customTextFontSize" min={4} max={10} step={0.5} value={[customTextFontSizePt]} onValueChange={v => setCustomTextFontSizePt(v[0])} className="my-1"/> </div>}
                     </div>
                     <div>
-                        <Label htmlFor="textAlignment" className="text-xs font-normal">Alinhamento Geral do Texto nos Blocos</Label>
+                        <Label htmlFor="textAlignment" className="text-xs font-normal">Alinhamento do Texto (dentro de cada bloco de texto)</Label>
                         <Select value={textAlignment} onValueChange={(v: 'left' | 'center' | 'right') => setTextAlignment(v)}>
                             <SelectTrigger id="textAlignment" className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
                             <SelectContent> <SelectItem value="left">Esquerda</SelectItem> <SelectItem value="center">Centro</SelectItem> <SelectItem value="right">Direita</SelectItem> </SelectContent>
@@ -471,3 +519,4 @@ export function LabelPreviewModal({
     </Dialog>
   );
 }
+
