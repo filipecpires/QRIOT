@@ -11,12 +11,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Printer, Search, AlertTriangle, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react'; // Changed Eye to Edit
+import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import QRCodeStyling from 'qrcode.react';
 import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable';
-import { LabelPreviewModal } from '@/components/feature/label-preview-modal'; // Import the new modal
+// import autoTable from 'jspdf-autotable'; // Not used for now with simple stacking
+import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
 
 // Mock data - replace with actual data fetching
 interface AssetForLabel {
@@ -29,7 +29,7 @@ interface AssetForLabel {
 
 async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForLabel[], total: number }> {
     console.log("Fetching assets with filters:", filters);
-    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
 
     const allAssets: AssetForLabel[] = [
         { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'TI-NB-001', category: 'Eletrônicos', location: 'Escritório 1' },
@@ -41,23 +41,18 @@ async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForL
         { id: 'ASSET007', name: 'Mesa Escritório', tag: 'MOB-MES-001', category: 'Mobiliário', location: 'Sala de Reuniões' },
         { id: 'ASSET008', name: 'Gaveteiro', tag: 'MOB-GAV-002', category: 'Mobiliário', location: 'Sala de Reuniões' },
         { id: 'ASSET009', name: 'Paleteira Manual', tag: 'ALM-PAL-001', category: 'Ferramentas', location: 'Almoxarifado' },
-        // Add more assets...
     ];
 
-    // Apply basic filtering
     const filteredAssets = allAssets.filter(asset => {
         let match = true;
         if (filters.search && !(asset.name.toLowerCase().includes(filters.search.toLowerCase()) || asset.tag.toLowerCase().includes(filters.search.toLowerCase()))) {
             match = false;
         }
-        // Check if category filter is active (not empty string which represents 'all')
         if (filters.category && asset.category !== filters.category) match = false;
-         // Check if location filter is active (not empty string which represents 'all')
         if (filters.location && asset.location !== filters.location) match = false;
         return match;
     });
 
-    // Simulate pagination
     const page = filters.page || 1;
     const limit = filters.limit || 10;
     const startIndex = (page - 1) * limit;
@@ -66,8 +61,6 @@ async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForL
     return { assets: paginatedAssets, total: filteredAssets.length };
 }
 
-// Mock label sizes (in mm)
-// Added type export
 export interface LabelConfig {
     id: string;
     name: string;
@@ -87,14 +80,15 @@ export interface LabelConfig {
 const labelSizes: LabelConfig[] = [
     { id: 'size1', name: 'Pimaco 6080 (38.1 x 21.2 mm)', width: 38.1, height: 21.2, cols: 5, rows: 13, gapX: 2.5, gapY: 0, pageFormat: 'a4', marginTop: 15.7, marginLeft: 4.7, marginRight: 4.7, marginBottom: 15.7 },
     { id: 'size2', name: 'Pimaco 6082 (63.5 x 38.1 mm)', width: 63.5, height: 38.1, cols: 3, rows: 7, gapX: 2.5, gapY: 0, pageFormat: 'a4', marginTop: 10.7, marginLeft: 4.7, marginRight: 4.7, marginBottom: 10.7 },
-    { id: 'size3', name: 'Térmica Pequena (50 x 30 mm)', width: 50, height: 30, cols: 1, rows: 1, gapX: 2, gapY: 2, pageFormat: 'custom' }, // Example thermal
-    { id: 'size4', name: 'Térmica Média (70 x 40 mm)', width: 70, height: 40, cols: 1, rows: 1, gapX: 2, gapY: 2, pageFormat: 'custom' }, // Example thermal
+    { id: 'size3', name: 'Térmica Pequena (50 x 30 mm)', width: 50, height: 30, cols: 1, rows: 1, gapX: 2, gapY: 2, pageFormat: 'custom' },
+    { id: 'size4', name: 'Térmica Média (70 x 40 mm)', width: 70, height: 40, cols: 1, rows: 1, gapX: 2, gapY: 2, pageFormat: 'custom' },
 ];
 
-// Constants for A4 page size in mm
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-// const DEFAULT_MARGIN_MM = 10; // Use margins from config now
+const MM_TO_PT_SCALE = 2.83465; // 1mm = 2.83465 points (approx)
+const PX_TO_PT_SCALE = 0.75; // 1px approx 0.75pt (for web display font sizes)
+
 
 export default function PrintLabelsPage() {
     const { toast } = useToast();
@@ -104,20 +98,20 @@ export default function PrintLabelsPage() {
     const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         search: '',
-        category: '', // Empty string means 'all'
-        location: '', // Empty string means 'all'
+        category: '',
+        location: '',
         page: 1,
         limit: 10,
     });
     const [totalAssets, setTotalAssets] = useState(0);
-    const [labelSizeId, setLabelSizeId] = useState<string>(labelSizes[0].id); // Default label size
-    const [qrSize, setQrSize] = useState(15); // QR code size in mm (adjust based on label size)
+    const [labelSizeId, setLabelSizeId] = useState<string>(labelSizes[0].id);
     const [isGenerating, setIsGenerating] = useState(false);
     const qrCanvasRefs = useRef<{ [key: string]: HTMLCanvasElement | null }>({});
-    const [isPreviewOpen, setIsPreviewOpen] = useState(false); // State for preview modal
-    const [assetToPreview, setAssetToPreview] = useState<AssetForLabel | null>(null); // State for preview modal asset
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    const [assetToPreview, setAssetToPreview] = useState<AssetForLabel | null>(null);
+    const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
 
-    // Mock data for filters (replace with actual fetches if needed)
+
     const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
     const locations = ['Escritório 1', 'Escritório 2', 'Sala de Reuniões', 'Sala de Treinamento', 'Almoxarifado'];
 
@@ -143,7 +137,6 @@ export default function PrintLabelsPage() {
     }, [filters]);
 
     const handleFilterChange = (key: keyof typeof filters, value: any) => {
-        // If the value is '__all__', treat it as an empty string for filtering state
         const actualValue = value === '__all__' ? '' : value;
         setFilters(prev => ({ ...prev, [key]: actualValue, page: 1 }));
     };
@@ -185,11 +178,22 @@ export default function PrintLabelsPage() {
             setIsPreviewOpen(true);
         }
     };
+    
+    const handleSaveLayout = (elements: LabelElementConfig[]) => {
+        console.log("Layout salvo (aplicado para próxima geração de PDF):", elements);
+        setCurrentLabelLayout(elements);
+        // Here you would typically save these settings to user preferences or backend
+        toast({ title: "Layout Aplicado", description: "O novo layout será usado para gerar as etiquetas."});
+    };
 
-    // Function to generate PDF
+
     const generatePdf = async () => {
         if (selectedAssets.size === 0) {
             toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para gerar etiquetas.", variant: "destructive" });
+            return;
+        }
+        if (currentLabelLayout.length === 0) {
+            toast({ title: "Layout Não Configurado", description: "Por favor, edite o layout da etiqueta antes de gerar o PDF.", variant: "destructive" });
             return;
         }
         setIsGenerating(true);
@@ -205,122 +209,159 @@ export default function PrintLabelsPage() {
         const doc = new jsPDF({
             orientation: selectedLabelConfig.pageFormat === 'a4' ? 'p' : 'l',
             unit: 'mm',
-            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width + selectedLabelConfig.gapX * 2, selectedLabelConfig.height + selectedLabelConfig.gapY * 2]
+            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX || 0) * 2, selectedLabelConfig.height + (selectedLabelConfig.gapY || 0) * 2]
         });
 
-        const { width: labelW, height: labelH, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
-        const marginTop = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : gapY / 2); // Use defined margin or default
-        const marginLeft = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : gapX / 2);
-        const pageW = pageFormat === 'a4' ? A4_WIDTH_MM : labelW + gapX * 2;
-        const pageH = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH + gapY * 2;
+        const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
+        const marginTop = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : (gapY / 2 || 1));
+        const marginLeft = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : (gapX / 2 || 1));
+        const pageW = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm + (gapX || 0) * 2;
+        const pageH = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm + (gapY || 0) * 2;
+        
+        const mainPaddingMm = 1; // Internal padding within each label in mm
 
-
-        let currentX = marginLeft;
-        let currentY = marginTop;
+        let currentX_mm = marginLeft;
+        let currentY_mm = marginTop;
         let assetIndex = 0;
 
-        const addLabelContent = (asset: AssetForLabel, x: number, y: number) => {
-            const qrCanvas = qrCanvasRefs.current[asset.id];
-            if (qrCanvas) {
-                try {
-                    const qrDataUrl = qrCanvas.toDataURL('image/png');
-                    const qrActualSize = Math.min(qrSize, labelH * 0.6, labelW * 0.4); // Limit QR size, potentially narrower for text space
-                    const qrX = x + 2; // Position QR to the left with padding
-                    const qrY = y + (labelH - qrActualSize) / 2; // Center QR vertically
-                    doc.addImage(qrDataUrl, 'PNG', qrX, qrY, qrActualSize, qrActualSize);
+        const addLabelContent = async (asset: AssetForLabel, x_mm: number, y_mm: number) => {
+            const labelContentWidthMm = labelW_mm - 2 * mainPaddingMm;
+            let currentElementY_mm = y_mm + mainPaddingMm; // Start after top padding
 
-                     // Calculate remaining space for text
-                    const textXStart = qrX + qrActualSize + 2; // Start text next to QR code + gap
-                    const availableTextWidth = labelW - (textXStart - x) - 2; // Width available for text
-                    let textY = y + 3; // Start text slightly from the top
-
-                     // Asset Name (potentially wraps)
-                    doc.setFontSize(7);
-                    doc.setFont('helvetica', 'bold');
-                    const nameLines = doc.splitTextToSize(asset.name, availableTextWidth);
-                    doc.text(nameLines, textXStart, textY, { baseline: 'top' });
-                    textY += nameLines.length * 2.5; // Adjust based on font size/line height
-
-                    // Asset Tag (smaller font)
-                    if (textY < y + labelH - 3) { // Check if space remains
-                         doc.setFontSize(6);
-                         doc.setFont('helvetica', 'normal');
-                         const tagText = `TAG: ${asset.tag}`;
-                         doc.text(tagText, textXStart, textY, { baseline: 'top' });
-                    }
-
-                    // Optional: Draw border for debugging
-                     // doc.setDrawColor(200, 200, 200);
-                     // doc.rect(x, y, labelW, labelH);
-
-                } catch (e) {
-                    console.error("Error adding QR code image:", e);
-                    doc.setFontSize(6);
-                    doc.setTextColor(255, 0, 0); // Red color for error
-                    doc.text("Erro QR", x + 5, y + 5);
-                    doc.setTextColor(0, 0, 0); // Reset text color
+            for (const element of currentLabelLayout.filter(el => el.visible)) {
+                const contentToRender = element.id === 'assetName' ? asset.name :
+                                      element.id === 'assetTag' ? `TAG: ${asset.tag}` :
+                                      element.content;
+                const textAlign = element.textAlign || 'left';
+                
+                let textX_mm = x_mm + mainPaddingMm;
+                if (textAlign === 'center') {
+                    textX_mm = x_mm + labelW_mm / 2;
+                } else if (textAlign === 'right') {
+                    textX_mm = x_mm + labelW_mm - mainPaddingMm;
                 }
-            } else {
-                 console.warn(`QR Canvas not found for asset ${asset.id}`);
-                 doc.setFontSize(6);
-                 doc.setTextColor(255, 0, 0);
-                 doc.text("QR N/D", x + 5, y + 5);
-                 doc.setTextColor(0, 0, 0);
+
+
+                if (element.type === 'text' || element.type === 'custom') {
+                    if (contentToRender) {
+                        doc.setFontSize(element.fontSizePx * PX_TO_PT_SCALE); // Convert px to pt for PDF
+                        doc.setFont(element.fontFamily || 'helvetica', 'normal'); // jsPDF uses helvetica, times, courier
+                        const textLines = doc.splitTextToSize(contentToRender, labelContentWidthMm);
+                        
+                        // Check if text fits, if not, reduce font size (simple approach)
+                        let currentFontSizePt = element.fontSizePx * PX_TO_PT_SCALE;
+                        let lines = textLines;
+                        while (lines.length * (currentFontSizePt / MM_TO_PT_SCALE) > (labelH_mm * 0.25) && currentFontSizePt > 4) { // Max 25% of label height for this text, min 4pt
+                            currentFontSizePt -= 0.5;
+                            doc.setFontSize(currentFontSizePt);
+                            lines = doc.splitTextToSize(contentToRender, labelContentWidthMm);
+                        }
+
+                        doc.text(lines, textX_mm, currentElementY_mm, { align: textAlign, baseline: 'top' });
+                        currentElementY_mm += lines.length * (currentFontSizePt / MM_TO_PT_SCALE) + (0.5); // Add small gap
+                    }
+                } else if (element.type === 'qr') {
+                    const qrCanvas = qrCanvasRefs.current[asset.id]; // Ensure this is populated correctly for each asset
+                    if (qrCanvas) {
+                        try {
+                            const qrDataUrl = qrCanvas.toDataURL('image/png');
+                            const qrSizeMm = Math.min(element.widthPx / MM_TO_PT_SCALE, labelContentWidthMm * 0.8, (labelH_mm - (currentElementY_mm - y_mm)) * 0.8);
+                            
+                            let qrPosX_mm = x_mm + mainPaddingMm;
+                            if (textAlign === 'center') qrPosX_mm = x_mm + (labelW_mm - qrSizeMm) / 2;
+                            else if (textAlign === 'right') qrPosX_mm = x_mm + labelW_mm - mainPaddingMm - qrSizeMm;
+
+                            if (currentElementY_mm + qrSizeMm <= y_mm + labelH_mm - mainPaddingMm) {
+                                doc.addImage(qrDataUrl, 'PNG', qrPosX_mm, currentElementY_mm, qrSizeMm, qrSizeMm);
+                                currentElementY_mm += qrSizeMm + (0.5);
+                            }
+                        } catch (e) { console.error("Error adding QR image to PDF:", e); }
+                    }
+                } else if (element.type === 'logo' && element.dataUrl) {
+                     try {
+                        const img = new Image();
+                        img.src = element.dataUrl;
+                        // Wait for image to load to get natural dimensions
+                        await new Promise(resolve => { img.onload = resolve; img.onerror = resolve; });
+
+                        const aspectRatio = img.naturalWidth / img.naturalHeight;
+                        let logoHeightMm = element.heightPx / MM_TO_PT_SCALE;
+                        let logoWidthMm = element.widthPx / MM_TO_PT_SCALE;
+
+                        // Adjust based on aspect ratio, fitting within constraints
+                        if (logoWidthMm / logoHeightMm > aspectRatio) { // Constrained by height
+                            logoWidthMm = logoHeightMm * aspectRatio;
+                        } else { // Constrained by width
+                            logoHeightMm = logoWidthMm / aspectRatio;
+                        }
+                        
+                        logoHeightMm = Math.min(logoHeightMm, (labelH_mm - (currentElementY_mm - y_mm)) * 0.7); // Max 70% of remaining height
+                        logoWidthMm = logoHeightMm * aspectRatio;
+                        logoWidthMm = Math.min(logoWidthMm, labelContentWidthMm * 0.8); // Max 80% of content width
+                        logoHeightMm = logoWidthMm / aspectRatio;
+
+
+                        let logoPosX_mm = x_mm + mainPaddingMm;
+                        if (textAlign === 'center') logoPosX_mm = x_mm + (labelW_mm - logoWidthMm) / 2;
+                        else if (textAlign === 'right') logoPosX_mm = x_mm + labelW_mm - mainPaddingMm - logoWidthMm;
+
+                        if (currentElementY_mm + logoHeightMm <= y_mm + labelH_mm - mainPaddingMm) {
+                            doc.addImage(element.dataUrl, 'PNG', logoPosX_mm, currentElementY_mm, logoWidthMm, logoHeightMm);
+                            currentElementY_mm += logoHeightMm + (0.5);
+                        }
+                    } catch (e) { console.error("Error adding logo image to PDF:", e); }
+                }
+                 // Optional: Draw border for debugging each label content area
+                // doc.setDrawColor(220, 220, 220);
+                // doc.rect(x_mm, y_mm, labelW_mm, labelH_mm);
             }
         };
 
         while (assetIndex < assetsToPrint.length) {
              for (let r = 0; r < rows; r++) {
-                currentX = marginLeft; // Reset X for new row
+                currentX_mm = marginLeft;
                 for (let c = 0; c < cols; c++) {
                     if (assetIndex >= assetsToPrint.length) break;
-                    addLabelContent(assetsToPrint[assetIndex], currentX, currentY);
-                    currentX += labelW + gapX;
+                    await addLabelContent(assetsToPrint[assetIndex], currentX_mm, currentY_mm);
+                    currentX_mm += labelW_mm + gapX;
                     assetIndex++;
                 }
-                currentY += labelH + gapY;
-                if (currentY + labelH > pageH - (selectedLabelConfig.marginBottom ?? marginTop) && assetIndex < assetsToPrint.length) {
-                    // Check if next row exceeds page height (consider margin bottom)
+                currentY_mm += labelH_mm + gapY;
+                if (assetIndex < assetsToPrint.length && currentY_mm + labelH_mm > pageH - (selectedLabelConfig.marginBottom ?? marginTop)) {
                      if (pageFormat === 'a4') {
                          doc.addPage();
-                         currentY = marginTop; // Reset Y for new page
-                         break; // Exit inner loops to start new page
+                         currentY_mm = marginTop;
+                         break; 
                     }
                 }
-                 if (assetIndex >= assetsToPrint.length) break; // Exit row loop if finished
+                 if (assetIndex >= assetsToPrint.length) break;
             }
-            if (assetIndex >= assetsToPrint.length) break; // Exit outer loop if all assets printed
-            // If not A4 and not finished, add a new page (for continuous thermal)
+            if (assetIndex >= assetsToPrint.length) break;
              if (pageFormat !== 'a4' && assetIndex < assetsToPrint.length) {
                  doc.addPage();
-                 currentY = marginTop; // Reset Y for new page (start from top margin)
+                 currentY_mm = marginTop;
              }
         }
-
 
         doc.save(`etiquetas_qriot_${new Date().toISOString().slice(0,10)}.pdf`);
         setIsGenerating(false);
         toast({ title: "PDF Gerado", description: `${assetsToPrint.length} etiquetas geradas com sucesso.` });
     };
 
-    // Pre-render QR codes in hidden canvases
     const renderHiddenQrCodes = () => {
-        const assetsForQR = assets.filter(a => selectedAssets.has(a.id)); // Only render selected
+        const assetsForQR = assets.filter(a => selectedAssets.has(a.id));
         return (
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
                 {assetsForQR.map((asset) => {
-                    // Construct public URL - ensure this runs client-side or pass origin
                     const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : '';
                     return (
                         <div key={`qr-hidden-${asset.id}`}>
                             <QRCodeStyling
-                                value={publicUrl || asset.tag} // Fallback to tag if URL fails
-                                size={150} // Render larger for better quality capture
-                                level="H" // High error correction for potentially smaller final size
+                                value={publicUrl || asset.tag}
+                                size={150} 
+                                level="H"
                                 includeMargin={false}
-                                // Use canvas ref to store the canvas element
                                 ref={(el) => {
-                                    // The ref might give the wrapper div first, find the canvas inside
                                     if (el) {
                                         const canvas = el.querySelector('canvas');
                                         if (canvas) {
@@ -338,17 +379,12 @@ export default function PrintLabelsPage() {
 
     return (
         <div className="space-y-6">
-            {/* Hidden QR codes for canvas generation */}
             {renderHiddenQrCodes()}
-
             <h1 className="text-3xl font-bold">Imprimir Etiquetas</h1>
-
-            {/* Asset Selection Card */}
             <Card>
                 <CardHeader>
                     <CardTitle>Selecionar Ativos</CardTitle>
                     <CardDescription>Escolha os ativos para os quais deseja gerar etiquetas.</CardDescription>
-                    {/* Filters */}
                     <div className="pt-4 flex flex-wrap gap-4">
                         <Input
                             placeholder="Buscar por nome ou tag..."
@@ -356,24 +392,20 @@ export default function PrintLabelsPage() {
                             onChange={(e) => handleFilterChange('search', e.target.value)}
                             className="max-w-sm"
                         />
-                         {/* Use filters.category or '__all__' for Select value */}
                          <Select value={filters.category || '__all__'} onValueChange={(v) => handleFilterChange('category', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Categoria" />
                             </SelectTrigger>
                             <SelectContent>
-                                {/* Use a non-empty value for the "All" option */}
                                 <SelectItem value="__all__">Todas Categorias</SelectItem>
                                 {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                         {/* Use filters.location or '__all__' for Select value */}
                          <Select value={filters.location || '__all__'} onValueChange={(v) => handleFilterChange('location', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Localização" />
                             </SelectTrigger>
                             <SelectContent>
-                                {/* Use a non-empty value for the "All" option */}
                                 <SelectItem value="__all__">Todas Localizações</SelectItem>
                                 {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                             </SelectContent>
@@ -434,7 +466,6 @@ export default function PrintLabelsPage() {
                             )}
                         </TableBody>
                     </Table>
-                    {/* Pagination */}
                      <div className="flex items-center justify-between space-x-2 py-4">
                          <div className="text-sm text-muted-foreground">
                             {selectedAssets.size} de {totalAssets} ativo(s) selecionado(s).
@@ -464,11 +495,10 @@ export default function PrintLabelsPage() {
                 </CardContent>
             </Card>
 
-            {/* Print Settings Card */}
             <Card>
                 <CardHeader>
                     <CardTitle>Configurações de Impressão</CardTitle>
-                    <CardDescription>Ajuste o tamanho da etiqueta e do QR Code.</CardDescription>
+                    <CardDescription>Ajuste o modelo da etiqueta. O layout detalhado é configurado no editor.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -485,42 +515,31 @@ export default function PrintLabelsPage() {
                         </Select>
                         <p className="text-xs text-muted-foreground">Define o layout e dimensões das etiquetas no PDF.</p>
                     </div>
-                     <div className="space-y-2">
-                        <Label htmlFor="qr-size">Tamanho do QR Code (mm)</Label>
-                         <Input
-                             id="qr-size"
-                             type="number"
-                             min="5"
-                             max="50" // Sensible max
-                             value={qrSize}
-                             onChange={(e) => setQrSize(Math.max(5, parseInt(e.target.value) || 15))} // Ensure minimum size
-                             className="w-24"
-                         />
-                        <p className="text-xs text-muted-foreground">Tamanho do QR Code dentro da etiqueta. Ajuste conforme necessário.</p>
-                    </div>
+                    {/* QR Size input removed, handled in editor */}
                 </CardContent>
                 <CardFooter className="flex justify-between">
                     <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0}>
-                         <Edit className="mr-2 h-4 w-4" /> Editar Etiqueta {/* Changed icon and text */}
+                         <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
-                     <Button onClick={generatePdf} disabled={selectedAssets.size === 0 || isGenerating}>
+                     <Button onClick={generatePdf} disabled={selectedAssets.size === 0 || isGenerating || currentLabelLayout.length === 0}>
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                         Gerar PDF ({selectedAssets.size})
                     </Button>
                 </CardFooter>
             </Card>
 
-            {/* Label Preview Modal */}
             {assetToPreview && (
                 <LabelPreviewModal
                     isOpen={isPreviewOpen}
                     onClose={() => setIsPreviewOpen(false)}
                     asset={assetToPreview}
-                    labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]} // Pass selected config
-                    qrSize={qrSize} // Pass selected QR size
+                    labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
+                    initialQrSizeMm={15} // Initial QR size in mm, editor uses pixels
                     qrValue={typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${assetToPreview.tag}` : ''}
+                    onSave={handleSaveLayout}
                 />
              )}
         </div>
     );
 }
+
