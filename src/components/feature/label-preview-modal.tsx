@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { ImageIcon, Trash2, ArrowDown, ArrowUp, GripVertical, PlusCircle } from 'lucide-react';
 import { Separator } from '../ui/separator';
-import { Card, CardContent } from '@/components/ui/card'; // Added Card import
+import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
@@ -290,12 +290,12 @@ export function LabelPreviewModal({
                         <Button variant="outline" size="sm" disabled={!asset.characteristics || availableCharacteristics.length === 0}><PlusCircle className="mr-2 h-4 w-4" />Característica</Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-56 p-0">
-                        <Command>
-                            <CommandInput placeholder="Buscar característica..." />
-                            <CommandEmpty>Nenhuma característica disponível.</CommandEmpty>
-                            <CommandGroup>
+                        <Command> {/* Custom Command wrapper */}
+                            <CommandInput placeholder="Buscar característica..." /> {/* Custom CommandInput wrapper */}
+                            <CommandEmpty>Nenhuma característica disponível.</CommandEmpty> {/* Custom CommandEmpty wrapper */}
+                            <CommandGroup> {/* Custom CommandGroup wrapper */}
                                 {availableCharacteristics.map((char) => (
-                                <CommandItem
+                                <CommandItem // Custom CommandItem wrapper
                                     key={char.key}
                                     value={char.key}
                                     onSelect={() => addElement('characteristic', undefined, char.key)}
@@ -405,15 +405,15 @@ export function LabelPreviewModal({
 
 // Helper components for Popover and Command (shadcn/ui structure)
 const Command = React.forwardRef<
-    React.ElementRef<typeof CommandPrimitive.Root>,
-    React.ComponentPropsWithoutRef<typeof CommandPrimitive.Root>
+    React.ElementRef<typeof CommandPrimitive>,
+    React.ComponentPropsWithoutRef<typeof CommandPrimitive>
 >(({ className, ...props }, ref) => (
-    <CommandPrimitive.Root
+    <CommandPrimitive
         ref={ref}
         className={cn("flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground", className)}
         {...props} />
 ));
-Command.displayName = CommandPrimitive.Root.displayName;
+Command.displayName = CommandPrimitive.displayName;
 
 const CommandInput = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Input>,
@@ -463,3 +463,4 @@ CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
 // And import CommandPrimitive from 'cmdk'
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react'; // Assuming lucide-react is used for icons
+
