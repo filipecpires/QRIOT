@@ -13,9 +13,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import QRCodeStyling from 'qrcode.react'; // Using qrcode.react for consistency
+import { QRCodeCanvas } from 'qrcode.react'; // Import QRCodeCanvas
 import { jsPDF } from "jspdf";
-import autoTable from 'jspdf-autotable'; // Import autoTable
+// import autoTable from 'jspdf-autotable'; // Currently unused, keep if needed later
 import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
 
 // Mock data - replace with actual data fetching
@@ -265,34 +265,24 @@ export default function PrintLabelsPage() {
             format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width, selectedLabelConfig.height] // Use exact label size for custom format
         });
 
-        // Remove default margins for better control
-        doc.setPage(1);
-        // @ts-ignore - jsPDF types might not be perfect
-        // doc.internal.events.subscribe('addPage', () => {
-        //     // Reset margins for new pages if needed
-        // });
-
-
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
         const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : 0);
         const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : 0);
         const pageW_mm = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm;
         const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm;
 
-
         let assetIndex = 0;
         let pageCount = 1;
 
         // Helper to add content to a single label at specified offset
         const addLabelContent = async (asset: AssetForLabel, x_offset_mm: number, y_offset_mm: number) => {
-             // Iterate through the saved layout elements
+            // Iterate through the saved layout elements
             for (const element of layoutToUse.filter(el => el.visible)) {
-                // Convert element position and size from px (editor) to mm (PDF)
                 const el_x_mm = x_offset_mm + (element.x * PX_TO_MM_SCALE);
                 const el_y_mm = y_offset_mm + (element.y * PX_TO_MM_SCALE);
                 const el_w_mm = element.widthPx * PX_TO_MM_SCALE;
                 const el_h_mm = element.heightPx * PX_TO_MM_SCALE;
-                const el_font_size_pt = element.fontSizePx * PX_TO_PT_SCALE; // Convert px to pt for font size
+                const el_font_size_pt = element.fontSizePx * PX_TO_PT_SCALE;
 
                 const contentToRender =
                     element.id === 'assetName' ? asset.name :
@@ -300,63 +290,69 @@ export default function PrintLabelsPage() {
                     element.type === 'characteristic' ? `${element.content}: ${asset.characteristics?.find(c => c.key === element.content)?.value || ''}` :
                     element.type === 'custom' ? element.content : '';
 
-                 let textAlignJsPdf: 'left' | 'center' | 'right' = element.textAlign || 'left';
-
+                let textAlignJsPdf: 'left' | 'center' | 'right' = element.textAlign || 'left';
 
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
-                         doc.setFontSize(el_font_size_pt);
-                         doc.setFont(element.fontFamily || 'helvetica', 'normal'); // Use selected font or default
-
-                         // Calculate available width for text within the element's boundaries
-                         const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95; // Use element width or remaining label width
-
-                         const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
-
-                         // Adjust x position based on alignment within the element's defined width
-                         let textXPosMm = el_x_mm;
-                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
-                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
-
-                         doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), { // Adjust y slightly for better baseline alignment
-                             align: textAlignJsPdf,
-                             baseline: 'top' // Use top baseline for consistency with x, y positioning
-                         });
-                     }
+                        doc.setFontSize(el_font_size_pt);
+                        doc.setFont(element.fontFamily || 'helvetica', 'normal');
+                        const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95;
+                        const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
+                        let textXPosMm = el_x_mm;
+                        if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
+                        else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
+                        doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), {
+                            align: textAlignJsPdf,
+                            baseline: 'top'
+                        });
+                    }
                 } else if (element.type === 'qr') {
                     const qrCanvas = qrCanvasRefs.current[asset.id];
                     if (qrCanvas) {
                         try {
-                             // Generate QR on the fly or ensure canvas exists from hidden render
-                             const qrDataUrl = qrCanvas.toDataURL('image/png');
-                             // Ensure QR size is positive
-                             const qrSizeMm = Math.max(1, el_w_mm); // Use widthPx converted to mm, minimum 1mm
-                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                        } catch (e) { console.error("Error adding QR image to PDF:", e); }
+                            // Ensure canvas is ready before getting data URL
+                            await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to help rendering
+                            const qrDataUrl = qrCanvas.toDataURL('image/png');
+                            const qrSizeMm = Math.max(1, el_w_mm);
+                             if (qrDataUrl && qrDataUrl.length > 'data:image/png;base64,'.length) { // Basic check for valid data URL
+                                 doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                             } else {
+                                 console.warn(`QR data URL is empty or invalid for asset ${asset.id}`);
+                                 // Optionally draw a placeholder rectangle
+                                 doc.setDrawColor(255, 0, 0);
+                                 doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                                 doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
+                             }
+                        } catch (e) {
+                            console.error(`Error adding QR image to PDF for asset ${asset.id}:`, e);
+                            // Draw placeholder on error
+                             const qrSizeMm = Math.max(1, el_w_mm);
+                             doc.setDrawColor(255, 0, 0);
+                             doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                             doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
+                        }
                     } else {
-                         console.warn(`QR canvas not found for asset ${asset.id}`);
+                        console.warn(`QR canvas ref not found for asset ${asset.id}`);
+                         // Draw placeholder if ref not found
+                         const qrSizeMm = Math.max(1, el_w_mm);
+                         doc.setDrawColor(255, 0, 0);
+                         doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                         doc.text("QR Missing", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
-                     try {
-                         // Ensure width and height are positive
-                         const logoW_mm = Math.max(1, el_w_mm);
-                         const logoH_mm = Math.max(1, el_h_mm);
+                    try {
+                        const logoW_mm = Math.max(1, el_w_mm);
+                        const logoH_mm = Math.max(1, el_h_mm);
                         doc.addImage(element.dataUrl, 'PNG', el_x_mm, el_y_mm, logoW_mm, logoH_mm);
                     } catch (e) { console.error("Error adding logo image to PDF:", e); }
                 }
-                 // Debugging: Draw element boundaries
-                 // doc.setDrawColor(255, 0, 0);
-                 // doc.rect(el_x_mm, el_y_mm, el_w_mm, el_h_mm);
             }
-            // Debugging: Draw label boundaries
-            // doc.setDrawColor(0, 0, 255);
-            // doc.rect(x_offset_mm, y_offset_mm, labelW_mm, labelH_mm);
         };
 
          // --- PDF Generation Logic ---
          if (pageFormat === 'a4') {
              for (assetIndex = 0; assetIndex < assetsToPrint.length; ) {
-                 if (assetIndex > 0) {
+                 if (assetIndex > 0 && assetIndex % (cols * rows) === 0) { // Check if we need a new page based on calculation
                      doc.addPage();
                      pageCount++;
                  }
@@ -372,18 +368,20 @@ export default function PrintLabelsPage() {
                      currentY_mm += labelH_mm + gapY;
                      if (assetIndex >= assetsToPrint.length) break;
                      if (currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
-                          // This row won't fit, break to start new page
-                          break;
+                          // This row won't fit, break to start new page in the outer loop
+                           break; // Break inner loops and let outer loop handle page add
                      }
+                 }
+                 // If we broke inner loops because page is full, ensure assetIndex hasn't reached the end yet before adding page
+                 if (assetIndex < assetsToPrint.length && currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
+                    // No need to add page here, the main loop condition will handle it
                  }
              }
          } else { // Custom/Thermal format (one label per "page")
              for (assetIndex = 0; assetIndex < assetsToPrint.length; assetIndex++) {
                  if (assetIndex > 0) {
-                     doc.addPage();
-                     pageCount++;
+                     doc.addPage([labelW_mm, labelH_mm], 'l'); // Add page with custom format
                  }
-                 // For custom, the content starts at 0,0 relative to the page (which is the label size)
                  await addLabelContent(assetsToPrint[assetIndex], 0, 0);
              }
          }
@@ -404,30 +402,21 @@ export default function PrintLabelsPage() {
     const renderHiddenQrCodes = () => {
         const assetsForQR = assets.filter(a => selectedAssets.has(a.id));
         return (
-            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 0, height: 0, overflow: 'hidden' }}>
+            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
                 {assetsForQR.map((asset) => {
                     const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : '';
-                    const qrElement = currentLabelLayout.find(el => el.type === 'qr');
                      // Use a fixed large size for hidden canvas to ensure quality, PDF generation will resize
-                    const renderSize = qrElement ? Math.max(150, qrElement.widthPx * 2) : 150;
+                    const renderSize = 256;
                     return (
                         <div key={`qr-hidden-${asset.id}`}>
-                            {/* Use standard qrcode.react here */}
-                             <QRCodeStyling
+                             <QRCodeCanvas
                                 value={publicUrl || asset.tag}
                                 size={renderSize} // Render larger hidden QR for quality
                                 level="H"
                                 includeMargin={false}
+                                // Assign ref directly to the QRCodeCanvas component
                                 ref={(el) => {
-                                    // qrcode.react doesn't directly expose canvas, need to querySelector
-                                    if (el) {
-                                         const canvas = el.querySelector('canvas');
-                                         if (canvas) {
-                                            qrCanvasRefs.current[asset.id] = canvas;
-                                         } else {
-                                             console.warn(`Canvas not found within QRCodeStyling for asset ${asset.id}`)
-                                         }
-                                    }
+                                    qrCanvasRefs.current[asset.id] = el;
                                 }}
                              />
                         </div>
