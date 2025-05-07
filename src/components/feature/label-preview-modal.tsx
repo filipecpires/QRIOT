@@ -16,7 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageIcon, Trash2, ArrowDown, ArrowUp, GripVertical, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Printer } from 'lucide-react'; // Added ZoomIn, ZoomOut, Chevrons, Printer
+import { ImageIcon, Trash2, ArrowDown, ArrowUp, GripVertical, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Printer } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,7 +24,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { Command as CommandPrimitive } from 'cmdk';
 import { Search } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+import { useToast } from '@/hooks/use-toast';
 
 
 interface AssetForLabel {
@@ -85,8 +85,8 @@ export function LabelPreviewModal({
   const [elements, setElements] = useState<LabelElementConfig[]>([]);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
-  const previewAreaRef = useRef<HTMLDivElement>(null); // Ref for the container holding the scaled preview
-  const scaledPreviewRef = useRef<HTMLDivElement>(null); // Ref for the scaled div itself
+  const previewAreaRef = useRef<HTMLDivElement>(null);
+  const scaledPreviewRef = useRef<HTMLDivElement>(null);
   const dragStartPos = useRef<{ x: number; y: number, elX: number, elY: number, scale: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
@@ -95,36 +95,46 @@ export function LabelPreviewModal({
   const qrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${currentAsset.tag}` : '';
 
 
-  // Initialize or update elements when the modal opens or the initial asset changes
    useEffect(() => {
         if (isOpen) {
-            const initialLayout = elements.length > 0 ? elements : [ // Keep existing layout if available, otherwise reset
-                { id: 'assetName', type: 'text', content: currentAsset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, currentAsset.name.length * 7), heightPx: 0, textAlign: 'center', fontFamily: 'Arial, sans-serif', x: 10, y: 20 },
-                { id: 'assetTag', type: 'text', content: `TAG: ${currentAsset.tag}`, fontSizePx: DEFAULT_FONT_SIZE_PX -2, visible: true, widthPx: Math.max(50, `TAG: ${currentAsset.tag}`.length * 6), heightPx: 0, textAlign: 'center', fontFamily: 'Arial, sans-serif', x: 10, y: 45 },
-                { id: 'qrCode', type: 'qr', content: qrValue, widthPx: DEFAULT_QR_SIZE_PX, heightPx: DEFAULT_QR_SIZE_PX, visible: true, fontSizePx: 0, textAlign: 'center', x: 10, y: 70 },
+            const initialLayoutBase = [
+                { id: 'assetName', type: 'text' as const, content: currentAsset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, currentAsset.name.length * 7), heightPx: (DEFAULT_FONT_SIZE_PX + 2) * 1.2, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
+                { id: 'assetTag', type: 'text' as const, content: `TAG: ${currentAsset.tag}`, fontSizePx: DEFAULT_FONT_SIZE_PX -2, visible: true, widthPx: Math.max(50, `TAG: ${currentAsset.tag}`.length * 6), heightPx: (DEFAULT_FONT_SIZE_PX - 2) * 1.2, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
+                { id: 'qrCode', type: 'qr' as const, content: qrValue, widthPx: DEFAULT_QR_SIZE_PX, heightPx: DEFAULT_QR_SIZE_PX, visible: true, fontSizePx: 0, textAlign: 'center' as const },
             ];
-            // Update content based on current asset, but keep positions and styles
-             const updatedLayout = initialLayout.map(el => {
-                 if (el.id === 'assetName') return { ...el, content: currentAsset.name };
-                 if (el.id === 'assetTag') return { ...el, content: `TAG: ${currentAsset.tag}` };
-                 if (el.id === 'qrCode') return { ...el, content: qrValue };
-                 if (el.type === 'characteristic') {
-                      const char = currentAsset.characteristics?.find(c => c.key === el.content);
-                     return { ...el, characteristicValue: char?.value || '' };
-                 }
-                 return el;
-             });
 
-            setElements(updatedLayout);
-            // Reset zoom and selection on open? Maybe keep zoom. Reset selection.
+            const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
+            const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
+
+            const positionedInitialLayout = initialLayoutBase.map((el, index) => {
+                const elWidth = el.widthPx;
+                // For text, heightPx is an estimation for centering, actual rendering might differ
+                const elHeight = el.type === 'qr' ? el.widthPx : el.heightPx || el.fontSizePx * 1.2;
+                return {
+                    ...el,
+                    x: (labelWidthPx / 2) - (elWidth / 2),
+                    y: (labelHeightPx / 3) * (index + 0.5) - (elHeight / 2) // Distribute vertically initially
+                };
+            });
+
+            setElements(elements.length > 0 ? elements.map(el => { // If layout already exists, update content
+                if (el.id === 'assetName') return { ...el, content: currentAsset.name };
+                if (el.id === 'assetTag') return { ...el, content: `TAG: ${currentAsset.tag}` };
+                if (el.id === 'qrCode') return { ...el, content: qrValue };
+                if (el.type === 'characteristic') {
+                    const char = currentAsset.characteristics?.find(c => c.key === el.content);
+                    return { ...el, characteristicValue: char?.value || '' };
+                }
+                return el;
+            }) : positionedInitialLayout);
+
+
             setSelectedElementId(null);
-            // setZoomLevel(1); // Keep zoom level persistent within modal session
-             setCurrentPreviewIndex(selectedAssetsData.findIndex(a => a.id === initialAsset.id) || 0); // Start with the initially passed asset
+            setCurrentPreviewIndex(selectedAssetsData.findIndex(a => a.id === initialAsset.id) || 0);
         }
-   }, [isOpen, initialAsset]); // Rerun only when modal opens or initial asset changes
+   }, [isOpen, initialAsset, labelConfig.width, labelConfig.height]); // Rerun if label dimensions change
 
 
-    // Update element content when switching preview asset
     useEffect(() => {
         setElements(prevElements =>
             prevElements.map(el => {
@@ -138,7 +148,7 @@ export function LabelPreviewModal({
                 return el;
             })
         );
-    }, [currentAsset, qrValue]); // Rerun when the previewed asset changes
+    }, [currentAsset, qrValue]);
 
 
   const updateElement = (id: string, updates: Partial<LabelElementConfig>) => {
@@ -147,35 +157,49 @@ export function LabelPreviewModal({
 
  const addElement = (type: 'text' | 'custom' | 'logo' | 'qr' | 'characteristic', content?: string, characteristicKey?: string) => {
     const newId = `${type}-${Date.now()}`;
-    let newElement: LabelElementConfig;
-    // Calculate next Y position based on existing elements
-    const nextY = elements.reduce((max, el) => {
-        let elementHeight = 20; // Default spacing
-        if (el.type === 'logo') elementHeight = el.heightPx;
-        else if (el.type === 'qr') elementHeight = el.widthPx; // QR is square
-        else if (el.fontSizePx > 0) elementHeight = el.fontSizePx * 1.5; // Approximate text height
-        return Math.max(max, el.y + elementHeight);
-    }, 10) + 5; // Start a bit below the max Y + spacing
+    let newElementBase: Omit<LabelElementConfig, 'x' | 'y'>;
 
+    const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
+    const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
+    let elWidthPx: number;
+    let elHeightPx: number;
 
     switch (type) {
       case 'logo':
-        newElement = { id: newId, type, content: 'Logo', dataUrl: undefined, widthPx: DEFAULT_LOGO_WIDTH_PX, heightPx: DEFAULT_LOGO_HEIGHT_PX, visible: true, fontSizePx: 0, textAlign: 'center', x: 10, y: nextY };
+        elWidthPx = DEFAULT_LOGO_WIDTH_PX;
+        elHeightPx = DEFAULT_LOGO_HEIGHT_PX;
+        newElementBase = { id: newId, type, content: 'Logo', dataUrl: undefined, widthPx: elWidthPx, heightPx: elHeightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
         break;
       case 'qr':
-        newElement = { id: newId, type, content: qrValue, widthPx: DEFAULT_QR_SIZE_PX, heightPx: DEFAULT_QR_SIZE_PX, visible: true, fontSizePx: 0, textAlign: 'center', x: 10, y: nextY };
+        elWidthPx = DEFAULT_QR_SIZE_PX;
+        elHeightPx = DEFAULT_QR_SIZE_PX; // QR is square
+        newElementBase = { id: newId, type, content: qrValue, widthPx: elWidthPx, heightPx: elHeightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
         break;
       case 'characteristic':
         const char = currentAsset.characteristics?.find(c => c.key === characteristicKey);
-        newElement = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: char?.value || '', fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: 100, heightPx: 0, textAlign: 'left', fontFamily: 'Arial, sans-serif', x: 10, y: nextY };
+        elWidthPx = 100; // Default width for text
+        elHeightPx = DEFAULT_FONT_SIZE_PX * 1.2; // Approximate height
+        newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: char?.value || '', fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: elHeightPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
       case 'custom':
-      default: // also 'text'
-        newElement = { id: newId, type: type === 'text' ? 'text': 'custom' , content: content || 'Texto Personalizado', fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: 100, heightPx: 0, textAlign: 'left', fontFamily: 'Arial, sans-serif', x: 10, y: nextY };
+      default:
+        elWidthPx = 100; // Default width for text
+        elHeightPx = DEFAULT_FONT_SIZE_PX * 1.2; // Approximate height
+        newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: content || 'Novo Texto', fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: elHeightPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
     }
+
+    const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
+    const y_centered = Math.max(0, (labelHeightPx / 2) - (elHeightPx / 2));
+
+    const newElement: LabelElementConfig = {
+        ...newElementBase,
+        x: x_centered,
+        y: y_centered,
+    };
+
     setElements(prev => [...prev, newElement]);
-    setSelectedElementId(newId); // Select the newly added element
+    setSelectedElementId(newId);
   };
 
   const removeElement = (id: string) => {
@@ -193,36 +217,41 @@ export function LabelPreviewModal({
             updateElement(logoElement.id, { dataUrl: reader.result as string, visible: true });
         };
         reader.readAsDataURL(file);
-    } else if (file && !elements.find(el => el.type === 'logo')) { // Add new logo if none exists and one wasn't selected
+    } else if (file && !elements.find(el => el.type === 'logo')) {
         const newId = `logo-${Date.now()}`;
-        const reader = a FileReader();
+        const reader = new FileReader();
         reader.onloadend = () => {
+
+            const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
+            const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
+            const elWidthPx = DEFAULT_LOGO_WIDTH_PX;
+            const elHeightPx = DEFAULT_LOGO_HEIGHT_PX;
+            const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
+            const y_centered = Math.max(0, (labelHeightPx / 2) - (elHeightPx / 2));
+
             const newLogo: LabelElementConfig = {
                 id: newId, type: 'logo', content: 'Logo', dataUrl: reader.result as string,
-                widthPx: DEFAULT_LOGO_WIDTH_PX, heightPx: DEFAULT_LOGO_HEIGHT_PX,
-                visible: true, fontSizePx: 0, textAlign: 'center', x: 10, y: 10
+                widthPx: elWidthPx, heightPx: elHeightPx,
+                visible: true, fontSizePx: 0, textAlign: 'center', x: x_centered, y: y_centered
             };
-            setElements(prev => [newLogo, ...prev]); // Add to the beginning
+            setElements(prev => [newLogo, ...prev]);
             setSelectedElementId(newId);
         };
         reader.readAsDataURL(file);
     }
-     // Reset file input value to allow re-uploading the same file
     if (event.target) {
         event.target.value = '';
     }
   };
 
    const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>, id: string) => {
-    e.preventDefault(); // Prevent default browser drag behavior
-    e.stopPropagation(); // Prevent event bubbling
+    e.preventDefault();
+    e.stopPropagation();
 
     setSelectedElementId(id);
     const el = elements.find(elem => elem.id === id);
-     // Ensure we have the preview area and scaled preview refs
      if (!el || !previewAreaRef.current || !scaledPreviewRef.current) return;
 
-    // Calculate initial offsets relative to the scaled preview element
     const previewRect = scaledPreviewRef.current.getBoundingClientRect();
     const initialMouseX = e.clientX;
     const initialMouseY = e.clientY;
@@ -234,34 +263,21 @@ export function LabelPreviewModal({
       y: initialMouseY,
       elX: initialElementX,
       elY: initialElementY,
-      scale: zoomLevel, // Store current scale
+      scale: zoomLevel,
     };
 
 
     const handleMouseMove = (moveEvent: MouseEvent) => {
       if (!dragStartPos.current) return;
 
-      // Calculate mouse movement delta
       const dx = moveEvent.clientX - dragStartPos.current.x;
       const dy = moveEvent.clientY - dragStartPos.current.y;
 
-       // Adjust delta based on zoom level to get movement in element's coordinate space
        const adjustedDx = dx / dragStartPos.current.scale;
        const adjustedDy = dy / dragStartPos.current.scale;
 
-
-      // Calculate new position based on initial position and adjusted delta
       let newX = dragStartPos.current.elX + adjustedDx;
       let newY = dragStartPos.current.elY + adjustedDy;
-
-
-      // **REMOVED Boundary checks**
-      // const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
-      // const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
-      // const elementWidth = el.widthPx || 50; // Fallback width
-      // const elementHeight = el.heightPx || el.fontSizePx || 20; // Fallback height
-      // newX = Math.max(0, Math.min(newX, labelWidthPx - elementWidth));
-      // newY = Math.max(0, Math.min(newY, labelHeightPx - elementHeight));
 
       updateElement(id, { x: newX, y: newY });
     };
@@ -286,12 +302,12 @@ export function LabelPreviewModal({
 
     const handleNextPreview = () => {
          setCurrentPreviewIndex(prev => (prev + 1) % selectedAssetsData.length);
-         setSelectedElementId(null); // Deselect element when changing preview
+         setSelectedElementId(null);
     };
 
      const handlePrevPreview = () => {
          setCurrentPreviewIndex(prev => (prev - 1 + selectedAssetsData.length) % selectedAssetsData.length);
-         setSelectedElementId(null); // Deselect element when changing preview
+         setSelectedElementId(null);
     };
 
     const handleGenerateClick = () => {
@@ -299,8 +315,7 @@ export function LabelPreviewModal({
             toast({ title: "Layout Vazio", description: "Adicione elementos à etiqueta antes de gerar.", variant: "destructive" });
             return;
         }
-         onGenerateRequest(elements); // Pass the current layout to the parent
-         // Keep the modal open after generating
+         onGenerateRequest(elements);
     };
 
 
@@ -325,49 +340,46 @@ export function LabelPreviewModal({
         </DialogHeader>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow min-h-0">
-          {/* Preview Area */}
           <div
              ref={previewAreaRef}
-             className="lg:col-span-2 flex items-center justify-center p-4 border rounded-md bg-gray-200 dark:bg-gray-700 relative overflow-auto" // Added overflow-auto for panning when zoomed
+             className="lg:col-span-2 flex items-center justify-center p-4 border rounded-md bg-gray-200 dark:bg-gray-700 relative overflow-auto"
           >
             <div
-              ref={scaledPreviewRef} // Add ref to the scaled div
+              ref={scaledPreviewRef}
               style={{
                 width: `${labelConfig.width * MM_TO_PX_SCALE}px`,
                 height: `${labelConfig.height * MM_TO_PX_SCALE}px`,
                 backgroundColor: 'white',
                 border: '1px dashed #ccc',
                 position: 'relative',
-                overflow: 'hidden', // Clip content outside the bounds
+                overflow: 'hidden',
                 transform: `scale(${zoomLevel})`,
-                transformOrigin: 'center center', // Zoom from the center
-                 transition: 'transform 0.1s ease-out', // Smooth zoom transition
+                transformOrigin: 'center center',
+                 transition: 'transform 0.1s ease-out',
               }}
             >
               {elements.filter(el => el.visible).map(el => (
                 <div
                   key={el.id}
                   onMouseDown={(e) => handleMouseDown(e, el.id)}
-                  onClick={(e) => {e.stopPropagation(); setSelectedElementId(el.id)}} // Select on click, stop propagation
+                  onClick={(e) => {e.stopPropagation(); setSelectedElementId(el.id)}}
                   className={cn(
-                    "absolute cursor-grab select-none p-0.5", // Minimal padding for selection ring
-                    "hover:outline hover:outline-1 hover:outline-blue-400", // Indicate hover
-                    selectedElementId === el.id && "outline outline-2 outline-primary outline-offset-1" // Highlight selected
+                    "absolute cursor-grab select-none p-0.5",
+                    "hover:outline hover:outline-1 hover:outline-blue-400",
+                    selectedElementId === el.id && "outline outline-2 outline-primary outline-offset-1"
                   )}
                    style={{
                     left: `${el.x}px`,
                     top: `${el.y}px`,
                     fontSize: `${el.fontSizePx}px`,
                     fontFamily: el.fontFamily || 'Arial, sans-serif',
-                    color: 'black', // Ensure text is black for preview
+                    color: 'black',
                     textAlign: el.textAlign,
-                    // Let width/height be determined by content or specific props
                     width: el.type === 'qr' || el.type === 'logo' ? `${el.widthPx}px` : 'auto',
                     height: el.type === 'qr' ? `${el.widthPx}px` : el.type === 'logo' ? `${el.heightPx}px` : 'auto',
-                    lineHeight: '1.1', // Adjust line height for tighter text blocks
+                    lineHeight: '1.1',
                   }}
                 >
-                  {/* Render different element types */}
                   {el.type === 'text' && <span className="block w-max">{el.content}</span>}
                   {el.type === 'custom' && <span className="block w-max">{el.content}</span>}
                   {el.type === 'characteristic' && <span className="block w-max">{`${el.content}: ${el.characteristicValue}`}</span>}
@@ -383,9 +395,7 @@ export function LabelPreviewModal({
             </div>
           </div>
 
-          {/* Controls Area */}
           <div className="space-y-3 overflow-y-auto pr-2 flex flex-col">
-             {/* Zoom and Navigation Controls */}
              <div className="flex justify-between items-center border-b pb-2 mb-2">
                  <div className="flex items-center gap-1">
                      <Button variant="outline" size="icon" onClick={handleZoomOut} disabled={zoomLevel <= MIN_ZOOM} className="h-8 w-8">
@@ -409,7 +419,6 @@ export function LabelPreviewModal({
                  )}
              </div>
 
-             {/* Element Adding Controls */}
             <div className="flex-grow space-y-3">
             <Label className="text-base font-semibold">Adicionar Elemento</Label>
              <div className="grid grid-cols-2 gap-2 mb-3">
@@ -442,7 +451,6 @@ export function LabelPreviewModal({
 
              <Separator />
 
-            {/* Element Editing Controls */}
             {selectedElement ? (
               <Card className="p-3 mt-3">
                 <div className="flex justify-between items-center mb-2">
@@ -455,7 +463,6 @@ export function LabelPreviewModal({
                         selectedElement.type === 'qr' ? 'QR Code' : 'Logo'
                         }
                     </Label>
-                     {/* Allow deleting custom elements, logo, qr, characteristics */}
                      {['custom', 'logo', 'qr', 'characteristic'].includes(selectedElement.type) && (
                         <Button variant="ghost" size="icon" onClick={() => removeElement(selectedElement.id)} className="h-6 w-6">
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -587,7 +594,7 @@ const Command = React.forwardRef<
         className={cn("flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground", className)}
         {...props} />
 ));
-Command.displayName = CommandPrimitive.displayName || 'Command'; // Add fallback display name
+Command.displayName = CommandPrimitive.displayName || 'Command';
 
 const CommandInput = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Input>,
@@ -601,7 +608,7 @@ const CommandInput = React.forwardRef<
             {...props} />
     </div>
 ));
-CommandInput.displayName = CommandPrimitive.displayName || 'CommandInput'; // Add fallback
+CommandInput.displayName = CommandPrimitive.Input.displayName || 'CommandInput';
 
 const CommandGroup = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Group>,
@@ -612,7 +619,7 @@ const CommandGroup = React.forwardRef<
         className={cn("overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground", className)}
         {...props} />
 ));
-CommandGroup.displayName = CommandPrimitive.displayName || 'CommandGroup'; // Add fallback
+CommandGroup.displayName = CommandPrimitive.Group.displayName || 'CommandGroup';
 
 const CommandItem = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Item>,
@@ -623,7 +630,7 @@ const CommandItem = React.forwardRef<
         className={cn("relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled='true']:pointer-events-none data-[disabled='true']:opacity-50", className)}
         {...props} />
 ));
-CommandItem.displayName = CommandPrimitive.displayName || 'CommandItem'; // Add fallback
+CommandItem.displayName = CommandPrimitive.Item.displayName || 'CommandItem';
 
 const CommandEmpty = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Empty>,
@@ -631,4 +638,6 @@ const CommandEmpty = React.forwardRef<
 >((props, ref) => (
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
-CommandEmpty.displayName = CommandPrimitive.displayName || 'CommandEmpty'; // Add fallback
+CommandEmpty.displayName = CommandPrimitive.Empty.displayName || 'CommandEmpty';
+
+      
