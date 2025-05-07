@@ -13,9 +13,9 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import QRCodeStyling from 'qrcode.react';
+import QRCodeStyling from 'qrcode.react'; // Using qrcode.react for consistency
 import { jsPDF } from "jspdf";
-// import autoTable from 'jspdf-autotable'; // Keep commented unless complex layout needed
+import autoTable from 'jspdf-autotable'; // Import autoTable
 import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
 
 // Mock data - replace with actual data fetching
@@ -88,6 +88,7 @@ const labelSizes: LabelConfig[] = [
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
 const MM_TO_PT_SCALE = 2.83465; // 1mm = 2.83465 points (approx)
+const PX_TO_MM_SCALE = 0.264583; // 1px approx 0.264583mm (for converting px layout to mm for PDF)
 const PX_TO_PT_SCALE = 0.75; // 1px approx 0.75pt (for web display font sizes)
 
 
@@ -99,8 +100,8 @@ export default function PrintLabelsPage() {
     const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         search: '',
-        category: '',
-        location: '',
+        category: '__all__', // Default to all
+        location: '__all__', // Default to all
         page: 1,
         limit: 10,
     });
@@ -109,17 +110,48 @@ export default function PrintLabelsPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const qrCanvasRefs = useRef<{ [key: string]: HTMLCanvasElement | null }>({});
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
+    const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]); // Store the current layout
 
 
     const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
     const locations = ['Escritório 1', 'Escritório 2', 'Sala de Reuniões', 'Sala de Treinamento', 'Almoxarifado'];
 
+    // --- Load saved layout when label size changes or on initial load ---
+    useEffect(() => {
+         if (typeof window !== 'undefined') { // Ensure localStorage is available
+             const savedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}`);
+             if (savedLayoutJson) {
+                 try {
+                     const savedLayout = JSON.parse(savedLayoutJson);
+                     if (Array.isArray(savedLayout)) { // Basic validation
+                         setCurrentLabelLayout(savedLayout);
+                         console.log(`Loaded layout for ${labelSizeId} from localStorage.`);
+                     } else {
+                         console.warn("Invalid layout data found in localStorage.");
+                         setCurrentLabelLayout([]); // Reset if invalid
+                     }
+                 } catch (e) {
+                     console.error("Error parsing saved layout:", e);
+                     setCurrentLabelLayout([]); // Reset on error
+                 }
+             } else {
+                 setCurrentLabelLayout([]); // Reset if no saved layout found
+                  console.log(`No saved layout found for ${labelSizeId}. Using default.`);
+             }
+         }
+     }, [labelSizeId]);
+
+
     const fetchData = async (currentFilters: typeof filters) => {
         setLoading(true);
         setError(null);
         try {
-            const { assets: fetchedAssets, total } = await fetchAssetsForLabeling(currentFilters);
+             const apiFilters = {
+                ...currentFilters,
+                category: currentFilters.category === '__all__' ? '' : currentFilters.category,
+                location: currentFilters.location === '__all__' ? '' : currentFilters.location,
+            };
+            const { assets: fetchedAssets, total } = await fetchAssetsForLabeling(apiFilters);
             setAssets(fetchedAssets);
             setTotalAssets(total);
         } catch (err) {
@@ -137,8 +169,7 @@ export default function PrintLabelsPage() {
     }, [filters]);
 
     const handleFilterChange = (key: keyof typeof filters, value: any) => {
-        const actualValue = value === '__all__' ? '' : value;
-        setFilters(prev => ({ ...prev, [key]: actualValue, page: 1 }));
+        setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
     };
 
     const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -174,10 +205,21 @@ export default function PrintLabelsPage() {
         setIsPreviewOpen(true);
     };
 
+     // --- Save Layout to Local Storage ---
     const handleSaveLayout = (elements: LabelElementConfig[]) => {
-        console.log("Layout salvo (aplicado para próxima geração de PDF):", elements);
-        setCurrentLabelLayout(elements);
-        toast({ title: "Layout Aplicado", description: "O novo layout será usado para gerar as etiquetas."});
+        setCurrentLabelLayout(elements); // Update current layout state
+        if (typeof window !== 'undefined') { // Ensure localStorage is available
+            try {
+                 const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
+                 if (!selectedLabelConfig) return;
+                 localStorage.setItem(`labelLayout_${selectedLabelConfig.id}`, JSON.stringify(elements));
+                 console.log(`Saved layout for ${selectedLabelConfig.name} to localStorage.`);
+                 toast({ title: "Layout Salvo", description: "O layout foi salvo localmente para este tamanho de etiqueta." });
+            } catch (error) {
+                 console.error("Error saving layout to localStorage:", error);
+                 toast({ title: "Erro ao Salvar Layout", description: "Não foi possível salvar o layout localmente.", variant: "destructive" });
+            }
+         }
     };
 
     // Function to escape CSV fields
@@ -193,18 +235,21 @@ export default function PrintLabelsPage() {
         return stringField;
     };
 
+
+    // Refined PDF Generation
     const generatePdf = async (layoutToUse: LabelElementConfig[]) => {
         if (selectedAssets.size === 0) {
             toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para gerar etiquetas.", variant: "destructive" });
             return;
         }
-        if (layoutToUse.length === 0) {
-            toast({ title: "Layout Não Configurado", description: "Por favor, edite o layout da etiqueta antes de gerar o PDF.", variant: "destructive" });
-            return;
-        }
+         if (layoutToUse.length === 0) {
+             toast({ title: "Layout Vazio", description: "O layout da etiqueta está vazio. Edite o layout para adicionar elementos.", variant: "destructive" });
+             return;
+         }
+
         setIsGenerating(true);
-        // Close preview modal if it's open when generating PDF
-        setIsPreviewOpen(false);
+        toast({ title: "Gerando PDF...", description: "Preparando etiquetas, aguarde." });
+        setIsPreviewOpen(false); // Close preview modal if open
 
         const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
         if (!selectedLabelConfig) {
@@ -217,36 +262,42 @@ export default function PrintLabelsPage() {
         const doc = new jsPDF({
             orientation: selectedLabelConfig.pageFormat === 'a4' ? 'p' : 'l',
             unit: 'mm',
-            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX || 0) * 2, selectedLabelConfig.height + (selectedLabelConfig.gapY || 0) * 2]
+            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width, selectedLabelConfig.height] // Use exact label size for custom format
         });
 
+        // Remove default margins for better control
+        doc.setPage(1);
+        // @ts-ignore - jsPDF types might not be perfect
+        // doc.internal.events.subscribe('addPage', () => {
+        //     // Reset margins for new pages if needed
+        // });
+
+
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
-        const marginTop = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : (gapY / 2 || 1));
-        const marginLeft = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : (gapX / 2 || 1));
-        const pageW = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm + (gapX || 0) * 2;
-        const pageH = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm + (gapY || 0) * 2;
+        const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : 0);
+        const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : 0);
+        const pageW_mm = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm;
+        const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm;
 
-        let currentX_mm = marginLeft;
-        let currentY_mm = marginTop;
+
         let assetIndex = 0;
+        let pageCount = 1;
 
-        // Helper to convert px from layout to mm for PDF
-        const pxToMm = (px: number) => px / MM_TO_PX_SCALE;
-
+        // Helper to add content to a single label at specified offset
         const addLabelContent = async (asset: AssetForLabel, x_offset_mm: number, y_offset_mm: number) => {
              // Iterate through the saved layout elements
             for (const element of layoutToUse.filter(el => el.visible)) {
-                // Calculate element position in mm based on px layout and current label offset
-                const el_x_mm = x_offset_mm + pxToMm(element.x);
-                const el_y_mm = y_offset_mm + pxToMm(element.y);
-                const el_w_mm = pxToMm(element.widthPx);
-                const el_h_mm = pxToMm(element.heightPx);
-                const el_font_size_pt = element.fontSizePx * PX_TO_PT_SCALE;
+                // Convert element position and size from px (editor) to mm (PDF)
+                const el_x_mm = x_offset_mm + (element.x * PX_TO_MM_SCALE);
+                const el_y_mm = y_offset_mm + (element.y * PX_TO_MM_SCALE);
+                const el_w_mm = element.widthPx * PX_TO_MM_SCALE;
+                const el_h_mm = element.heightPx * PX_TO_MM_SCALE;
+                const el_font_size_pt = element.fontSizePx * PX_TO_PT_SCALE; // Convert px to pt for font size
 
                 const contentToRender =
                     element.id === 'assetName' ? asset.name :
                     element.id === 'assetTag' ? `TAG: ${asset.tag}` :
-                    element.type === 'characteristic' ? `${element.content}: ${element.characteristicValue || asset.characteristics?.find(c => c.key === element.content)?.value || ''}` :
+                    element.type === 'characteristic' ? `${element.content}: ${asset.characteristics?.find(c => c.key === element.content)?.value || ''}` :
                     element.type === 'custom' ? element.content : '';
 
                  let textAlignJsPdf: 'left' | 'center' | 'right' = element.textAlign || 'left';
@@ -254,102 +305,131 @@ export default function PrintLabelsPage() {
 
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
-                        doc.setFontSize(el_font_size_pt);
-                        doc.setFont(element.fontFamily || 'helvetica', 'normal');
-                        // Note: jsPDF's splitTextToSize doesn't work well with auto width,
-                        // we assume the widthPx in the editor defines the wrap width
-                         const maxTextWidthMm = pxToMm(element.widthPx) > 5 ? pxToMm(element.widthPx) : labelW_mm * 0.9; // Use element width or fallback
-                        const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
+                         doc.setFontSize(el_font_size_pt);
+                         doc.setFont(element.fontFamily || 'helvetica', 'normal'); // Use selected font or default
 
-                        // jsPDF text alignment needs careful x positioning
-                        let textXPosMm = el_x_mm;
-                        if (textAlignJsPdf === 'center') textXPosMm += maxTextWidthMm / 2;
-                        else if (textAlignJsPdf === 'right') textXPosMm += maxTextWidthMm;
+                         // Calculate available width for text within the element's boundaries
+                         const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95; // Use element width or remaining label width
 
-                        doc.text(textLines, textXPosMm, el_y_mm, { align: textAlignJsPdf, baseline: 'top' });
-                    }
+                         const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
+
+                         // Adjust x position based on alignment within the element's defined width
+                         let textXPosMm = el_x_mm;
+                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
+                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
+
+                         doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), { // Adjust y slightly for better baseline alignment
+                             align: textAlignJsPdf,
+                             baseline: 'top' // Use top baseline for consistency with x, y positioning
+                         });
+                     }
                 } else if (element.type === 'qr') {
                     const qrCanvas = qrCanvasRefs.current[asset.id];
                     if (qrCanvas) {
                         try {
-                            const qrDataUrl = qrCanvas.toDataURL('image/png');
-                            doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, el_w_mm, el_w_mm); // QR is square
+                             // Generate QR on the fly or ensure canvas exists from hidden render
+                             const qrDataUrl = qrCanvas.toDataURL('image/png');
+                             // Ensure QR size is positive
+                             const qrSizeMm = Math.max(1, el_w_mm); // Use widthPx converted to mm, minimum 1mm
+                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) { console.error("Error adding QR image to PDF:", e); }
+                    } else {
+                         console.warn(`QR canvas not found for asset ${asset.id}`);
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
                      try {
-                        doc.addImage(element.dataUrl, 'PNG', el_x_mm, el_y_mm, el_w_mm, el_h_mm);
+                         // Ensure width and height are positive
+                         const logoW_mm = Math.max(1, el_w_mm);
+                         const logoH_mm = Math.max(1, el_h_mm);
+                        doc.addImage(element.dataUrl, 'PNG', el_x_mm, el_y_mm, logoW_mm, logoH_mm);
                     } catch (e) { console.error("Error adding logo image to PDF:", e); }
                 }
+                 // Debugging: Draw element boundaries
+                 // doc.setDrawColor(255, 0, 0);
+                 // doc.rect(el_x_mm, el_y_mm, el_w_mm, el_h_mm);
             }
-             // Optional: Draw border for debugging each label boundary
-             // doc.setDrawColor(200, 200, 200);
-             // doc.rect(x_offset_mm, y_offset_mm, labelW_mm, labelH_mm);
+            // Debugging: Draw label boundaries
+            // doc.setDrawColor(0, 0, 255);
+            // doc.rect(x_offset_mm, y_offset_mm, labelW_mm, labelH_mm);
         };
 
-        while (assetIndex < assetsToPrint.length) {
-             for (let r = 0; r < rows; r++) {
-                currentX_mm = marginLeft;
-                for (let c = 0; c < cols; c++) {
-                    if (assetIndex >= assetsToPrint.length) break;
-                    await addLabelContent(assetsToPrint[assetIndex], currentX_mm, currentY_mm);
-                    currentX_mm += labelW_mm + gapX;
-                    assetIndex++;
-                }
-                currentY_mm += labelH_mm + gapY;
-                if (assetIndex < assetsToPrint.length && currentY_mm + labelH_mm > pageH - (selectedLabelConfig.marginBottom ?? marginTop)) {
-                     if (pageFormat === 'a4') {
-                         doc.addPage();
-                         currentY_mm = marginTop;
-                         break; // Go to next page
-                    }
-                    // For custom/thermal, assume one label per "page" for simplicity in this logic block
-                }
-                 if (assetIndex >= assetsToPrint.length) break;
-            }
-             if (assetIndex >= assetsToPrint.length) break;
+         // --- PDF Generation Logic ---
+         if (pageFormat === 'a4') {
+             for (assetIndex = 0; assetIndex < assetsToPrint.length; ) {
+                 if (assetIndex > 0) {
+                     doc.addPage();
+                     pageCount++;
+                 }
+                 let currentY_mm = marginTop_mm;
+                 for (let r = 0; r < rows; r++) {
+                     let currentX_mm = marginLeft_mm;
+                     for (let c = 0; c < cols; c++) {
+                         if (assetIndex >= assetsToPrint.length) break;
+                         await addLabelContent(assetsToPrint[assetIndex], currentX_mm, currentY_mm);
+                         currentX_mm += labelW_mm + gapX;
+                         assetIndex++;
+                     }
+                     currentY_mm += labelH_mm + gapY;
+                     if (assetIndex >= assetsToPrint.length) break;
+                     if (currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
+                          // This row won't fit, break to start new page
+                          break;
+                     }
+                 }
+             }
+         } else { // Custom/Thermal format (one label per "page")
+             for (assetIndex = 0; assetIndex < assetsToPrint.length; assetIndex++) {
+                 if (assetIndex > 0) {
+                     doc.addPage();
+                     pageCount++;
+                 }
+                 // For custom, the content starts at 0,0 relative to the page (which is the label size)
+                 await addLabelContent(assetsToPrint[assetIndex], 0, 0);
+             }
+         }
 
-             // Add new page if needed (mostly for A4)
-              if (pageFormat === 'a4' && assetIndex < assetsToPrint.length) {
-                 doc.addPage();
-                 currentY_mm = marginTop;
-              } else if (pageFormat !== 'a4' && assetIndex < assetsToPrint.length) {
-                  // For thermal, add new page for each label
-                  doc.addPage();
-                  currentY_mm = marginTop; // Reset Y for the single label on the new page
-              }
+
+        try {
+            doc.save(`etiquetas_qriot_${new Date().toISOString().slice(0,10)}.pdf`);
+            setIsGenerating(false);
+            toast({ title: "PDF Gerado", description: `${assetsToPrint.length} etiquetas geradas com sucesso.` });
+        } catch (e) {
+             console.error("Error saving PDF:", e);
+             setIsGenerating(false);
+             toast({ title: "Erro ao Salvar PDF", description: "Não foi possível salvar o arquivo PDF.", variant: "destructive" });
         }
-
-        doc.save(`etiquetas_qriot_${new Date().toISOString().slice(0,10)}.pdf`);
-        setIsGenerating(false);
-        toast({ title: "PDF Gerado", description: `${assetsToPrint.length} etiquetas geradas com sucesso.` });
     };
 
+    // Ensure QR codes are rendered off-screen to be captured by refs
     const renderHiddenQrCodes = () => {
         const assetsForQR = assets.filter(a => selectedAssets.has(a.id));
         return (
-            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 0, height: 0, overflow: 'hidden' }}>
                 {assetsForQR.map((asset) => {
                     const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : '';
-                    // Find the QR element in the current layout to get its size
                     const qrElement = currentLabelLayout.find(el => el.type === 'qr');
-                    const qrSize = qrElement ? qrElement.widthPx : 150; // Default size if not found
+                     // Use a fixed large size for hidden canvas to ensure quality, PDF generation will resize
+                    const renderSize = qrElement ? Math.max(150, qrElement.widthPx * 2) : 150;
                     return (
                         <div key={`qr-hidden-${asset.id}`}>
-                            <QRCodeStyling
+                            {/* Use standard qrcode.react here */}
+                             <QRCodeStyling
                                 value={publicUrl || asset.tag}
-                                size={qrSize}
+                                size={renderSize} // Render larger hidden QR for quality
                                 level="H"
                                 includeMargin={false}
                                 ref={(el) => {
+                                    // qrcode.react doesn't directly expose canvas, need to querySelector
                                     if (el) {
-                                        const canvas = el.querySelector('canvas');
-                                        if (canvas) {
+                                         const canvas = el.querySelector('canvas');
+                                         if (canvas) {
                                             qrCanvasRefs.current[asset.id] = canvas;
-                                        }
+                                         } else {
+                                             console.warn(`Canvas not found within QRCodeStyling for asset ${asset.id}`)
+                                         }
                                     }
                                 }}
-                            />
+                             />
                         </div>
                     );
                 })}
@@ -357,8 +437,10 @@ export default function PrintLabelsPage() {
         );
     };
 
-    // Callback function for the modal to trigger PDF generation
-    const handleGenerateRequest = (layout: LabelElementConfig) => {
+    // Callback function for the modal to trigger PDF generation using the *current* layout state
+    const handleGenerateRequest = (layout: LabelElementConfig[]) => {
+        // The modal passes its current state, which might be different from saved state
+        // We use the layout passed from the modal for generation
         generatePdf(layout);
     };
 
@@ -380,7 +462,7 @@ export default function PrintLabelsPage() {
                             onChange={(e) => handleFilterChange('search', e.target.value)}
                             className="max-w-sm"
                         />
-                         <Select value={filters.category || '__all__'} onValueChange={(v) => handleFilterChange('category', v)}>
+                         <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Categoria" />
                             </SelectTrigger>
@@ -389,7 +471,7 @@ export default function PrintLabelsPage() {
                                 {categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                         <Select value={filters.location || '__all__'} onValueChange={(v) => handleFilterChange('location', v)}>
+                         <Select value={filters.location} onValueChange={(v) => handleFilterChange('location', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
                                 <SelectValue placeholder="Localização" />
                             </SelectTrigger>
@@ -486,7 +568,7 @@ export default function PrintLabelsPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Configurações de Impressão</CardTitle>
-                    <CardDescription>Ajuste o modelo da etiqueta. O layout detalhado é configurado no editor.</CardDescription>
+                    <CardDescription>Ajuste o modelo da etiqueta e edite o layout.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -509,25 +591,28 @@ export default function PrintLabelsPage() {
                          <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
                      {/* Button inside the modal now triggers generation */}
-                     <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating || currentLabelLayout.length === 0}>
+                     <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating}>
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                         Gerar PDF ({selectedAssets.size})
                     </Button>
                 </CardFooter>
             </Card>
 
-            {/* Pass all selected assets data and generation request handler */}
+            {/* Label Preview Modal */}
              {isPreviewOpen && selectedAssetsData.length > 0 && (
                 <LabelPreviewModal
                     isOpen={isPreviewOpen}
                     onClose={() => setIsPreviewOpen(false)}
-                    initialAsset={selectedAssetsData[0]} // Pass the first selected asset initially
-                    selectedAssetsData={selectedAssetsData} // Pass all selected assets data
+                    initialAsset={selectedAssetsData[0]}
+                    selectedAssetsData={selectedAssetsData}
                     labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
-                    onSave={handleSaveLayout}
+                    onSave={handleSaveLayout} // Pass the save handler
                     onGenerateRequest={handleGenerateRequest} // Pass the generation handler
+                    initialLayout={currentLabelLayout} // Pass the currently loaded/edited layout
                 />
              )}
         </div>
     );
 }
+
+    
