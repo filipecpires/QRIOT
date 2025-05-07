@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -49,8 +48,8 @@ async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForL
         if (filters.search && !(asset.name.toLowerCase().includes(filters.search.toLowerCase()) || asset.tag.toLowerCase().includes(filters.search.toLowerCase()))) {
             match = false;
         }
-        if (filters.category && asset.category !== filters.category) match = false;
-        if (filters.location && asset.location !== filters.location) match = false;
+        if (filters.category && filters.category !== '__all__' && asset.category !== filters.category) match = false;
+        if (filters.location && filters.location !== '__all__' && asset.location !== filters.location) match = false;
         return match;
     });
 
@@ -309,27 +308,28 @@ export default function PrintLabelsPage() {
                 } else if (element.type === 'qr') {
                     const qrCanvas = qrCanvasRefs.current[asset.id];
                     if (qrCanvas) {
+                         // Small delay to allow canvas to render fully before capturing
+                         await new Promise(resolve => setTimeout(resolve, 100));
                         try {
-                            // Ensure canvas is ready before getting data URL
-                            await new Promise(resolve => setTimeout(resolve, 50)); // Small delay to help rendering
                             const qrDataUrl = qrCanvas.toDataURL('image/png');
-                            const qrSizeMm = Math.max(1, el_w_mm);
-                             if (qrDataUrl && qrDataUrl.length > 'data:image/png;base64,'.length) { // Basic check for valid data URL
-                                 doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                             } else {
-                                 console.warn(`QR data URL is empty or invalid for asset ${asset.id}`);
-                                 // Optionally draw a placeholder rectangle
-                                 doc.setDrawColor(255, 0, 0);
-                                 doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                                 doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
-                             }
+                            const qrSizeMm = Math.max(1, el_w_mm); // Use width as size, ensure it's at least 1mm
+                            if (qrDataUrl && qrDataUrl.length > 'data:image/png;base64,'.length) {
+                                doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                                console.log(`Added QR for ${asset.tag} at (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}) size ${qrSizeMm.toFixed(1)}`);
+                            } else {
+                                console.warn(`QR data URL is empty or invalid for asset ${asset.id}`);
+                                // Optionally draw a placeholder rectangle
+                                doc.setDrawColor(255, 0, 0);
+                                doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                                doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
+                            }
                         } catch (e) {
                             console.error(`Error adding QR image to PDF for asset ${asset.id}:`, e);
                             // Draw placeholder on error
                              const qrSizeMm = Math.max(1, el_w_mm);
                              doc.setDrawColor(255, 0, 0);
                              doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                             doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
+                             doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
                         }
                     } else {
                         console.warn(`QR canvas ref not found for asset ${asset.id}`);
@@ -337,7 +337,7 @@ export default function PrintLabelsPage() {
                          const qrSizeMm = Math.max(1, el_w_mm);
                          doc.setDrawColor(255, 0, 0);
                          doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                         doc.text("QR Missing", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle' });
+                         doc.text("QR Missing", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
                     try {
@@ -414,9 +414,12 @@ export default function PrintLabelsPage() {
                                 size={renderSize} // Render larger hidden QR for quality
                                 level="H"
                                 includeMargin={false}
-                                // Assign ref directly to the QRCodeCanvas component
+                                // Assign ref directly to the QRCodeCanvas component's underlying canvas
                                 ref={(el) => {
-                                    qrCanvasRefs.current[asset.id] = el;
+                                     // el can be null during unmounts/renders
+                                     if (el) {
+                                         qrCanvasRefs.current[asset.id] = el;
+                                     }
                                 }}
                              />
                         </div>
@@ -603,5 +606,3 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
-
-    

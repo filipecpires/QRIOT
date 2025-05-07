@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useRef, ChangeEvent, useEffect, useCallback } from 'react';
-import QRCodeStyling from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react'; // Use QRCodeCanvas
 import {
   Dialog,
   DialogContent,
@@ -434,7 +433,15 @@ export function LabelPreviewModal({
                   {el.type === 'characteristic' && <span className="block whitespace-nowrap">{`${el.content}: ${el.characteristicValue}`}</span>}
                   {el.type === 'qr' && (
                       <div style={{ width: el.widthPx, height: el.widthPx }}> {/* Ensure container matches size */}
-                          <QRCodeStyling value={el.content || 'no-data'} size={el.widthPx} level="H" includeMargin={false} />
+                          {/* Use QRCodeCanvas instead of QRCodeStyling for direct canvas access */}
+                           <QRCodeCanvas
+                            value={el.content || 'no-data'}
+                            size={el.widthPx}
+                            level={"H"}
+                            includeMargin={false}
+                            // Note: Style props might not directly apply to QRCodeCanvas,
+                            // it renders to a canvas. Positioning is handled by the parent div.
+                           />
                       </div>
                   )}
                    {el.type === 'logo' && el.dataUrl && (
@@ -570,10 +577,14 @@ export function LabelPreviewModal({
                                 </Select>
                             </div>
                              {/* Optional Width Control for Text */}
-                            {/* <div>
+                             <div>
                                 <Label htmlFor={`width-${selectedElement.id}`} className="text-xs">Largura (px)</Label>
                                 <Input id={`width-${selectedElement.id}`} type="number" value={selectedElement.widthPx} onChange={(e) => updateElement(selectedElement.id, { widthPx: parseInt(e.target.value) || 100 })} className="text-xs h-8 mt-1" />
-                            </div> */}
+                             </div>
+                             <div>
+                                <Label htmlFor={`height-${selectedElement.id}`} className="text-xs">Altura (px)</Label>
+                                <Input id={`height-${selectedElement.id}`} type="number" value={selectedElement.heightPx} onChange={(e) => updateElement(selectedElement.id, { heightPx: parseInt(e.target.value) || (selectedElement.fontSizePx * 1.2) })} className="text-xs h-8 mt-1" />
+                             </div>
                         </div>
                         </>
                     )}
@@ -583,18 +594,6 @@ export function LabelPreviewModal({
                             <Label htmlFor={`qrSize-${selectedElement.id}`} className="text-xs">Tamanho (px)</Label>
                             <Input id={`qrSize-${selectedElement.id}`} type="number" value={selectedElement.widthPx} onChange={(e) => { const s = parseInt(e.target.value) || DEFAULT_QR_SIZE_PX; updateElement(selectedElement.id, { widthPx: s, heightPx: s });}} className="text-xs h-8 mt-1" />
                             </div>
-                             {/* QR Alignment might not be needed if positioned manually */}
-                            {/* <div>
-                                <Label htmlFor={`qrAlign-${selectedElement.id}`} className="text-xs">Alinhar</Label>
-                                <Select value={selectedElement.textAlign || 'center'} onValueChange={(v: 'left' | 'center' | 'right') => updateElement(selectedElement.id, { textAlign: v })}>
-                                    <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="left">Esquerda</SelectItem>
-                                        <SelectItem value="center">Centro</SelectItem>
-                                        <SelectItem value="right">Direita</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div> */}
                         </div>
                     )}
                     {selectedElement.type === 'logo' && (
@@ -613,18 +612,6 @@ export function LabelPreviewModal({
                                 <Input id={`logoHeight-${selectedElement.id}`} type="number" value={selectedElement.heightPx} onChange={(e) => updateElement(selectedElement.id, { heightPx: parseInt(e.target.value) || DEFAULT_LOGO_HEIGHT_PX })} className="text-xs h-8 mt-1" />
                             </div>
                         </div>
-                        {/* Logo Alignment might not be needed if positioned manually */}
-                        {/* <div>
-                                <Label htmlFor={`logoAlign-${selectedElement.id}`} className="text-xs">Alinhar</Label>
-                                <Select value={selectedElement.textAlign || 'center'} onValueChange={(v: 'left' | 'center' | 'right') => updateElement(selectedElement.id, { textAlign: v })}>
-                                    <SelectTrigger className="text-xs h-8 mt-1"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="left">Esquerda</SelectItem>
-                                        <SelectItem value="center">Centro</SelectItem>
-                                        <SelectItem value="right">Direita</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                        </div> */}
                         </div>
                     )}
                     </div>
@@ -711,5 +698,3 @@ const CommandEmpty = React.forwardRef<
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName || 'CommandEmpty';
-
-    
