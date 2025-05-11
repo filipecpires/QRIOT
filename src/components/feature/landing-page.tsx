@@ -4,15 +4,19 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ArrowRight, ShieldCheck, Printer, UserCheck } from 'lucide-react'; // Added UserCheck
-import Image from 'next/image'; // For potential hero image or screenshots
+import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ArrowRight, ShieldCheck, Printer, UserCheck } from 'lucide-react';
+import Image from 'next/image';
 
 export default function LandingPage() {
     const handleDemoLogin = async () => {
         // Simulate demo login (replace with actual logic if needed)
         console.log("Attempting demo login...");
         // Example: redirect to dashboard or show a demo state
-        window.location.href = '/dashboard'; // Simple redirect for demo
+        // In a real app, you would use router.push('/dashboard') after successful auth.
+        // For this static example, direct navigation is fine.
+        if (typeof window !== 'undefined') {
+            window.location.href = '/dashboard';
+        }
     };
     return (
         <div className="flex flex-col min-h-screen bg-gradient-to-b from-background to-secondary/20">
@@ -23,35 +27,35 @@ export default function LandingPage() {
                         <QrCode className="h-6 w-6" />
                         QRIoT.app
                     </Link>
-                    <nav className="flex items-center gap-2 sm:gap-4"> {/* Adjusted gap for smaller screens */}
+                    <nav className="flex items-center gap-2 sm:gap-4">
                          <Button size="sm" variant="secondary" onClick={handleDemoLogin}>
-                             <UserCheck className="mr-1 sm:mr-2 h-4 w-4" /> {/* Adjusted margin */}
+                             <UserCheck className="mr-1 sm:mr-2 h-4 w-4" />
                             Demo
                          </Button>
-                         <Link href="/login" asChild>
-                            <Button size="sm">Acessar</Button> {/* Shortened text, Button is child of Link */}
-                         </Link>
+                         <Button asChild size="sm">
+                            <Link href="/login">Acessar</Link>
+                         </Button>
                     </nav>
                 </div>
             </header>
 
             {/* Hero Section */}
-            <section className="container flex flex-col items-center justify-center gap-6 py-12 md:py-20 text-center px-4"> {/* Reduced padding for smaller screens */}
+            <section className="container flex flex-col items-center justify-center gap-6 py-12 md:py-20 text-center px-4">
                  <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
                     Gerencie seus Ativos com <span className="text-primary">Inteligência</span> e <span className="text-accent">Praticidade</span>.
                  </h1>
                  <p className="max-w-2xl text-md sm:text-lg text-muted-foreground">
                     O QRIoT.app simplifica o controle do seu patrimônio. Cadastre, localize, inventarie e monitore tudo com a facilidade dos QR Codes.
                  </p>
-                 <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md sm:max-w-none"> {/* Ensure buttons stack well */}
+                 <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md sm:max-w-none">
                      <Button size="lg" variant="secondary" onClick={handleDemoLogin} className="w-full sm:w-auto">
                          <UserCheck className="mr-2 h-5 w-5" /> Acessar Conta Demo
                     </Button>
-                    <Link href="/login" asChild>
-                        <Button size="lg" variant="default" className="w-full sm:w-auto">
-                             <span>Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" /></span>
-                        </Button>
-                    </Link>
+                    <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
+                        <Link href="/login">
+                           <span>Acessar Sistema</span>
+                        </Link>
+                    </Button>
                  </div>
                   <div className="mt-8 h-48 sm:h-64 md:h-80 lg:h-96 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground p-2 sm:p-4">
                     <Image src="https://picsum.photos/seed/qriot-hero/800/450" alt="Demonstração do QRIoT.app" width={800} height={450} className="rounded-md object-contain w-full h-full" data-ai-hint="app dashboard"/>
@@ -151,16 +155,16 @@ export default function LandingPage() {
                          Registre-se gratuitamente e comece a usar agora mesmo ou solicite uma demonstração personalizada.
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-lg mx-auto">
-                         <Link href="/register" asChild>
-                            <Button size="lg" variant="secondary" className="w-full sm:w-auto">
-                                Registrar Grátis
-                            </Button>
-                         </Link>
-                         <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app" asChild>
-                            <Button size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto">
-                                <span><Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração</span>
-                            </Button>
-                         </Link>
+                         <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
+                            <Link href="/register">Registrar Grátis</Link>
+                         </Button>
+                         <Button asChild size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto">
+                            <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app">
+                                <div className="flex items-center">
+                                    <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
+                                </div>
+                            </Link>
+                         </Button>
                     </div>
                 </div>
             </section>
@@ -176,4 +180,3 @@ export default function LandingPage() {
     );
 }
 
-    
