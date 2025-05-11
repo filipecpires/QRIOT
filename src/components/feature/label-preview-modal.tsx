@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Printer, Save, Search, BringToFront, SendToBack } from 'lucide-react'; // Added BringToFront, SendToBack
+import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Save, Search, BringToFront, SendToBack } from 'lucide-react'; // Removed Printer
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -59,7 +59,7 @@ interface LabelPreviewModalProps {
   selectedAssetsData: AssetForLabel[];
   labelConfig: LabelConfig;
   onSave: (elements: LabelElementConfig[]) => void;
-  onGenerateRequest: (layout: LabelElementConfig[]) => void;
+  // onGenerateRequest: (layout: LabelElementConfig[]) => void; // Removed as PDF generation is triggered from main page
   initialLayout?: LabelElementConfig[];
 }
 
@@ -102,7 +102,7 @@ export function LabelPreviewModal({
   selectedAssetsData,
   labelConfig,
   onSave,
-  onGenerateRequest,
+  // onGenerateRequest, // Removed
   initialLayout,
 }: LabelPreviewModalProps) {
   const { toast } = useToast();
@@ -155,7 +155,6 @@ export function LabelPreviewModal({
          setElements(prevElements =>
             prevElements.map(el => updateElementContent(el, currentAsset, qrValue))
          );
-         // setSelectedElementId(null); // Deselecting here can be disruptive if user is editing an element and switches preview
      }, [currentAsset, qrValue]);
 
 
@@ -337,14 +336,6 @@ export function LabelPreviewModal({
          setCurrentPreviewIndex(prev => (prev - 1 + selectedAssetsData.length) % selectedAssetsData.length);
     };
 
-    const handleGenerateClick = () => {
-         if (elements.length === 0) {
-            toast({ title: "Layout Vazio", description: "Adicione elementos à etiqueta antes de gerar.", variant: "destructive" });
-            return;
-        }
-         onGenerateRequest(elements);
-    };
-
     const handleSaveAndClose = () => {
         onSave(elements);
         onClose();
@@ -352,6 +343,7 @@ export function LabelPreviewModal({
 
     const handleSaveChanges = () => {
         onSave(elements);
+         toast({ title: "Layout Salvo", description: "O layout atual foi salvo localmente." });
     };
 
 
@@ -411,9 +403,9 @@ export function LabelPreviewModal({
                     minWidth: el.type === 'text' || el.type === 'custom' || el.type === 'characteristic' ? '10px' : undefined,
                     height: el.type === 'qr' ? `${el.widthPx}px` : el.type === 'logo' ? `${el.heightPx}px` : el.heightPx > 0 ? `${el.heightPx}px`: 'auto',
                     lineHeight: '1.1',
-                    zIndex: selectedElementId === el.id ? 10 : 1, // Could be improved for actual z-index based on array order
-                    overflow: 'hidden', // Hide overflow for text elements if width is set
-                    whiteSpace: (el.type === 'text' || el.type === 'custom' || el.type === 'characteristic') && el.widthPx > 0 ? 'normal' : 'nowrap', // Allow wrapping if width is set
+                    zIndex: selectedElementId === el.id ? 10 : elements.findIndex(e => e.id === el.id) + 1,
+                    overflow: 'hidden', 
+                    whiteSpace: (el.type === 'text' || el.type === 'custom' || el.type === 'characteristic') && el.widthPx > 0 ? 'normal' : 'nowrap', 
                   }}
                 >
                   {el.type === 'text' && <span className="block">{el.content}</span>}
@@ -498,9 +490,9 @@ export function LabelPreviewModal({
             <Separator />
 
             <div className="flex-grow overflow-y-auto pr-1 space-y-3">
-                <Label className="text-base font-semibold">Configurar Elemento Selecionado</Label>
-                {selectedElement ? (
-                <Card className="p-3">
+                 <Label className="text-base font-semibold">Configurar Elemento Selecionado</Label>
+                 {selectedElement ? (
+                   <Card className="p-3">
                     <div className="flex justify-between items-center mb-2">
                         <Label className="text-sm font-medium truncate" title={selectedElement.content}>
                             Editando: {
@@ -594,7 +586,6 @@ export function LabelPreviewModal({
                         </div>
                         </div>
                     )}
-                    {/* Layering Controls */}
                      <div className="flex items-center justify-start gap-2 pt-2">
                         <Button
                             variant="outline"
@@ -617,24 +608,24 @@ export function LabelPreviewModal({
                          <p className="text-xs text-muted-foreground ml-2">Ordem: {selectedElementIndex + 1} de {elements.length}</p>
                     </div>
                     </div>
-                </Card>
-                ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">Selecione um elemento na pré-visualização para editar ou adicione novos elementos.</p>
-                )}
+                   </Card>
+                 ) : (
+                    <p className="text-xs text-muted-foreground text-center py-4">Selecione um elemento na pré-visualização para editar ou adicione novos elementos.</p>
+                 )}
             </div>
           </div>
         </div>
 
-        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0">
-             <Button variant="secondary" onClick={handleGenerateClick} disabled={elements.length === 0}>
-                 <Printer className="mr-2 h-4 w-4" /> Gerar PDF ({selectedAssetsData.length})
-             </Button>
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={onClose}> Cancelar </Button>
-                 <Button variant="outline" onClick={handleSaveChanges}>
+        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-end gap-2 flex-shrink-0">
+            {/* Removed "Gerar PDF" button from modal footer */}
+            <div className="flex-grow sm:flex-grow-0">
+                <Button variant="outline" onClick={onClose} className="w-full sm:w-auto"> Cancelar </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                 <Button variant="outline" onClick={handleSaveChanges} className="w-full sm:w-auto">
                      <Save className="mr-2 h-4 w-4" /> Salvar Layout
                  </Button>
-                <Button onClick={handleSaveAndClose}>Aplicar e Fechar</Button>
+                <Button onClick={handleSaveAndClose} className="w-full sm:w-auto">Salvar e Fechar</Button>
             </div>
         </DialogFooter>
       </DialogContent>
@@ -697,4 +688,3 @@ const CommandEmpty = React.forwardRef<
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
-

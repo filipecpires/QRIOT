@@ -13,7 +13,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-// No need to import QRCodeCanvas directly here if HiddenQrCanvasWithDataUrl handles it
 import { jsPDF } from "jspdf";
 // import autoTable from 'jspdf-autotable'; // Currently unused
 import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
@@ -88,9 +87,8 @@ const labelSizes: LabelConfig[] = [
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-// const MM_TO_PT_SCALE = 2.83465; // 1mm = 2.83465 points (approx) // Not directly used for font size if using jsPDF native units
-const PX_TO_MM_SCALE = 0.264583; // 1px approx 0.264583mm (for converting px layout to mm for PDF)
-const PX_TO_PT_SCALE = 0.75; // 1px approx 0.75pt (for web display font sizes to PDF points)
+const PX_TO_MM_SCALE = 0.264583; 
+const PX_TO_PT_SCALE = 0.75; 
 
 
 export default function PrintLabelsPage() {
@@ -112,6 +110,7 @@ export default function PrintLabelsPage() {
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
     const [qrCodeDataUrls, setQrCodeDataUrls] = useState<Record<string, string | null>>({});
+    const [areQrCodesReady, setAreQrCodesReady] = useState(false);
 
 
     const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
@@ -132,10 +131,20 @@ export default function PrintLabelsPage() {
                      setCurrentLabelLayout([]);
                  }
              } else {
-                 setCurrentLabelLayout([]);
+                 setCurrentLabelLayout([]); // Initialize if no saved layout
              }
          }
      }, [labelSizeId]);
+
+     useEffect(() => {
+        const selectedAssetIds = Array.from(selectedAssets);
+        if (selectedAssetIds.length === 0) {
+            setAreQrCodesReady(true); 
+            return;
+        }
+        const allReady = selectedAssetIds.every(id => qrCodeDataUrls[id] && qrCodeDataUrls[id]!.length > 'data:image/png;base64,'.length);
+        setAreQrCodesReady(allReady);
+    }, [selectedAssets, qrCodeDataUrls]);
 
 
     const fetchData = useCallback(async (currentFilters: typeof filters) => {
@@ -238,10 +247,14 @@ export default function PrintLabelsPage() {
              toast({ title: "Layout Vazio", description: "O layout da etiqueta está vazio. Edite o layout para adicionar elementos.", variant: "destructive" });
              return;
          }
+        if (!areQrCodesReady) {
+            toast({ title: "Preparando QR Codes", description: "Aguarde a preparação dos QR Codes antes de gerar o PDF.", variant: "default" });
+            return;
+        }
 
         setIsGenerating(true);
         toast({ title: "Gerando PDF...", description: "Preparando etiquetas, aguarde." });
-        setIsPreviewOpen(false);
+        
 
         const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
         if (!selectedLabelConfig) {
@@ -260,7 +273,7 @@ export default function PrintLabelsPage() {
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
         const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : 0);
         const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : 0);
-        const pageW_mm = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm;
+        // const pageW_mm = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm; // Not used
         const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm;
 
         let assetIndex = 0;
@@ -284,13 +297,13 @@ export default function PrintLabelsPage() {
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
                         doc.setFontSize(el_font_size_pt);
-                        doc.setFont(element.fontFamily || 'helvetica', 'normal'); // Default font for jsPDF
+                        doc.setFont(element.fontFamily || 'helvetica', 'normal'); 
                         const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95;
                         const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
                         let textXPosMm = el_x_mm;
                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
-                        doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), { // Adjust Y for better baseline
+                        doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), { 
                             align: textAlignJsPdf,
                             baseline: 'top'
                         });
@@ -303,12 +316,10 @@ export default function PrintLabelsPage() {
                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) {
                             console.error(`Error adding QR image to PDF for asset ${asset.id}:`, e);
-                            // Draw placeholder on error
                             doc.setDrawColor(255, 0, 0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Error", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
                         }
                     } else {
                         console.warn(`QR data URL not ready or invalid for asset ${asset.id}`);
-                         // Draw placeholder if data URL not ready
                         doc.setDrawColor(255,0,0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Missing", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
@@ -342,12 +353,15 @@ export default function PrintLabelsPage() {
                      }
                  }
              }
-         } else {
+         } else { // Custom page format (likely thermal printer)
              for (assetIndex = 0; assetIndex < assetsToPrint.length; assetIndex++) {
                  if (assetIndex > 0) {
-                     doc.addPage([labelW_mm, labelH_mm], 'l');
+                     doc.addPage([labelW_mm + gapX, labelH_mm + gapY], 'l'); // Add page with label dimensions + gaps
                  }
-                 await addLabelContent(assetsToPrint[assetIndex], 0, 0);
+                 // Apply margins for custom format too, if specified or default to 0
+                 const customMarginX = selectedLabelConfig.marginLeft ?? 0;
+                 const customMarginY = selectedLabelConfig.marginTop ?? 0;
+                 await addLabelContent(assetsToPrint[assetIndex], customMarginX, customMarginY);
              }
          }
 
@@ -386,10 +400,6 @@ export default function PrintLabelsPage() {
                 })}
             </div>
         );
-    };
-
-    const handleGenerateRequest = (layout: LabelElementConfig[]) => {
-        generatePdf(layout);
     };
 
     const selectedAssetsData = assets.filter(a => selectedAssets.has(a.id));
@@ -538,9 +548,20 @@ export default function PrintLabelsPage() {
                     <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0} className="w-full sm:w-auto">
                          <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
-                     <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating} className="w-full sm:w-auto">
-                        {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+                     <Button 
+                        onClick={() => generatePdf(currentLabelLayout)} 
+                        disabled={selectedAssets.size === 0 || isGenerating || !areQrCodesReady} 
+                        className="w-full sm:w-auto"
+                    >
+                        {isGenerating ? (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                         ) : (
+                            <Printer className="mr-2 h-4 w-4" />
+                         )}
                         Gerar PDF ({selectedAssets.size})
+                        {!isGenerating && !areQrCodesReady && selectedAssets.size > 0 && (
+                            <Loader2 className="ml-2 h-4 w-4 animate-spin" title="Preparando QR Codes..." />
+                        )}
                     </Button>
                 </CardFooter>
             </Card>
@@ -553,12 +574,9 @@ export default function PrintLabelsPage() {
                     selectedAssetsData={selectedAssetsData}
                     labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
                     onSave={handleSaveLayout}
-                    onGenerateRequest={handleGenerateRequest}
                     initialLayout={currentLabelLayout}
                 />
              )}
         </div>
     );
 }
-
-
