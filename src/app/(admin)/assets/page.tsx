@@ -4,10 +4,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Eye, Home, Building, MoreHorizontal } from 'lucide-react'; // Added MoreHorizontal
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Eye, Home, Building, MoreHorizontal } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -16,7 +16,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"; // Import DropdownMenu components
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,16 +26,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog" // Import AlertDialog for delete confirmation
-import { useToast } from '@/hooks/use-toast'; // For delete feedback
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 // Mock data - replace with actual data fetching later
 const initialAssets = [
-  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'AB12C', location: 'Escritório 1', responsible: 'João Silva', status: 'active', ownership: 'own' }, // Added ownership, updated tag
-  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'DE34F', location: 'Escritório 2', responsible: 'Maria Oliveira', status: 'active', ownership: 'own' }, // Updated tag
-  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'GH56I', location: 'Sala de Reuniões', responsible: 'Carlos Pereira', status: 'lost', ownership: 'rented' }, // Example rented, updated tag
-  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'JK78L', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive', ownership: 'own' }, // Example inactive, updated tag
+  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'AB12C', location: 'Escritório 1', responsible: 'João Silva', status: 'active', ownership: 'own' },
+  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'DE34F', location: 'Escritório 2', responsible: 'Maria Oliveira', status: 'active', ownership: 'own' },
+  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'GH56I', location: 'Sala de Reuniões', responsible: 'Carlos Pereira', status: 'lost', ownership: 'rented' },
+  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'JK78L', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive', ownership: 'own' },
 ];
 
 type Asset = typeof initialAssets[0];
@@ -111,7 +111,7 @@ export default function AssetsPage() {
                 <TableHead className="hidden md:table-cell">Tag Única</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden lg:table-cell">Categoria</TableHead>
-                <TableHead>Local</TableHead>
+                <TableHead className="hidden md:table-cell">Local</TableHead>
                 <TableHead className="hidden md:table-cell">Responsável</TableHead>
                 <TableHead className="hidden md:table-cell">Propriedade</TableHead>
                 <TableHead>Status</TableHead>
@@ -124,12 +124,16 @@ export default function AssetsPage() {
                    <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell>
                   <TableCell>
                      <div className="font-medium">{asset.name}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">{asset.tag}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">{asset.location}</div>
-                     <div className="text-xs text-muted-foreground lg:hidden md:hidden">{asset.category}</div> {/* Show category on mobile below name/tag */}
+                     <div className="text-xs text-muted-foreground md:hidden">Tag: {asset.tag}</div>
+                     <div className="text-xs text-muted-foreground md:hidden">Local: {asset.location}</div>
+                     <div className="text-xs text-muted-foreground lg:hidden md:hidden">Cat: {asset.category}</div>
+                     <div className="text-xs text-muted-foreground md:hidden">Resp: {asset.responsible}</div>
+                     <div className="text-xs text-muted-foreground md:hidden">
+                        Prop: {asset.ownership === 'rented' ? 'Alugado' : 'Próprio'}
+                     </div>
                   </TableCell>
                    <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>
-                  <TableCell className="hidden md:table-cell">{asset.location}</TableCell> {/* Hide Local on smallest screens */}
+                  <TableCell className="hidden md:table-cell">{asset.location}</TableCell>
                    <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>
                    <TableCell className="hidden md:table-cell">
                      {asset.ownership === 'rented' ? (
@@ -193,7 +197,7 @@ export default function AssetsPage() {
               ))}
                {assets.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={7} lg:colSpan={8}">
+                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                         Nenhum ativo encontrado.
                     </TableCell>
                 </TableRow>
@@ -202,6 +206,11 @@ export default function AssetsPage() {
           </Table>
            {/* Add Pagination Controls Here Later */}
         </CardContent>
+         <CardFooter>
+            <div className="text-xs text-muted-foreground">
+                Mostrando <strong>{assets.length}</strong> de <strong>{initialAssets.length}</strong> ativos.
+            </div>
+        </CardFooter>
       </Card>
 
        {/* Delete Confirmation Dialog */}

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, UserCog, UserCheck, User, Wrench, KeyRound, CheckCircle, XCircle, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, UserCog, UserCheck, User, Wrench, KeyRound, CheckCircle, XCircle, MoreHorizontal, Users as UsersIcon, Calendar } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -32,7 +32,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton import
+import { Skeleton } from '@/components/ui/skeleton'; 
 
 // Mock data - replace with actual data fetching later (filtered by company)
 const initialUsers = [
@@ -67,27 +67,20 @@ const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
 
 export default function AdminUsersPage() {
   const { toast } = useToast();
-  const [users, setUsers] = useState<User[]>([]); // Initialize empty, fetch later
+  const [users, setUsers] = useState<User[]>([]); 
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState('__all__'); // Default to __all__
-  const [statusFilter, setStatusFilter] = useState('__all__'); // Default to __all__
-  // TODO: Add pagination state
-  // const [currentPage, setCurrentPage] = useState(1);
-  // const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [roleFilter, setRoleFilter] = useState('__all__'); 
+  const [statusFilter, setStatusFilter] = useState('__all__'); 
 
-  // TODO: Assume companyId is available from context or props
   const companyId = 'COMPANY_XYZ';
 
-  // Fetch users for the specific company
   useEffect(() => {
     const fetchCompanyUsers = async (companyId: string) => {
       setLoading(true);
       console.log("Fetching users for company:", companyId);
-      // Replace with actual API call to fetch users filtered by companyId
       await new Promise(resolve => setTimeout(resolve, 1000));
-      // Filter mock data for demo purposes
-      const companyUsers = initialUsers; // In real app, this would be the API response
+      const companyUsers = initialUsers; 
       setUsers(companyUsers);
       setLoading(false);
     };
@@ -98,21 +91,16 @@ export default function AdminUsersPage() {
     const searchMatch = searchTerm === '' ||
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const roleMatch = roleFilter === '__all__' || user.role === roleFilter; // Check against __all__
-    const statusMatch = statusFilter === '__all__' || user.status === statusFilter; // Check against __all__
+    const roleMatch = roleFilter === '__all__' || user.role === roleFilter; 
+    const statusMatch = statusFilter === '__all__' || user.status === statusFilter; 
     return searchMatch && roleMatch && statusMatch;
   });
 
-  // Placeholder for pagination logic
-  // const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
-
   const toggleUserStatus = (userId: string) => {
-    // TODO: Implement actual API call based on logged-in user permissions and company context
     const userToToggle = users.find(u => u.id === userId);
     if (!userToToggle) return;
 
-    // Example: Assume only Admins can toggle status (replace with actual permission check)
-    const currentUserRole = 'Administrador'; // Replace with actual logged-in user role
+    const currentUserRole = 'Administrador'; 
     if (currentUserRole !== 'Administrador' && userToToggle.role === 'Administrador') {
          toast({ title: "Permissão Negada", description: "Você não pode alterar o status de um Administrador.", variant: "destructive" });
          return;
@@ -132,12 +120,10 @@ export default function AdminUsersPage() {
   };
 
   const deleteUser = (userId: string) => {
-     // TODO: Implement actual API call based on logged-in user permissions and company context
     const userToDelete = users.find(u => u.id === userId);
     if (!userToDelete) return;
 
-     // Example: Assume only Admins can delete (replace with actual permission check)
-     const currentUserRole = 'Administrador'; // Replace with actual logged-in user role
+     const currentUserRole = 'Administrador'; 
      if (currentUserRole !== 'Administrador') {
          toast({ title: "Permissão Negada", description: "Você não tem permissão para excluir usuários.", variant: "destructive" });
          return;
@@ -151,25 +137,21 @@ export default function AdminUsersPage() {
     toast({
       title: "Usuário Excluído",
       description: `O usuário ${userToDelete.name} foi excluído com sucesso.`,
-      variant: "default", // Use default variant for success
+      variant: "default", 
     });
   };
 
   const resetPassword = (userId: string) => {
-     // TODO: Implement actual API call based on logged-in user permissions
      const userToReset = users.find(u => u.id === userId);
      if (!userToReset) return;
 
-      // Example: Assume only Admins/Managers can reset (replace with actual permission check)
-      const currentUserRole = 'Administrador'; // Replace with actual logged-in user role
+      const currentUserRole = 'Administrador'; 
      if (currentUserRole !== 'Administrador' && currentUserRole !== 'Gerente') {
          toast({ title: "Permissão Negada", description: "Você não tem permissão para resetar senhas.", variant: "destructive" });
          return;
      }
-      // Add further checks if needed (e.g., manager can only reset subordinates)
 
     console.log(`Initiating password reset for ${userToReset.email}`);
-    // Simulate API call to send reset email
     toast({
       title: "Email de Redefinição Enviado",
       description: `Um email foi enviado para ${userToReset.email} com instruções para redefinir a senha.`,
@@ -181,7 +163,6 @@ export default function AdminUsersPage() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
         <Button asChild>
-          {/* Ensure the 'new' link points to the correct admin path */}
           <Link href="/settings/admin/users/new">
             <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
           </Link>
@@ -204,7 +185,7 @@ export default function AdminUsersPage() {
                 <SelectValue placeholder="Filtrar por Perfil" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Todos Perfis</SelectItem> {/* Changed value */}
+                <SelectItem value="__all__">Todos Perfis</SelectItem> 
                 {roles.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -213,12 +194,11 @@ export default function AdminUsersPage() {
                 <SelectValue placeholder="Filtrar por Status" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="__all__">Todos Status</SelectItem> {/* Changed value */}
+                <SelectItem value="__all__">Todos Status</SelectItem> 
                 <SelectItem value="active">Ativo</SelectItem>
                 <SelectItem value="inactive">Inativo</SelectItem>
               </SelectContent>
             </Select>
-            {/* <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button> */}
           </div>
         </CardHeader>
         <CardContent>
@@ -227,11 +207,11 @@ export default function AdminUsersPage() {
               <TableRow>
                 <TableHead>Nome</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead>Perfil</TableHead>
+                <TableHead className="hidden md:table-cell">Perfil</TableHead>
                 <TableHead className="hidden lg:table-cell">Gerente</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="hidden lg:table-cell">Criado em</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -239,7 +219,7 @@ export default function AdminUsersPage() {
                 <TableRow key={`skel-${i}`}>
                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24 rounded" /></div></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40 rounded" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
                     <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24 rounded" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                     <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20 rounded" /></TableCell>
@@ -256,13 +236,15 @@ export default function AdminUsersPage() {
                         </Avatar>
                         <div>
                             {user.name}
-                            <div className="text-xs text-muted-foreground md:hidden">{user.email}</div>
-                             <div className="md:hidden mt-1">
+                            <div className="text-xs text-muted-foreground md:hidden">Email: {user.email}</div>
+                            <div className="md:hidden mt-1">
                                 <Badge variant="secondary" className="flex items-center gap-1 w-fit text-xs">
                                   {getRoleIcon(user.role)}
                                   {user.role}
                                 </Badge>
                             </div>
+                            <div className="text-xs text-muted-foreground lg:hidden">Gerente: {user.managerName ?? 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground lg:hidden">Criado: {format(user.createdAt, "dd/MM/yy")}</div>
                         </div>
                     </div>
                   </TableCell>
@@ -296,7 +278,6 @@ export default function AdminUsersPage() {
                         <DropdownMenuLabel>Ações: {user.name}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                          {/* Ensure the 'edit' link points to the correct admin path */}
                            <Link href={`/settings/admin/users/${user.id}/edit`}>
                             <Edit className="mr-2 h-4 w-4" /> Editar
                           </Link>
@@ -315,9 +296,9 @@ export default function AdminUsersPage() {
                          <AlertDialog>
                           <AlertDialogTrigger asChild>
                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()} // Prevent closing dropdown immediately
+                                onSelect={(e) => e.preventDefault()} 
                                 className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                                disabled={user.role === 'Administrador'} // Example: disable delete for admin
+                                disabled={user.role === 'Administrador'} 
                               >
                                <Trash2 className="mr-2 h-4 w-4" /> Excluir
                              </DropdownMenuItem>
@@ -347,7 +328,7 @@ export default function AdminUsersPage() {
               ))}
               {!loading && filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={7}">
+                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
                     Nenhum usuário encontrado para esta empresa.
                   </TableCell>
                 </TableRow>
@@ -357,13 +338,8 @@ export default function AdminUsersPage() {
         </CardContent>
         <CardFooter>
           <div className="text-xs text-muted-foreground">
-             Mostrando <strong>{filteredUsers.length}</strong> de <strong>{users.length}</strong> usuários. {/* Update when pagination is added */}
+             Mostrando <strong>{filteredUsers.length}</strong> de <strong>{users.length}</strong> usuários.
           </div>
-           {/* Add Pagination Controls Here Later */}
-           {/* <div className="flex items-center justify-end space-x-2">
-               <Button variant="outline" size="sm" disabled>Anterior</Button>
-               <Button variant="outline" size="sm" disabled>Próxima</Button>
-           </div> */}
         </CardFooter>
       </Card>
     </div>

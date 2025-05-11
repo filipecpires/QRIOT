@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, AlertTriangle, XCircle } from 'lucide-react'; // Added XCircle
+import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, AlertTriangle, XCircle, User as UserIcon, Calendar as CalendarIcon, Clock as ClockIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -110,7 +110,7 @@ const getStatusBadgeVariant = (status: WorkOrderStatus): { variant: "default" | 
         case 'Open': return { variant: 'default', icon: AlertCircle, color: 'bg-blue-500 hover:bg-blue-600 text-white' };
         case 'In Progress': return { variant: 'secondary', icon: Hourglass, color: 'bg-yellow-500 hover:bg-yellow-600 text-black' };
         case 'Completed': return { variant: 'default', icon: Check, color: 'bg-green-600 hover:bg-green-700 text-white' };
-        case 'Cancelled': return { variant: 'outline', icon: XCircle }; // Use imported XCircle
+        case 'Cancelled': return { variant: 'outline', icon: XCircle };
         default: return { variant: 'outline' };
     }
 };
@@ -247,15 +247,6 @@ export default function WorkOrdersPage() {
                                 <SelectItem value="High">Alta</SelectItem>
                             </SelectContent>
                         </Select>
-                         {/* Optional: Filter by Assigned User */}
-                        {/* <Select value={filters.assignedUser} onValueChange={(v) => handleFilterChange('assignedUser', v)}>
-                            <SelectTrigger><SelectValue placeholder="Responsável" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="__all__">Todos Responsáveis</SelectItem>
-                                {mockUsers.map(user => <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>)}
-                             </SelectContent>
-                        </Select> */}
-                        {/* Consider adding date range filter */}
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -296,7 +287,11 @@ export default function WorkOrdersPage() {
                                         <TableCell>
                                              <div className="font-medium">{wo.assetName}</div>
                                              <div className="text-xs text-muted-foreground">{wo.assetTag}</div>
-                                             <div className="text-xs text-muted-foreground md:hidden">{wo.workOrderNumber}</div> {/* Show WO# on mobile */}
+                                             <div className="text-xs text-muted-foreground md:hidden">OS: {wo.workOrderNumber}</div>
+                                             <div className="text-xs text-muted-foreground lg:hidden">Tipo: {wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</div>
+                                             <div className="text-xs text-muted-foreground md:hidden">Resp: {wo.assignedUserName ?? '-'}</div>
+                                             <div className="text-xs text-muted-foreground lg:hidden">Reporte: {format(wo.reportedDate, "dd/MM/yy")}</div>
+                                             <div className="text-xs text-muted-foreground lg:hidden">Prazo: {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}</div>
                                         </TableCell>
                                         <TableCell>
                                              <Badge variant={statusVariant} className={cn("flex items-center gap-1 text-xs w-fit", statusColor)}>
@@ -352,18 +347,17 @@ export default function WorkOrdersPage() {
                             })}
                             {!loading && workOrders.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={6} lg:colSpan={9}">
+                                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
                                         {error || "Nenhuma ordem de serviço encontrada para os filtros selecionados."}
                                     </TableCell>
                                 </TableRow>
                             )}
                         </TableBody>
                     </Table>
-                    {/* Add Pagination Controls Here Later */}
                 </CardContent>
                  <CardFooter>
                     <div className="text-xs text-muted-foreground">
-                         Mostrando <strong>{workOrders.length}</strong> de <strong>{totalWorkOrders}</strong> ordens de serviço. {/* Update when pagination is added */}
+                         Mostrando <strong>{workOrders.length}</strong> de <strong>{totalWorkOrders}</strong> ordens de serviço.
                     </div>
                  </CardFooter>
             </Card>
