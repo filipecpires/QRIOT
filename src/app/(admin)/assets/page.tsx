@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog" // Import AlertDialog for delete confirmation
 import { useToast } from '@/hooks/use-toast'; // For delete feedback
+import { cn } from '@/lib/utils';
 
 // Mock data - replace with actual data fetching later
 const initialAssets = [
@@ -107,8 +108,14 @@ export default function AssetsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                {/* Hidden on mobile */}
-                <TableHead className="hidden md:table-cell">Tag Única</TableHead><TableHead>Nome</TableHead><TableHead className="hidden lg:table-cell">Categoria</TableHead><TableHead>Local</TableHead><TableHead className="hidden md:table-cell">Responsável</TableHead><TableHead className="hidden md:table-cell">Propriedade</TableHead><TableHead>Status</TableHead><TableHead className="text-right w-[50px]">Ações</TableHead>
+                <TableHead className="hidden md:table-cell">Tag Única</TableHead>
+                <TableHead>Nome</TableHead>
+                <TableHead className="hidden lg:table-cell">Categoria</TableHead>
+                <TableHead>Local</TableHead>
+                <TableHead className="hidden md:table-cell">Responsável</TableHead>
+                <TableHead className="hidden md:table-cell">Propriedade</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -118,9 +125,11 @@ export default function AssetsPage() {
                   <TableCell>
                      <div className="font-medium">{asset.name}</div>
                      <div className="text-xs text-muted-foreground md:hidden">{asset.tag}</div>
+                     <div className="text-xs text-muted-foreground md:hidden">{asset.location}</div>
+                     <div className="text-xs text-muted-foreground lg:hidden md:hidden">{asset.category}</div> {/* Show category on mobile below name/tag */}
                   </TableCell>
                    <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>
-                  <TableCell>{asset.location}</TableCell>
+                  <TableCell className="hidden md:table-cell">{asset.location}</TableCell> {/* Hide Local on smallest screens */}
                    <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>
                    <TableCell className="hidden md:table-cell">
                      {asset.ownership === 'rented' ? (
@@ -143,7 +152,7 @@ export default function AssetsPage() {
                     ) : asset.status === 'inactive' ? (
                        <Badge variant="secondary" className="text-xs">Inativo</Badge>
                     ): (
-                       <Badge variant="default" className="text-xs">Ativo</Badge>
+                       <Badge variant="default" className={cn("text-xs bg-green-500 hover:bg-green-600")}>Ativo</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -184,8 +193,7 @@ export default function AssetsPage() {
               ))}
                {assets.length === 0 && (
                 <TableRow>
-                     {/* Adjust colSpan based on visible columns */}
-                     <TableCell colSpan={6} className="h-24 text-center text-muted-foreground md:colSpan={7} lg:colSpan={8}">
+                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={7} lg:colSpan={8}">
                         Nenhum ativo encontrado.
                     </TableCell>
                 </TableRow>

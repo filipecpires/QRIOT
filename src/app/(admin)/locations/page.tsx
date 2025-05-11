@@ -18,7 +18,7 @@ const locations = [
 export default function LocationsPage() {
   return (
     <div className="space-y-6"> {/* Use simple div instead of container */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Gerenciar Locais</h1>
         <Button asChild>
           <Link href="/locations/new">
@@ -31,8 +31,8 @@ export default function LocationsPage() {
         <CardHeader>
           <CardTitle>Lista de Locais</CardTitle>
           <CardDescription>Visualize e gerencie todos os locais de instalação cadastrados.</CardDescription>
-           <div className="pt-4 flex gap-2">
-             <Input placeholder="Buscar por nome..." className="max-w-sm" />
+           <div className="pt-4 flex flex-col sm:flex-row gap-2">
+             <Input placeholder="Buscar por nome..." className="max-w-xs w-full sm:w-auto" />
              <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button>
            </div>
         </CardHeader>
@@ -41,9 +41,9 @@ export default function LocationsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Local</TableHead>
-                <TableHead>Latitude</TableHead>
-                <TableHead>Longitude</TableHead>
-                <TableHead>Ativos no Local</TableHead>
+                <TableHead className="hidden md:table-cell">Latitude</TableHead>
+                <TableHead className="hidden md:table-cell">Longitude</TableHead>
+                <TableHead className="hidden md:table-cell">Ativos no Local</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -51,11 +51,17 @@ export default function LocationsPage() {
               {locations.map((location) => (
                 <TableRow key={location.id}>
                   <TableCell className="font-medium flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground"/> {location.name}
+                    <MapPin className="h-4 w-4 text-muted-foreground"/> 
+                    <div>
+                        {location.name}
+                        <div className="text-xs text-muted-foreground md:hidden">
+                            Lat: {location.lat.toFixed(2)}, Lng: {location.lng.toFixed(2)} ({location.assetCount} ativos)
+                        </div>
+                    </div>
                   </TableCell>
-                  <TableCell>{location.lat.toFixed(4)}</TableCell>
-                  <TableCell>{location.lng.toFixed(4)}</TableCell>
-                  <TableCell>{location.assetCount}</TableCell>
+                  <TableCell className="hidden md:table-cell">{location.lat.toFixed(4)}</TableCell>
+                  <TableCell className="hidden md:table-cell">{location.lng.toFixed(4)}</TableCell>
+                  <TableCell className="hidden md:table-cell">{location.assetCount}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" asChild>
                        <Link href={`/locations/${location.id}/edit`} title="Editar">
@@ -71,7 +77,7 @@ export default function LocationsPage() {
               ))}
                {locations.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground md:colSpan={5}">
                         Nenhum local encontrado.
                     </TableCell>
                 </TableRow>
@@ -84,3 +90,4 @@ export default function LocationsPage() {
     </div>
   );
 }
+

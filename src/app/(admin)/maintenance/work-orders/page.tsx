@@ -218,10 +218,10 @@ export default function WorkOrdersPage() {
                             placeholder="Buscar por nº, ativo, tag..."
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
-                            className="lg:col-span-2"
+                            className="lg:col-span-2 w-full"
                         />
                         <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
-                            <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="__all__">Todos Status</SelectItem>
                                 <SelectItem value="Open">Aberta</SelectItem>
@@ -231,7 +231,7 @@ export default function WorkOrdersPage() {
                             </SelectContent>
                         </Select>
                         <Select value={filters.type} onValueChange={(v) => handleFilterChange('type', v)}>
-                            <SelectTrigger><SelectValue placeholder="Tipo" /></SelectTrigger>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Tipo" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="__all__">Todos Tipos</SelectItem>
                                 <SelectItem value="Planned">Planejada</SelectItem>
@@ -239,7 +239,7 @@ export default function WorkOrdersPage() {
                             </SelectContent>
                         </Select>
                         <Select value={filters.priority} onValueChange={(v) => handleFilterChange('priority', v)}>
-                            <SelectTrigger><SelectValue placeholder="Prioridade" /></SelectTrigger>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Prioridade" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="__all__">Todas Prioridades</SelectItem>
                                 <SelectItem value="Low">Baixa</SelectItem>
@@ -352,7 +352,7 @@ export default function WorkOrdersPage() {
                             })}
                             {!loading && workOrders.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="h-24 text-center text-muted-foreground">
+                                    <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={6} lg:colSpan={9}">
                                         {error || "Nenhuma ordem de serviço encontrada para os filtros selecionados."}
                                     </TableCell>
                                 </TableRow>

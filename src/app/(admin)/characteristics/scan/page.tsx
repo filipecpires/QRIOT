@@ -69,10 +69,15 @@ async function fetchAssetNameByTag(tag: string): Promise<string | null> {
     await new Promise(resolve => setTimeout(resolve, 300));
     const mockAssets: { [tag: string]: string } = {
         'TI-NB-001': 'Notebook Dell Latitude 7400',
+        'AB12C': 'Notebook Dell Latitude 7400', // Also accept new tag format for demo
         'TI-MN-005': 'Monitor LG 27"',
+        'DE34F': 'Monitor LG 27"',
         'MOB-CAD-012': 'Cadeira de Escritório',
+        'GH56I': 'Cadeira de Escritório',
         'TI-PROJ-002': 'Projetor Epson PowerLite',
+        'JK78L': 'Projetor Epson PowerLite',
         'ALM-PAL-001': 'Paleteira Manual',
+        'TU34V': 'Paleteira Manual',
     };
     return mockAssets[tag] || null;
 }
@@ -411,8 +416,8 @@ export default function CharacteristicScanPage() {
                          <div className="space-y-3 border p-4 rounded-md">
                              <Label className="font-medium">Adicionar Novas Características</Label>
                              {newCategories.map((cat) => (
-                                 <div key={cat.id} className="flex items-end gap-2 p-2 border rounded bg-muted/30">
-                                    <div className="flex-1 space-y-1">
+                                 <div key={cat.id} className="flex flex-col sm:flex-row sm:items-end gap-2 p-2 border rounded bg-muted/30">
+                                    <div className="flex-1 space-y-1 w-full sm:w-auto">
                                          <Label htmlFor={`new-cat-key-${cat.id}`} className="text-xs">Nome da Característica</Label>
                                          <Input
                                              id={`new-cat-key-${cat.id}`}
@@ -421,7 +426,7 @@ export default function CharacteristicScanPage() {
                                              onChange={(e) => handleNewCategoryChange(cat.id, 'key', e.target.value)}
                                           />
                                     </div>
-                                     <div className="w-32 space-y-1">
+                                     <div className="w-full sm:w-32 space-y-1">
                                          <Label htmlFor={`new-cat-valtype-${cat.id}`} className="text-xs">Tipo Valor</Label>
                                          <Select
                                              value={cat.valueType}
@@ -438,7 +443,7 @@ export default function CharacteristicScanPage() {
                                             </SelectContent>
                                          </Select>
                                      </div>
-                                     <div className="flex-1 space-y-1">
+                                     <div className="flex-1 space-y-1 w-full sm:w-auto">
                                          <Label htmlFor={`new-cat-default-${cat.id}`} className="text-xs">Valor Padrão (Opcional)</Label>
                                           {/* Render input based on valueType */}
                                          {cat.valueType === 'boolean' ? (
@@ -450,8 +455,9 @@ export default function CharacteristicScanPage() {
                                          ) : cat.valueType === 'date' ? (
                                              <Popover>
                                                  <PopoverTrigger asChild>
-                                                    <Button variant="outline" size="sm" className="w-full justify-start">
-                                                        {cat.defaultValue instanceof Date ? format(cat.defaultValue, 'P', { locale: ptBR }) : "Selecione"}
+                                                    <Button variant="outline" size="sm" className="w-full justify-start text-left font-normal">
+                                                        <CalendarDays className="mr-2 h-4 w-4"/>
+                                                        {cat.defaultValue instanceof Date ? format(cat.defaultValue, 'P', { locale: ptBR }) : <span>Selecione</span>}
                                                     </Button>
                                                  </PopoverTrigger>
                                                  <PopoverContent className="w-auto p-0">
@@ -468,7 +474,7 @@ export default function CharacteristicScanPage() {
                                               />
                                          )}
                                      </div>
-                                     <Button variant="ghost" size="icon" onClick={() => removeNewCategory(cat.id)} title="Remover Nova Característica">
+                                     <Button variant="ghost" size="icon" onClick={() => removeNewCategory(cat.id)} title="Remover Nova Característica" className="mt-auto sm:mt-0 flex-shrink-0">
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                      </Button>
                                 </div>
@@ -544,12 +550,12 @@ export default function CharacteristicScanPage() {
                     <div className="space-y-3">
                          <Label className="text-lg font-semibold">3. Escanear Ativos</Label>
                          <p className="text-sm text-muted-foreground">Clique em "Iniciar" para ativar a câmera e começar a escanear os QR Codes dos ativos. As características configuradas serão aplicadas após confirmação.</p>
-                         <div className="flex gap-4 items-center">
+                         <div className="flex flex-col sm:flex-row gap-4 items-center">
                              <Button
                                 size="lg"
                                 onClick={isScanning ? stopScanSession : startScanSession}
                                 disabled={isLoadingTemplates || (selectedTemplates.length === 0 && newCategories.length === 0)}
-                                className={isScanning ? 'bg-destructive hover:bg-destructive/90' : ''}
+                                className={cn(isScanning && 'bg-destructive hover:bg-destructive/90', 'w-full sm:w-auto')}
                              >
                                 {isScanning ? (
                                     <>

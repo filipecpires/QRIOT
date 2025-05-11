@@ -28,11 +28,11 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { Skeleton } from '@/components/ui/skeleton'; // Added Skeleton import
 
 // Mock data - replace with actual data fetching later (filtered by company)
 const initialUsers = [
@@ -178,7 +178,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
         <h1 className="text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
         <Button asChild>
           {/* Ensure the 'new' link points to the correct admin path */}
@@ -197,7 +197,7 @@ export default function AdminUsersPage() {
               placeholder="Buscar por nome ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm"
+              className="max-w-sm w-full md:w-auto"
             />
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-full md:w-[180px]">
@@ -226,43 +226,54 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Email</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
                 <TableHead>Perfil</TableHead>
-                <TableHead>Gerente</TableHead>
+                <TableHead className="hidden lg:table-cell">Gerente</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
+                <TableHead className="hidden lg:table-cell">Criado em</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
              {loading && Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={`skel-${i}`}>
-                    <TableCell><div className="flex items-center gap-3"><Avatar className="h-8 w-8 bg-muted" /><div className="h-4 w-24 bg-muted rounded"></div></div></TableCell>
-                    <TableCell><div className="h-4 w-40 bg-muted rounded"></div></TableCell>
-                    <TableCell><div className="h-4 w-20 bg-muted rounded"></div></TableCell>
-                    <TableCell><div className="h-4 w-24 bg-muted rounded"></div></TableCell>
-                    <TableCell><div className="h-4 w-16 bg-muted rounded"></div></TableCell>
-                    <TableCell><div className="h-4 w-20 bg-muted rounded"></div></TableCell>
-                    <TableCell className="text-right"><div className="h-8 w-8 bg-muted rounded"></div></TableCell>
+                    <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24 rounded" /></div></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40 rounded" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24 rounded" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20 rounded" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded" /></TableCell>
                 </TableRow>
              ))}
               {!loading && filteredUsers.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium flex items-center gap-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage src={`https://i.pravatar.cc/32?u=${user.email}`} alt={user.name} />
-                      <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                    </Avatar>
-                    {user.name}
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                        <AvatarImage src={`https://i.pravatar.cc/32?u=${user.email}`} alt={user.name} />
+                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
+                        </Avatar>
+                        <div>
+                            {user.name}
+                            <div className="text-xs text-muted-foreground md:hidden">{user.email}</div>
+                             <div className="md:hidden mt-1">
+                                <Badge variant="secondary" className="flex items-center gap-1 w-fit text-xs">
+                                  {getRoleIcon(user.role)}
+                                  {user.role}
+                                </Badge>
+                            </div>
+                        </div>
+                    </div>
                   </TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden md:table-cell">
                     <Badge variant="secondary" className="flex items-center gap-1 w-fit text-xs">
                       {getRoleIcon(user.role)}
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.managerName ?? 'N/A'}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{user.managerName ?? 'N/A'}</TableCell>
                   <TableCell>
                     {user.status === 'active' ? (
                       <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200 text-xs">Ativo</Badge>
@@ -270,7 +281,7 @@ export default function AdminUsersPage() {
                       <Badge variant="outline" className="text-xs">Inativo</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
+                  <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
                      {format(user.createdAt, "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="text-right">
@@ -282,7 +293,8 @@ export default function AdminUsersPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
+                        <DropdownMenuLabel>Ações: {user.name}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                           {/* Ensure the 'edit' link points to the correct admin path */}
                            <Link href={`/settings/admin/users/${user.id}/edit`}>
@@ -335,7 +347,7 @@ export default function AdminUsersPage() {
               ))}
               {!loading && filteredUsers.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center text-muted-foreground">
+                  <TableCell colSpan={4} className="h-24 text-center text-muted-foreground md:colSpan={7}">
                     Nenhum usuário encontrado para esta empresa.
                   </TableCell>
                 </TableRow>
