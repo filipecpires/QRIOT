@@ -174,7 +174,7 @@ export default function AuditLogPage() {
                             placeholder="Filtrar por usuário..."
                             value={filters.user}
                             onChange={(e) => handleFilterChange('user', e.target.value)}
-                            className="max-w-xs"
+                            className="w-full sm:max-w-xs"
                         />
                         <Select value={filters.entityType || '__all__'} onValueChange={(v) => handleFilterChange('entityType', v)}>
                             <SelectTrigger className="w-full md:w-[180px]">
@@ -230,110 +230,112 @@ export default function AuditLogPage() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[150px]">Data/Hora</TableHead>
-                                <TableHead>Usuário</TableHead>
-                                <TableHead>Ação</TableHead>
-                                <TableHead>Entidade</TableHead>
-                                <TableHead>Detalhes</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading && Array.from({ length: 5 }).map((_, i) => (
-                                <TableRow key={`skel-${i}`}>
-                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
-                                    <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[150px]">Data/Hora</TableHead>
+                                    <TableHead>Usuário</TableHead>
+                                    <TableHead>Ação</TableHead>
+                                    <TableHead>Entidade</TableHead>
+                                    <TableHead>Detalhes</TableHead>
                                 </TableRow>
-                            ))}
-                            {!loading && logs.map((log) => {
-                                const { icon: ActionIcon, color: actionColor, label: actionLabel } = getActionVisuals(log.action, log.details);
-                                const { icon: EntityIcon, label: entityLabel } = getEntityTypeVisuals(log.entityType);
+                            </TableHeader>
+                            <TableBody>
+                                {loading && Array.from({ length: 5 }).map((_, i) => (
+                                    <TableRow key={`skel-${i}`}>
+                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                        <TableCell><Skeleton className="h-4 w-full" /></TableCell>
+                                    </TableRow>
+                                ))}
+                                {!loading && logs.map((log) => {
+                                    const { icon: ActionIcon, color: actionColor, label: actionLabel } = getActionVisuals(log.action, log.details);
+                                    const { icon: EntityIcon, label: entityLabel } = getEntityTypeVisuals(log.entityType);
 
-                                return (
-                                    <TableRow key={log.id}>
-                                        <TableCell className="text-xs text-muted-foreground">
-                                            {format(log.timestamp, "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
-                                        </TableCell>
-                                        <TableCell className="flex items-center gap-2">
-                                            <User className="h-4 w-4 text-muted-foreground"/>
-                                            {log.userName}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline" className={`flex items-center gap-1 w-fit ${actionColor} border-current/50`}>
-                                                <ActionIcon className={`h-3 w-3`} />
-                                                {actionLabel}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                             <div className="flex items-center gap-1 text-sm">
-                                                <EntityIcon className="h-4 w-4 text-muted-foreground"/>
-                                                <span className="font-medium">{entityLabel}:</span>
-                                                <span className="truncate text-muted-foreground" title={log.entityName}>{log.entityName}</span>
-                                             </div>
-                                        </TableCell>
-                                        <TableCell className="text-xs">
-                                            {log.details ? (
-                                                <Popover>
-                                                    <PopoverTrigger asChild>
-                                                        <Button variant="ghost" size="sm">Ver Detalhes</Button>
-                                                    </PopoverTrigger>
-                                                    <PopoverContent className="w-80">
-                                                        <ScrollArea className="max-h-60">
-                                                        <div className="grid gap-4">
-                                                            <div className="space-y-2">
-                                                            <h4 className="font-medium leading-none">Detalhes da Alteração</h4>
-                                                            <p className="text-sm text-muted-foreground">
-                                                                Alterações registradas para esta ação.
-                                                            </p>
+                                    return (
+                                        <TableRow key={log.id}>
+                                            <TableCell className="text-xs text-muted-foreground">
+                                                {format(log.timestamp, "dd/MM/yyyy HH:mm:ss", { locale: ptBR })}
+                                            </TableCell>
+                                            <TableCell className="flex items-center gap-2">
+                                                <User className="h-4 w-4 text-muted-foreground"/>
+                                                {log.userName}
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={`flex items-center gap-1 w-fit ${actionColor} border-current/50`}>
+                                                    <ActionIcon className={`h-3 w-3`} />
+                                                    {actionLabel}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-1 text-sm">
+                                                    <EntityIcon className="h-4 w-4 text-muted-foreground"/>
+                                                    <span className="font-medium">{entityLabel}:</span>
+                                                    <span className="truncate text-muted-foreground" title={log.entityName}>{log.entityName}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="text-xs">
+                                                {log.details ? (
+                                                    <Popover>
+                                                        <PopoverTrigger asChild>
+                                                            <Button variant="ghost" size="sm">Ver Detalhes</Button>
+                                                        </PopoverTrigger>
+                                                        <PopoverContent className="w-80">
+                                                            <ScrollArea className="max-h-60">
+                                                            <div className="grid gap-4">
+                                                                <div className="space-y-2">
+                                                                <h4 className="font-medium leading-none">Detalhes da Alteração</h4>
+                                                                <p className="text-sm text-muted-foreground">
+                                                                    Alterações registradas para esta ação.
+                                                                </p>
+                                                                </div>
+                                                                <div className="grid gap-2">
+                                                                    {log.details.fieldName && (
+                                                                        <div className="grid grid-cols-2 items-center gap-2">
+                                                                            <span className="text-muted-foreground">Campo:</span>
+                                                                            <span className="font-semibold">{log.details.fieldName}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {log.details.oldValue !== undefined && (
+                                                                        <div className="grid grid-cols-2 items-start gap-2">
+                                                                            <span className="text-muted-foreground">Valor Antigo:</span>
+                                                                            <span className="break-all">{JSON.stringify(log.details.oldValue)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {log.details.newValue !== undefined && (
+                                                                        <div className="grid grid-cols-2 items-start gap-2">
+                                                                            <span className="text-muted-foreground">Valor Novo:</span>
+                                                                            <span className="break-all">{JSON.stringify(log.details.newValue)}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {!log.details.fieldName && log.details.newValue === undefined && log.details.oldValue === undefined && (
+                                                                        <p className="text-muted-foreground text-center">Nenhum detalhe específico registrado.</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <div className="grid gap-2">
-                                                                {log.details.fieldName && (
-                                                                    <div className="grid grid-cols-2 items-center gap-2">
-                                                                        <span className="text-muted-foreground">Campo:</span>
-                                                                        <span className="font-semibold">{log.details.fieldName}</span>
-                                                                    </div>
-                                                                )}
-                                                                {log.details.oldValue !== undefined && (
-                                                                     <div className="grid grid-cols-2 items-start gap-2">
-                                                                        <span className="text-muted-foreground">Valor Antigo:</span>
-                                                                        <span className="break-all">{JSON.stringify(log.details.oldValue)}</span>
-                                                                    </div>
-                                                                )}
-                                                                 {log.details.newValue !== undefined && (
-                                                                     <div className="grid grid-cols-2 items-start gap-2">
-                                                                        <span className="text-muted-foreground">Valor Novo:</span>
-                                                                        <span className="break-all">{JSON.stringify(log.details.newValue)}</span>
-                                                                    </div>
-                                                                )}
-                                                                 {!log.details.fieldName && log.details.newValue === undefined && log.details.oldValue === undefined && (
-                                                                    <p className="text-muted-foreground text-center">Nenhum detalhe específico registrado.</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        </ScrollArea>
-                                                    </PopoverContent>
-                                                </Popover>
-                                            ) : (
-                                                <span className="text-muted-foreground italic">N/A</span>
-                                            )}
+                                                            </ScrollArea>
+                                                        </PopoverContent>
+                                                    </Popover>
+                                                ) : (
+                                                    <span className="text-muted-foreground italic">N/A</span>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                                {!loading && logs.length === 0 && (
+                                    <TableRow>
+                                        <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            {error || "Nenhum log encontrado para os filtros selecionados."}
                                         </TableCell>
                                     </TableRow>
-                                );
-                            })}
-                            {!loading && logs.length === 0 && (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
-                                        {error || "Nenhum log encontrado para os filtros selecionados."}
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                       {/* Pagination */}
                      <div className="flex items-center justify-end space-x-2 py-4">
                         <span className="text-sm text-muted-foreground">

@@ -99,111 +99,113 @@ export default function AssetsPage() {
           <CardTitle>Lista de Ativos</CardTitle>
           <CardDescription>Visualize e gerencie todos os ativos cadastrados.</CardDescription>
            <div className="pt-4 flex flex-col md:flex-row gap-2">
-             <Input placeholder="Buscar por nome, tag ou responsável..." className="max-w-sm" />
+             <Input placeholder="Buscar por nome, tag ou responsável..." className="w-full sm:max-w-sm" />
              {/* TODO: Add filters for status, ownership, category, etc. */}
              <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button>
            </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="hidden sm:table-cell">Tag Única</TableHead>
-                <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">Categoria</TableHead>
-                <TableHead className="hidden sm:table-cell">Local</TableHead>
-                <TableHead className="hidden sm:table-cell">Responsável</TableHead>
-                <TableHead className="hidden sm:table-cell">Propriedade</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right w-[50px]">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {assets.map((asset) => (
-                <TableRow key={asset.id}>
-                   <TableCell className="font-medium hidden sm:table-cell">{asset.tag}</TableCell>
-                  <TableCell>
-                     <div className="font-medium">{asset.name}</div>
-                     <div className="text-xs text-muted-foreground sm:hidden">Tag: {asset.tag}</div>
-                     <div className="text-xs text-muted-foreground sm:hidden">Local: {asset.location}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">Cat: {asset.category}</div>
-                     <div className="text-xs text-muted-foreground sm:hidden">Resp: {asset.responsible}</div>
-                     <div className="text-xs text-muted-foreground sm:hidden">
-                        Prop: {asset.ownership === 'rented' ? 'Alugado' : 'Próprio'}
-                     </div>
-                  </TableCell>
-                   <TableCell className="hidden md:table-cell">{asset.category}</TableCell>
-                  <TableCell className="hidden sm:table-cell">{asset.location}</TableCell>
-                   <TableCell className="hidden sm:table-cell">{asset.responsible}</TableCell>
-                   <TableCell className="hidden sm:table-cell">
-                     {asset.ownership === 'rented' ? (
-                       <div className="flex items-center gap-1 text-orange-600" title="Alugado">
-                         <Building className="h-4 w-4" />
-                         <span>Alugado</span>
-                       </div>
-                     ) : (
-                       <div className="flex items-center gap-1 text-green-600" title="Próprio">
-                         <Home className="h-4 w-4" />
-                         <span>Próprio</span>
-                       </div>
-                     )}
-                  </TableCell>
-                  <TableCell>
-                    {asset.status === 'lost' ? (
-                      <Badge variant="destructive" className="flex items-center gap-1 text-xs">
-                        <AlertTriangle className="h-3 w-3" /> Perdido
-                      </Badge>
-                    ) : asset.status === 'inactive' ? (
-                       <Badge variant="secondary" className="text-xs">Inativo</Badge>
-                    ): (
-                       <Badge variant="default" className={cn("text-xs bg-green-500 hover:bg-green-600")}>Ativo</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Abrir menu</span>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>{asset.name}</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                          <Link href={getPublicUrl(asset.tag)} target="_blank">
-                            <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link href={`/assets/${asset.id}/edit`}>
-                            <Edit className="mr-2 h-4 w-4" /> Editar
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                         <DropdownMenuItem
-                            className="text-destructive focus:bg-destructive/10 focus:text-destructive"
-                             onSelect={(e) => {
-                                e.preventDefault(); // Prevent closing menu
-                                handleDeleteRequest(asset);
-                             }}
-                         >
-                           <Trash2 className="mr-2 h-4 w-4" /> Excluir
-                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-               {assets.length === 0 && (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                        Nenhum ativo encontrado.
-                    </TableCell>
+                  <TableHead className="hidden sm:table-cell">Tag Única</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead className="hidden md:table-cell">Categoria</TableHead>
+                  <TableHead className="hidden sm:table-cell">Local</TableHead>
+                  <TableHead className="hidden sm:table-cell">Responsável</TableHead>
+                  <TableHead className="hidden sm:table-cell">Propriedade</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right w-[50px]">Ações</TableHead>
                 </TableRow>
-               )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {assets.map((asset) => (
+                  <TableRow key={asset.id}>
+                    <TableCell className="font-medium hidden sm:table-cell">{asset.tag}</TableCell>
+                    <TableCell>
+                      <div className="font-medium">{asset.name}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">Tag: {asset.tag}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">Local: {asset.location}</div>
+                      <div className="text-xs text-muted-foreground md:hidden">Cat: {asset.category}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">Resp: {asset.responsible}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">
+                          Prop: {asset.ownership === 'rented' ? 'Alugado' : 'Próprio'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">{asset.category}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{asset.location}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{asset.responsible}</TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {asset.ownership === 'rented' ? (
+                        <div className="flex items-center gap-1 text-orange-600" title="Alugado">
+                          <Building className="h-4 w-4" />
+                          <span>Alugado</span>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1 text-green-600" title="Próprio">
+                          <Home className="h-4 w-4" />
+                          <span>Próprio</span>
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {asset.status === 'lost' ? (
+                        <Badge variant="destructive" className="flex items-center gap-1 text-xs">
+                          <AlertTriangle className="h-3 w-3" /> Perdido
+                        </Badge>
+                      ) : asset.status === 'inactive' ? (
+                        <Badge variant="secondary" className="text-xs">Inativo</Badge>
+                      ): (
+                        <Badge variant="default" className={cn("text-xs bg-green-500 hover:bg-green-600")}>Ativo</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Abrir menu</span>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>{asset.name}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem asChild>
+                            <Link href={getPublicUrl(asset.tag)} target="_blank">
+                              <Eye className="mr-2 h-4 w-4" /> Ver Página Pública
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/assets/${asset.id}/edit`}>
+                              <Edit className="mr-2 h-4 w-4" /> Editar
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                              className="text-destructive focus:bg-destructive/10 focus:text-destructive"
+                              onSelect={(e) => {
+                                  e.preventDefault(); // Prevent closing menu
+                                  handleDeleteRequest(asset);
+                              }}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {assets.length === 0 && (
+                  <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                          Nenhum ativo encontrado.
+                      </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
            {/* Add Pagination Controls Here Later */}
         </CardContent>
          <CardFooter>
@@ -237,4 +239,3 @@ export default function AssetsPage() {
     </div>
   );
 }
-

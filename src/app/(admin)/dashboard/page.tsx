@@ -41,7 +41,7 @@ import {
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartConfig } from '@/components/ui/chart'; // Added ChartLegend, ChartLegendContent
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'; // Added ChartLegend, ChartLegendContent
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { StatsCard } from '@/components/feature/stats-card';
@@ -329,7 +329,7 @@ export default function DashboardPage() {
     // Memoize chart data and configs to prevent unnecessary recalculations
     const assetHistoryChartData = useMemo(() => data?.assetHistory || [], [data?.assetHistory]);
     const assetHistoryChartConfig = useMemo(() => ({
-        count: { label: "Ativos", color: "hsl(210, 100%, 85%)" }, // Use a pastel color
+        count: { label: "Ativos", color: "hsl(var(--primary))" },
     }), []);
 
     // Memoize category data and dynamic config
@@ -357,7 +357,7 @@ export default function DashboardPage() {
         return (data?.byStatus || []).map(stat => ({
              ...stat,
              // Get color from the static config, falling back to gray if status not found
-             fill: statusChartConfig[stat.status]?.color || 'hsl(0, 0%, 80%)',
+             fill: statusChartConfig[stat.status as keyof typeof statusChartConfig]?.color || 'hsl(0, 0%, 80%)',
         }));
      }, [data?.byStatus]);
 
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                          <CardDescription>Contagem total de ativos ao longo do tempo.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <ChartContainer config={assetHistoryChartConfig} className="aspect-auto h-[250px] w-full">
+                         <ChartContainer config={assetHistoryChartConfig} className="aspect-video h-[200px] sm:h-[250px] w-full">
                              <LineChart data={assetHistoryChartData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                 <XAxis
@@ -520,7 +520,7 @@ export default function DashboardPage() {
                         <CardTitle>Distribuição por Status</CardTitle>
                          <CardDescription>Distribuição atual dos ativos por status.</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex items-center justify-center aspect-auto h-[250px]">
+                    <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
                         <ChartContainer config={statusChartConfig} className="h-full w-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <BarChart
@@ -560,7 +560,7 @@ export default function DashboardPage() {
                         <CardTitle>Ativos por Categoria</CardTitle>
                         <CardDescription>Distribuição dos ativos por categoria principal.</CardDescription>
                     </CardHeader>
-                     <CardContent className="flex items-center justify-center aspect-auto h-[250px]">
+                     <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
                          {/* Ensure config has keys matching the data's 'category' field */}
                           <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
@@ -573,8 +573,8 @@ export default function DashboardPage() {
                                         nameKey="category" // Map to the category name in your data
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
+                                        innerRadius={50} // Adjusted for smaller screens
+                                        outerRadius={70} // Adjusted for smaller screens
                                         activeIndex={pieActiveIndex}
                                         activeShape={renderActiveShape}
                                         onMouseEnter={onPieEnter}
@@ -596,14 +596,14 @@ export default function DashboardPage() {
                         <CardTitle>Ativos por Localização (Top 5)</CardTitle>
                          <CardDescription>Concentração de ativos nos principais locais.</CardDescription>
                     </CardHeader>
-                    <CardContent className="h-[250px]">
+                    <CardContent className="aspect-video h-[200px] sm:h-[250px]">
                          {/* Create a simple config just for the color */}
-                          <ChartContainer config={{ count: { label: "Ativos", color: "hsl(210, 100%, 85%)" } }} className="w-full h-full">
+                          <ChartContainer config={{ count: { label: "Ativos", color: "hsl(var(--primary))" } }} className="w-full h-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="locationName" hide/>
-                                    <YAxis dataKey="locationName" type="category" width={100} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
+                                    <YAxis dataKey="locationName" type="category" width={80} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                                     <Bar dataKey="count" fill="var(--color-count)" radius={4} />
                                 </BarChart>
