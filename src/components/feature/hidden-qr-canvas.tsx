@@ -28,10 +28,11 @@ export const HiddenQrCanvasWithDataUrl: React.FC<HiddenQrCanvasWithDataUrlProps>
       if (canvasRef.current) {
         try {
           const dataUrl = canvasRef.current.toDataURL('image/png');
+          console.log(`QR Data URL for ${assetId} (first 50 chars): ${dataUrl.substring(0, 50)}`);
           if (dataUrl.length > 'data:image/png;base64,'.length) { // Basic check for valid data URL
             onDataUrlReady(assetId, dataUrl);
           } else {
-            console.warn(`Generated empty data URL for QR code ${assetId}`);
+            console.warn(`Generated empty or invalid data URL for QR code ${assetId}`);
             onDataUrlReady(assetId, null);
           }
         } catch (e) {
@@ -42,7 +43,7 @@ export const HiddenQrCanvasWithDataUrl: React.FC<HiddenQrCanvasWithDataUrlProps>
         console.warn(`Canvas ref not available for QR code ${assetId} during data URL generation.`);
         onDataUrlReady(assetId, null); 
       }
-    }, 50); // A small delay should be enough for canvas to update. Adjust if needed.
+    }, 150); // Increased timeout from 50ms to 150ms for potentially slower renders
 
     return () => clearTimeout(timer); // Cleanup timer on unmount or before re-run
   }, [assetId, value, size, onDataUrlReady]);
