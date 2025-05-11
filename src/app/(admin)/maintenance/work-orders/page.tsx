@@ -253,28 +253,28 @@ export default function WorkOrdersPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="hidden md:table-cell">Nº OS</TableHead>
+                                <TableHead className="hidden sm:table-cell">Nº OS</TableHead>
                                 <TableHead>Ativo</TableHead>
                                 <TableHead>Status</TableHead>
-                                <TableHead className="hidden lg:table-cell">Tipo</TableHead>
+                                <TableHead className="hidden md:table-cell">Tipo</TableHead>
                                 <TableHead>Prioridade</TableHead>
-                                <TableHead className="hidden md:table-cell">Responsável</TableHead>
-                                <TableHead className="hidden lg:table-cell">Data Reporte</TableHead>
-                                <TableHead className="hidden lg:table-cell">Prazo</TableHead>
+                                <TableHead className="hidden sm:table-cell">Responsável</TableHead>
+                                <TableHead className="hidden md:table-cell">Data Reporte</TableHead>
+                                <TableHead className="hidden md:table-cell">Prazo</TableHead>
                                 <TableHead className="text-right w-[50px]">Ações</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                              {loading && Array.from({ length: 5 }).map((_, i) => (
                                 <TableRow key={`skel-wo-${i}`}>
-                                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                                     <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded" /></TableCell>
                                 </TableRow>
                              ))}
@@ -283,15 +283,15 @@ export default function WorkOrdersPage() {
                                  const { variant: priorityVariant, color: priorityColor } = getPriorityBadgeVariant(wo.priority);
                                  return (
                                     <TableRow key={wo.id}>
-                                         <TableCell className="font-mono text-xs hidden md:table-cell">{wo.workOrderNumber}</TableCell>
+                                         <TableCell className="font-mono text-xs hidden sm:table-cell">{wo.workOrderNumber}</TableCell>
                                         <TableCell>
                                              <div className="font-medium">{wo.assetName}</div>
                                              <div className="text-xs text-muted-foreground">{wo.assetTag}</div>
-                                             <div className="text-xs text-muted-foreground md:hidden">OS: {wo.workOrderNumber}</div>
-                                             <div className="text-xs text-muted-foreground lg:hidden">Tipo: {wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</div>
-                                             <div className="text-xs text-muted-foreground md:hidden">Resp: {wo.assignedUserName ?? '-'}</div>
-                                             <div className="text-xs text-muted-foreground lg:hidden">Reporte: {format(wo.reportedDate, "dd/MM/yy")}</div>
-                                             <div className="text-xs text-muted-foreground lg:hidden">Prazo: {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}</div>
+                                             <div className="text-xs text-muted-foreground sm:hidden">OS: {wo.workOrderNumber}</div>
+                                             <div className="text-xs text-muted-foreground md:hidden">Tipo: {wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</div>
+                                             <div className="text-xs text-muted-foreground sm:hidden">Resp: {wo.assignedUserName ?? '-'}</div>
+                                             <div className="text-xs text-muted-foreground md:hidden">Reporte: {format(wo.reportedDate, "dd/MM/yy")}</div>
+                                             <div className="text-xs text-muted-foreground md:hidden">Prazo: {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}</div>
                                         </TableCell>
                                         <TableCell>
                                              <Badge variant={statusVariant} className={cn("flex items-center gap-1 text-xs w-fit", statusColor)}>
@@ -299,17 +299,17 @@ export default function WorkOrdersPage() {
                                                 {wo.status === 'In Progress' ? 'Progresso' : wo.status === 'Open' ? 'Aberta' : wo.status === 'Completed' ? 'Concluída' : 'Cancelada'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="hidden lg:table-cell">{wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</TableCell>
+                                        <TableCell className="hidden md:table-cell">{wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</TableCell>
                                         <TableCell>
                                              <Badge variant={priorityVariant} className={cn("text-xs", priorityColor)}>
                                                 {wo.priority === 'High' ? 'Alta' : wo.priority === 'Medium' ? 'Média' : 'Baixa'}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell className="hidden md:table-cell">{wo.assignedUserName ?? '-'}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
+                                        <TableCell className="hidden sm:table-cell">{wo.assignedUserName ?? '-'}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
                                             {format(wo.reportedDate, "dd/MM/yy")}
                                         </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
+                                        <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
                                              {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}
                                         </TableCell>
                                         <TableCell className="text-right">

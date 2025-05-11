@@ -108,12 +108,12 @@ export default function AssetsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="hidden md:table-cell">Tag Única</TableHead>
+                <TableHead className="hidden sm:table-cell">Tag Única</TableHead>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden lg:table-cell">Categoria</TableHead>
-                <TableHead className="hidden md:table-cell">Local</TableHead>
-                <TableHead className="hidden md:table-cell">Responsável</TableHead>
-                <TableHead className="hidden md:table-cell">Propriedade</TableHead>
+                <TableHead className="hidden md:table-cell">Categoria</TableHead>
+                <TableHead className="hidden sm:table-cell">Local</TableHead>
+                <TableHead className="hidden sm:table-cell">Responsável</TableHead>
+                <TableHead className="hidden sm:table-cell">Propriedade</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
@@ -121,21 +121,21 @@ export default function AssetsPage() {
             <TableBody>
               {assets.map((asset) => (
                 <TableRow key={asset.id}>
-                   <TableCell className="font-medium hidden md:table-cell">{asset.tag}</TableCell>
+                   <TableCell className="font-medium hidden sm:table-cell">{asset.tag}</TableCell>
                   <TableCell>
                      <div className="font-medium">{asset.name}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">Tag: {asset.tag}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">Local: {asset.location}</div>
-                     <div className="text-xs text-muted-foreground lg:hidden md:hidden">Cat: {asset.category}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">Resp: {asset.responsible}</div>
-                     <div className="text-xs text-muted-foreground md:hidden">
+                     <div className="text-xs text-muted-foreground sm:hidden">Tag: {asset.tag}</div>
+                     <div className="text-xs text-muted-foreground sm:hidden">Local: {asset.location}</div>
+                     <div className="text-xs text-muted-foreground md:hidden">Cat: {asset.category}</div>
+                     <div className="text-xs text-muted-foreground sm:hidden">Resp: {asset.responsible}</div>
+                     <div className="text-xs text-muted-foreground sm:hidden">
                         Prop: {asset.ownership === 'rented' ? 'Alugado' : 'Próprio'}
                      </div>
                   </TableCell>
-                   <TableCell className="hidden lg:table-cell">{asset.category}</TableCell>
-                  <TableCell className="hidden md:table-cell">{asset.location}</TableCell>
-                   <TableCell className="hidden md:table-cell">{asset.responsible}</TableCell>
-                   <TableCell className="hidden md:table-cell">
+                   <TableCell className="hidden md:table-cell">{asset.category}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{asset.location}</TableCell>
+                   <TableCell className="hidden sm:table-cell">{asset.responsible}</TableCell>
+                   <TableCell className="hidden sm:table-cell">
                      {asset.ownership === 'rented' ? (
                        <div className="flex items-center gap-1 text-orange-600" title="Alugado">
                          <Building className="h-4 w-4" />

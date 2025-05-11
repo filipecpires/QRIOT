@@ -41,9 +41,9 @@ export default function LocationsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome do Local</TableHead>
-                <TableHead className="hidden md:table-cell">Latitude</TableHead>
-                <TableHead className="hidden md:table-cell">Longitude</TableHead>
-                <TableHead className="hidden md:table-cell">Ativos no Local</TableHead>
+                <TableHead className="hidden sm:table-cell">Latitude</TableHead>
+                <TableHead className="hidden sm:table-cell">Longitude</TableHead>
+                <TableHead className="hidden sm:table-cell">Ativos no Local</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -54,14 +54,14 @@ export default function LocationsPage() {
                     <MapPin className="h-4 w-4 text-muted-foreground"/> 
                     <div>
                         {location.name}
-                        <div className="text-xs text-muted-foreground md:hidden">
+                        <div className="text-xs text-muted-foreground sm:hidden">
                             Lat: {location.lat.toFixed(2)}, Lng: {location.lng.toFixed(2)} ({location.assetCount} ativos)
                         </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{location.lat.toFixed(4)}</TableCell>
-                  <TableCell className="hidden md:table-cell">{location.lng.toFixed(4)}</TableCell>
-                  <TableCell className="hidden md:table-cell">{location.assetCount}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{location.lat.toFixed(4)}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{location.lng.toFixed(4)}</TableCell>
+                  <TableCell className="hidden sm:table-cell">{location.assetCount}</TableCell>
                   <TableCell className="text-right">
                     <Button variant="ghost" size="icon" asChild>
                        <Link href={`/locations/${location.id}/edit`} title="Editar">

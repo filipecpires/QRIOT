@@ -206,11 +206,11 @@ export default function AdminUsersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead className="hidden md:table-cell">Email</TableHead>
-                <TableHead className="hidden md:table-cell">Perfil</TableHead>
-                <TableHead className="hidden lg:table-cell">Gerente</TableHead>
+                <TableHead className="hidden sm:table-cell">Email</TableHead>
+                <TableHead className="hidden sm:table-cell">Perfil</TableHead>
+                <TableHead className="hidden md:table-cell">Gerente</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="hidden lg:table-cell">Criado em</TableHead>
+                <TableHead className="hidden md:table-cell">Criado em</TableHead>
                 <TableHead className="text-right w-[50px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -218,11 +218,11 @@ export default function AdminUsersPage() {
              {loading && Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={`skel-${i}`}>
                     <TableCell><div className="flex items-center gap-3"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-24 rounded" /></div></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40 rounded" /></TableCell>
-                    <TableCell className="hidden md:table-cell"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-24 rounded" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-40 rounded" /></TableCell>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24 rounded" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
-                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20 rounded" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20 rounded" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded" /></TableCell>
                 </TableRow>
              ))}
@@ -236,26 +236,26 @@ export default function AdminUsersPage() {
                         </Avatar>
                         <div>
                             {user.name}
-                            <div className="text-xs text-muted-foreground md:hidden">Email: {user.email}</div>
-                            <div className="md:hidden mt-1">
+                            <div className="text-xs text-muted-foreground sm:hidden">Email: {user.email}</div>
+                            <div className="sm:hidden mt-1">
                                 <Badge variant="secondary" className="flex items-center gap-1 w-fit text-xs">
                                   {getRoleIcon(user.role)}
                                   {user.role}
                                 </Badge>
                             </div>
-                            <div className="text-xs text-muted-foreground lg:hidden">Gerente: {user.managerName ?? 'N/A'}</div>
-                            <div className="text-xs text-muted-foreground lg:hidden">Criado: {format(user.createdAt, "dd/MM/yy")}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">Gerente: {user.managerName ?? 'N/A'}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">Criado: {format(user.createdAt, "dd/MM/yy")}</div>
                         </div>
                     </div>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell">{user.email}</TableCell>
-                  <TableCell className="hidden md:table-cell">
+                  <TableCell className="hidden sm:table-cell">{user.email}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant="secondary" className="flex items-center gap-1 w-fit text-xs">
                       {getRoleIcon(user.role)}
                       {user.role}
                     </Badge>
                   </TableCell>
-                  <TableCell className="hidden lg:table-cell">{user.managerName ?? 'N/A'}</TableCell>
+                  <TableCell className="hidden md:table-cell">{user.managerName ?? 'N/A'}</TableCell>
                   <TableCell>
                     {user.status === 'active' ? (
                       <Badge variant="default" className="bg-green-100 text-green-800 hover:bg-green-200 text-xs">Ativo</Badge>
@@ -263,7 +263,7 @@ export default function AdminUsersPage() {
                       <Badge variant="outline" className="text-xs">Inativo</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
+                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
                      {format(user.createdAt, "dd/MM/yyyy", { locale: ptBR })}
                   </TableCell>
                   <TableCell className="text-right">
