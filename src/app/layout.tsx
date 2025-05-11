@@ -1,4 +1,5 @@
-import type { Metadata, Viewport } from 'next'; // Import Viewport
+
+import type { Metadata } from 'next'; // Removed Viewport import
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -31,10 +32,7 @@ export const metadata: Metadata = {
    // icons: { ... }, // Keep icon tags if needed (favicon, apple-touch-icon)
 };
 
-// Basic Viewport Configuration (Removed PWA themeColor)
-export const viewport: Viewport = {
-  viewport: "width=device-width, initial-scale=1", // Standard viewport
-};
+// Removed Viewport Configuration as PWA functionality was removed.
 
 
 export default function RootLayout({
@@ -52,3 +50,4 @@ export default function RootLayout({
     </html>
   );
 }
+

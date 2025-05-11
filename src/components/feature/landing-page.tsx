@@ -53,7 +53,7 @@ export default function LandingPage() {
                     </Button>
                     <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
                         <Link href="/login">
-                           <span>Acessar Sistema</span>
+                           Acessar Sistema
                         </Link>
                     </Button>
                  </div>

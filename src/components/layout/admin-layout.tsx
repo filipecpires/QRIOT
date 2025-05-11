@@ -44,11 +44,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
-          <SidebarMenu className="p-2 group-data-[collapsible=icon]:p-0"> {/* Adjusted padding */}
+        <SidebarContent className="p-0"> {/* Remove padding from content if items handle it */}
+          <SidebarMenu className="p-2 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1"> {/* Adjusted padding */}
             {/* Dashboard */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Dashboard">
+              <SidebarMenuButton asChild tooltip="Dashboard" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/dashboard">
                   <LayoutDashboard />
                   <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
@@ -57,7 +57,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Assets */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Ativos">
+              <SidebarMenuButton asChild tooltip="Ativos" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/assets">
                   <QrCode />
                   <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
@@ -66,7 +66,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Asset Tree */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Árvore de Ativos">
+              <SidebarMenuButton asChild tooltip="Árvore de Ativos" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/assets/tree">
                   <GitMerge />
                   <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
@@ -75,7 +75,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Inventory Scan */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Inventário (Scan)">
+              <SidebarMenuButton asChild tooltip="Inventário (Scan)" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/inventory/scan">
                   <CheckSquare />
                   <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Characteristic Scan */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)">
+              <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/characteristics/scan">
                   <ScanLine />
                   <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
@@ -93,7 +93,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Locations */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Locais">
+              <SidebarMenuButton asChild tooltip="Locais" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/locations">
                   <MapPin />
                   <span className="group-data-[collapsible=icon]:hidden">Locais</span>
@@ -102,7 +102,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Maintenance */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Manutenção">
+              <SidebarMenuButton asChild tooltip="Manutenção" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/maintenance/work-orders">
                   <MaintenanceIcon />
                   <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
@@ -111,7 +111,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Print Labels */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Imprimir Etiquetas">
+              <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/labels/print">
                   <Printer />
                   <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
@@ -120,7 +120,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Audit Log */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Log de Auditoria">
+              <SidebarMenuButton asChild tooltip="Log de Auditoria" className="group-data-[collapsible=icon]:justify-center">
                 <Link href="/audit-log">
                   <History />
                   <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
@@ -139,7 +139,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <SidebarTrigger asChild>
                <Button variant="ghost" size="icon" className="h-8 w-8">
                  <PanelLeft />
-                 <span className="sr-only">Toggle Sidebar</span>
+                 <VisuallyHidden.Root>Toggle Sidebar</VisuallyHidden.Root>
               </Button>
           </SidebarTrigger>
 
@@ -168,35 +168,45 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <DropdownMenuSeparator />
                  <DropdownMenuItem asChild>
                   <Link href="/profile">
-                    <UserCircle className="mr-2 h-4 w-4" />
-                    <span>Meu Perfil</span>
+                    <span className="flex items-center w-full">
+                        <UserCircle className="mr-2 h-4 w-4" />
+                        <span>Meu Perfil</span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
                  <DropdownMenuItem asChild>
                   <Link href="/licensing">
-                     <FileText className="mr-2 h-4 w-4" />
-                    <span>Licença</span>
+                    <span className="flex items-center w-full">
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>Licença</span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link href="/settings">
-                     <Settings className="mr-2 h-4 w-4" />
-                    <span>Configurações</span>
+                    <span className="flex items-center w-full">
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Configurações</span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
                  {userRole === 'Administrador' && (
                      <DropdownMenuItem asChild>
                          <Link href="/settings/admin">
-                             <Briefcase className="mr-2 h-4 w-4" />
-                             <span>Administração</span>
+                            <span className="flex items-center w-full">
+                                <Briefcase className="mr-2 h-4 w-4" />
+                                <span>Administração</span>
+                            </span>
                         </Link>
                      </DropdownMenuItem>
                  )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
                    <Link href="/logout">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    <span>Sair</span>
+                    <span className="flex items-center w-full">
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Sair</span>
+                    </span>
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -204,10 +214,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
            </div>
         </header>
         {/* The actual page content rendered here */}
-        <main className="flex-1 p-2 sm:p-4 md:p-6 overflow-auto"> {/* Adjusted padding for better responsiveness */}
+        <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> {/* Increased padding for larger screens */}
           {children}
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
+

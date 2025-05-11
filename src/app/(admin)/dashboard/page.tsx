@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  BarChart,
+  BarChart as RechartsBarChart, // Renamed to avoid conflict
   Bar,
   LineChart,
   Line,
@@ -37,11 +37,12 @@ import {
     Activity,
     FileWarning,
     TrendingUp,
-    TrendingDown
+    TrendingDown,
+    BarChart // Lucide icon
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart'; // Added ChartLegend, ChartLegendContent
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from '@/lib/utils';
 import { StatsCard } from '@/components/feature/stats-card';
@@ -455,7 +456,7 @@ export default function DashboardPage() {
                 icon={MapPin}
                 description={
                    <Link href="/locations" className="text-primary hover:underline flex items-center text-xs">
-                        Gerenciar Locais <ArrowRight className="ml-1 h-3 w-3" />
+                        <span>Gerenciar Locais</span> <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -466,7 +467,7 @@ export default function DashboardPage() {
                 icon={Users}
                  description={
                    <Link href="/settings/admin/users" className="text-primary hover:underline flex items-center text-xs"> {/* Updated link */}
-                        Gerenciar Usuários <ArrowRight className="ml-1 h-3 w-3" />
+                        <span>Gerenciar Usuários</span> <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -477,7 +478,7 @@ export default function DashboardPage() {
                 icon={CheckSquare}
                 description={
                      <Link href="/inventory/scan" className="text-primary hover:underline flex items-center text-xs">
-                        Iniciar Inventário <ArrowRight className="ml-1 h-3 w-3" />
+                        <span>Iniciar Inventário</span> <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -523,7 +524,7 @@ export default function DashboardPage() {
                     <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
                         <ChartContainer config={statusChartConfig} className="h-full w-full">
                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart
+                                <RechartsBarChart
                                     data={statusChartData}
                                     layout="vertical"
                                     margin={{left: 10, right: 10, top: 10, bottom: 10}}
@@ -545,7 +546,7 @@ export default function DashboardPage() {
                                             <Cell key={`cell-${entry.status}`} fill={entry.fill} />
                                         ))}
                                      </Bar>
-                                </BarChart>
+                                </RechartsBarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
                     </CardContent>
@@ -600,13 +601,13 @@ export default function DashboardPage() {
                          {/* Create a simple config just for the color */}
                           <ChartContainer config={{ count: { label: "Ativos", color: "hsl(var(--primary))" } }} className="w-full h-full">
                              <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
+                                <RechartsBarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                     <XAxis dataKey="locationName" hide/>
                                     <YAxis dataKey="locationName" type="category" width={80} tickLine={false} axisLine={false} tick={{ fontSize: 10 }} />
                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                                     <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                                </BarChart>
+                                </RechartsBarChart>
                             </ResponsiveContainer>
                         </ChartContainer>
                     </CardContent>
@@ -655,7 +656,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link href="/assets?filter=rented_expiring">Ver Todas Locações <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                            <Link href="/assets?filter=rented_expiring"><span>Ver Todas Locações</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -689,7 +690,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                             <Link href="/assets?filter=lost">Ver Todos Perdidos <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                             <Link href="/assets?filter=lost"><span>Ver Todos Perdidos</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -725,7 +726,7 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link href="/audit-log">Ver Log Completo <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                            <Link href="/audit-log"><span>Ver Log Completo</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -734,3 +735,4 @@ export default function DashboardPage() {
         </div>
     );
 }
+
