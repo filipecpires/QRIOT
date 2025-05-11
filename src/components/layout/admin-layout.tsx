@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon } from 'lucide-react'; // Added MaintenanceIcon
+import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -41,12 +41,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         <SidebarHeader>
           <Link href="/dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
             <QrCode className="h-6 w-6 text-sidebar-primary" />
-             {/* Apply group class to hide text when icon-only */}
             <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
           </Link>
         </SidebarHeader>
-        <SidebarContent> {/* Removed padding here, applied to SidebarMenu */}
-          <SidebarMenu className="group-data-[collapsible=icon]:p-0"> {/* Remove padding when collapsed */}
+        <SidebarContent>
+          <SidebarMenu className="p-2 group-data-[collapsible=icon]:p-0"> {/* Adjusted padding */}
             {/* Dashboard */}
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Dashboard">
@@ -67,10 +66,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Asset Tree */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Árvore Hierárquica">
+              <SidebarMenuButton asChild tooltip="Árvore de Ativos">
                 <Link href="/assets/tree">
                   <GitMerge />
-                  <span className="group-data-[collapsible=icon]:hidden">Árvore Hierárquica</span>
+                  <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -78,16 +77,16 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Inventário (Scan)">
                 <Link href="/inventory/scan">
-                  <ScanLine />
+                  <CheckSquare />
                   <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             {/* Characteristic Scan */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Registrar Caract. (Scan)">
+              <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)">
                 <Link href="/characteristics/scan">
-                  <Tag />
+                  <ScanLine />
                   <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
                 </Link>
               </SidebarMenuButton>
@@ -130,15 +129,13 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarContent>
-         {/* Footer is empty, links moved to top dropdown */}
          <SidebarFooter />
       </Sidebar>
 
       {/* Main content area that adjusts based on sidebar state */}
       <SidebarInset>
         {/* Header within the main content area */}
-        <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30"> {/* Added sticky */}
-          {/* Sidebar Trigger Button - Visible on all screen sizes */}
+        <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30">
           <SidebarTrigger asChild>
                <Button variant="ghost" size="icon" className="h-8 w-8">
                  <PanelLeft />
@@ -187,7 +184,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <span>Configurações</span>
                   </Link>
                 </DropdownMenuItem>
-                {/* Add Admin link conditionally */}
                  {userRole === 'Administrador' && (
                      <DropdownMenuItem asChild>
                          <Link href="/settings/admin">
@@ -208,7 +204,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
            </div>
         </header>
         {/* The actual page content rendered here */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto"> {/* Ensure main content is scrollable */}
+        <main className="flex-1 p-2 sm:p-4 md:p-6 overflow-auto"> {/* Adjusted padding for better responsiveness */}
           {children}
         </main>
       </SidebarInset>

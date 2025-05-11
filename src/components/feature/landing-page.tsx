@@ -23,144 +23,142 @@ export default function LandingPage() {
                         <QrCode className="h-6 w-6" />
                         QRIoT.app
                     </Link>
-                    {/* Reverted: Added buttons back to header */}
-                    <nav className="flex items-center gap-4">
+                    <nav className="flex items-center gap-2 sm:gap-4"> {/* Adjusted gap for smaller screens */}
                          <Button size="sm" variant="secondary" onClick={handleDemoLogin}>
-                             <UserCheck className="mr-2 h-4 w-4" />
-                            Acessar Demo
+                             <UserCheck className="mr-1 sm:mr-2 h-4 w-4" /> {/* Adjusted margin */}
+                            Demo
                          </Button>
                          <Button size="sm" asChild>
-                            <Link href="/login">Acessar Sistema</Link>
+                            <Link href="/login">Acessar</Link> {/* Shortened text */}
                          </Button>
                     </nav>
                 </div>
             </header>
 
             {/* Hero Section */}
-            <section className="container flex flex-col items-center justify-center gap-6 py-16 md:py-24 text-center">
-                 <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl xl:text-6xl">
+            <section className="container flex flex-col items-center justify-center gap-6 py-12 md:py-20 text-center"> {/* Reduced padding for smaller screens */}
+                 <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl xl:text-6xl">
                     Gerencie seus Ativos com <span className="text-primary">Inteligência</span> e <span className="text-accent">Praticidade</span>.
                  </h1>
-                 <p className="max-w-2xl text-lg text-muted-foreground">
+                 <p className="max-w-2xl text-md sm:text-lg text-muted-foreground">
                     O QRIoT.app simplifica o controle do seu patrimônio. Cadastre, localize, inventarie e monitore tudo com a facilidade dos QR Codes.
                  </p>
-                 <div className="flex gap-4">
-                     {/* Reverted: Using Login and Demo buttons here */}
-                     <Button size="lg" variant="secondary" onClick={handleDemoLogin}>
+                 <div className="flex flex-col sm:flex-row gap-4 mt-4"> {/* Stack buttons on small screens, row on sm+ */}
+                     <Button size="lg" variant="secondary" onClick={handleDemoLogin} className="w-full sm:w-auto">
                          <UserCheck className="mr-2 h-5 w-5" /> Acessar Conta Demo
                     </Button>
-                    <Button size="lg" variant="default" asChild>
+                    <Button size="lg" variant="default" asChild className="w-full sm:w-auto">
                         <Link href="/login">
                              Acessar Sistema <ArrowRight className="ml-2 h-4 w-4" />
                         </Link>
                     </Button>
                  </div>
-                  <div className="mt-8 h-64 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground">
-                    [ Placeholder para Imagem/Vídeo Ilustrativo ]
+                  <div className="mt-8 h-48 sm:h-64 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground p-4">
+                    <Image src="https://picsum.photos/seed/qriot-hero/800/450" alt="Demonstração do QRIoT.app" width={800} height={450} className="rounded-md object-cover w-full h-full" data-ai-hint="app dashboard"/>
                   </div>
             </section>
 
             {/* Features Section */}
-            <section id="features" className="container py-16 md:py-24 bg-secondary/10 rounded-t-lg">
-                <h2 className="text-3xl font-bold text-center mb-12">Por que escolher o QRIoT.app?</h2>
-                <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+            <section id="features" className="container py-12 md:py-20 bg-secondary/10 rounded-t-lg">
+                <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10 sm:mb-12">Por que escolher o QRIoT.app?</h2>
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     <Card className="shadow-sm hover:shadow-md transition-shadow">
                          <CardContent className="p-6 flex flex-col items-center text-center">
                             <div className="p-3 rounded-full bg-primary/10 mb-4">
-                                <QrCode className="h-8 w-8 text-primary" />
+                                <QrCode className="h-7 w-7 sm:h-8 sm:w-8 text-primary" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Identificação Rápida com QR Code</h3>
-                            <p className="text-sm text-muted-foreground">Cada ativo recebe um QR Code único para acesso instantâneo a informações detalhadas, mesmo offline.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Identificação Rápida com QR Code</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Cada ativo recebe um QR Code único para acesso instantâneo a informações detalhadas, mesmo offline.</p>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm hover:shadow-md transition-shadow">
                         <CardContent className="p-6 flex flex-col items-center text-center">
                              <div className="p-3 rounded-full bg-accent/10 mb-4">
-                                <CheckCircle className="h-8 w-8 text-accent" />
+                                <CheckCircle className="h-7 w-7 sm:h-8 sm:w-8 text-accent" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Inventário Simplificado</h3>
-                            <p className="text-sm text-muted-foreground">Realize inventários completos apenas escaneando os QR Codes. Rápido, fácil e sem planilhas complicadas.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Inventário Simplificado</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Realize inventários completos apenas escaneando os QR Codes. Rápido, fácil e sem planilhas complicadas.</p>
                         </CardContent>
                     </Card>
                      <Card className="shadow-sm hover:shadow-md transition-shadow">
                         <CardContent className="p-6 flex flex-col items-center text-center">
                              <div className="p-3 rounded-full bg-green-500/10 mb-4">
-                                <BarChart className="h-8 w-8 text-green-600" />
+                                <BarChart className="h-7 w-7 sm:h-8 sm:w-8 text-green-600" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Controle Total e Histórico</h3>
-                            <p className="text-sm text-muted-foreground">Monitore localização (GPS), responsável, características, status (perdido, alugado) e histórico de alterações.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Controle Total e Histórico</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Monitore localização (GPS), responsável, características, status (perdido, alugado) e histórico de alterações.</p>
                         </CardContent>
                     </Card>
                      <Card className="shadow-sm hover:shadow-md transition-shadow">
                         <CardContent className="p-6 flex flex-col items-center text-center">
                             <div className="p-3 rounded-full bg-blue-500/10 mb-4">
-                                <Users className="h-8 w-8 text-blue-600" />
+                                <Users className="h-7 w-7 sm:h-8 sm:w-8 text-blue-600" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Hierarquia e Permissões</h3>
-                            <p className="text-sm text-muted-foreground">Gerencie usuários com diferentes níveis de acesso e controle a visibilidade de ativos por hierarquia.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Hierarquia e Permissões</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Gerencie usuários com diferentes níveis de acesso e controle a visibilidade de ativos por hierarquia.</p>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm hover:shadow-md transition-shadow">
                         <CardContent className="p-6 flex flex-col items-center text-center">
                              <div className="p-3 rounded-full bg-purple-500/10 mb-4">
-                                <ShieldCheck className="h-8 w-8 text-purple-600" />
+                                <ShieldCheck className="h-7 w-7 sm:h-8 sm:w-8 text-purple-600" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Auditoria Completa</h3>
-                            <p className="text-sm text-muted-foreground">Rastreie todas as modificações em ativos e características, garantindo segurança e conformidade.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Auditoria Completa</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Rastreie todas as modificações em ativos e características, garantindo segurança e conformidade.</p>
                         </CardContent>
                     </Card>
                     <Card className="shadow-sm hover:shadow-md transition-shadow">
                         <CardContent className="p-6 flex flex-col items-center text-center">
                             <div className="p-3 rounded-full bg-orange-500/10 mb-4">
-                                <Printer className="h-8 w-8 text-orange-600" />
+                                <Printer className="h-7 w-7 sm:h-8 sm:w-8 text-orange-600" />
                             </div>
-                            <h3 className="text-lg font-semibold mb-2">Impressão de Etiquetas</h3>
-                            <p className="text-sm text-muted-foreground">Gere e imprima etiquetas com QR Code em diversos tamanhos, compatíveis com impressoras comuns e térmicas.</p>
+                            <h3 className="text-md sm:text-lg font-semibold mb-2">Impressão de Etiquetas</h3>
+                            <p className="text-xs sm:text-sm text-muted-foreground">Gere e imprima etiquetas com QR Code em diversos tamanhos, compatíveis com impressoras comuns e térmicas.</p>
                         </CardContent>
                     </Card>
                 </div>
             </section>
 
              {/* How it Works Section (Simplified) */}
-             <section id="how-it-works" className="container py-16 md:py-24">
-                 <h2 className="text-3xl font-bold text-center mb-12">Como Funciona?</h2>
-                 <div className="grid gap-8 md:grid-cols-3">
-                     <div className="flex flex-col items-center text-center">
-                        <div className="text-4xl font-bold text-primary mb-4">1</div>
-                        <h3 className="text-lg font-semibold mb-2">Cadastre</h3>
-                        <p className="text-sm text-muted-foreground">Registre seus ativos com detalhes: nome, categoria, local, responsável, fotos e características.</p>
+             <section id="how-it-works" className="container py-12 md:py-20">
+                 <h2 className="text-2xl sm:text-3xl font-bold text-center mb-10 sm:mb-12">Como Funciona?</h2>
+                 <div className="grid gap-6 md:grid-cols-3">
+                     <div className="flex flex-col items-center text-center p-2">
+                        <div className="text-3xl sm:text-4xl font-bold text-primary mb-3 sm:mb-4">1</div>
+                        <h3 className="text-md sm:text-lg font-semibold mb-2">Cadastre</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Registre seus ativos com detalhes: nome, categoria, local, responsável, fotos e características.</p>
                      </div>
-                      <div className="flex flex-col items-center text-center">
-                        <div className="text-4xl font-bold text-primary mb-4">2</div>
-                        <h3 className="text-lg font-semibold mb-2">Etiquete</h3>
-                        <p className="text-sm text-muted-foreground">Gere e imprima etiquetas com QR Code exclusivo para cada ativo.</p>
+                      <div className="flex flex-col items-center text-center p-2">
+                        <div className="text-3xl sm:text-4xl font-bold text-primary mb-3 sm:mb-4">2</div>
+                        <h3 className="text-md sm:text-lg font-semibold mb-2">Etiquete</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Gere e imprima etiquetas com QR Code exclusivo para cada ativo.</p>
                      </div>
-                      <div className="flex flex-col items-center text-center">
-                        <div className="text-4xl font-bold text-primary mb-4">3</div>
-                        <h3 className="text-lg font-semibold mb-2">Gerencie</h3>
-                        <p className="text-sm text-muted-foreground">Escaneie o QR Code para visualizar informações, fazer inventário, atualizar status e muito mais.</p>
+                      <div className="flex flex-col items-center text-center p-2">
+                        <div className="text-3xl sm:text-4xl font-bold text-primary mb-3 sm:mb-4">3</div>
+                        <h3 className="text-md sm:text-lg font-semibold mb-2">Gerencie</h3>
+                        <p className="text-xs sm:text-sm text-muted-foreground">Escaneie o QR Code para visualizar informações, fazer inventário, atualizar status e muito mais.</p>
                      </div>
                  </div>
              </section>
 
 
             {/* Call to Action Section */}
-            <section id="contact" className="bg-primary text-primary-foreground py-16 md:py-24">
-                <div className="container text-center">
-                    <Zap className="h-12 w-12 mx-auto mb-4 text-accent" />
-                    <h2 className="text-3xl font-bold mb-4">Pronto para Simplificar sua Gestão de Ativos?</h2>
-                    <p className="max-w-xl mx-auto mb-8 text-primary-foreground/80">
+            <section id="contact" className="bg-primary text-primary-foreground py-12 md:py-20">
+                <div className="container text-center px-4">
+                    <Zap className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-accent" />
+                    <h2 className="text-2xl sm:text-3xl font-bold mb-4">Pronto para Simplificar sua Gestão de Ativos?</h2>
+                    <p className="max-w-xl mx-auto mb-8 text-primary-foreground/80 text-sm sm:text-base">
                          Registre-se gratuitamente e comece a usar agora mesmo ou solicite uma demonstração personalizada.
                     </p>
-                    <div className="flex flex-wrap justify-center gap-4">
-                         <Button size="lg" variant="secondary" asChild>
+                    <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+                         <Button size="lg" variant="secondary" asChild className="w-full sm:w-auto">
                             <Link href="/register">
                                 Registrar Grátis
                             </Link>
                          </Button>
-                         <Button size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary" asChild>
+                         <Button size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto" asChild>
                             <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app">
-                                <Phone className="mr-2 h-5 w-5" /> Solicitar Demonstração
+                                <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
                             </Link>
                          </Button>
                     </div>
@@ -169,8 +167,8 @@ export default function LandingPage() {
 
             {/* Footer */}
             <footer className="py-6 border-t">
-                <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
-                    <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} QRIoT.app. Todos os direitos reservados.</p>
+                <div className="container flex flex-col items-center justify-between gap-2 md:flex-row px-4">
+                    <p className="text-xs sm:text-sm text-muted-foreground">&copy; {new Date().getFullYear()} QRIoT.app. Todos os direitos reservados.</p>
                     {/* Optional: Add social links or privacy policy link */}
                 </div>
             </footer>
