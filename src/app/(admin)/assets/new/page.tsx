@@ -617,69 +617,73 @@ export default function NewAssetPage() {
               <div>
                 <h3 className="text-lg font-semibold mb-2">Características Adicionais</h3>
                  {characteristics.map((char, index) => (
-                    <div key={index} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
-                       <FormField
-                          control={form.control}
-                          name={`characteristics.${index}.key`}
-                          render={({ field }) => (
-                           <FormItem className="flex-1">
-                              <FormLabel>Característica</FormLabel>
-                              <FormControl>
-                                 <Input
-                                    placeholder="Ex: Voltagem"
-                                    value={char.key}
-                                    onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
-                                 />
-                              </FormControl>
-                              <FormMessage />
-                           </FormItem>
-                          )}
-                        />
-                         <FormField
-                          control={form.control}
-                          name={`characteristics.${index}.value`}
-                           render={({ field }) => (
-                             <FormItem className="flex-1">
-                                <FormLabel>Valor</FormLabel>
-                                <FormControl>
-                                  <Input
-                                      placeholder="Ex: 220V"
-                                      value={char.value}
-                                      onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                           )}
-                         />
-                         <FormField
-                            control={form.control}
-                            name={`characteristics.${index}.isPublic`}
-                             render={({ field }) => (
-                              <FormItem className="flex items-center space-x-2 pb-1">
-                                <FormControl>
-                                    <Checkbox
-                                        checked={char.isPublic}
-                                        onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
-                                     />
-                                </FormControl>
-                                <FormLabel className="text-sm font-normal !mt-0">
-                                  Visível publicamente?
-                                </FormLabel>
-                                <FormMessage />
-                               </FormItem>
-                             )}
-                         />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeCharacteristic(index)}
-                          className="text-destructive hover:bg-destructive/10"
-                          title="Remover Característica"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                    <div key={index} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
+                        <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
+                            <FormField
+                                control={form.control}
+                                name={`characteristics.${index}.key`}
+                                render={({ field }) => (
+                                <FormItem className="flex-1 min-w-0">
+                                    <FormLabel>Característica</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="Ex: Voltagem"
+                                            value={char.key}
+                                            onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`characteristics.${index}.value`}
+                                render={({ field }) => (
+                                    <FormItem className="flex-1 min-w-0">
+                                        <FormLabel>Valor</FormLabel>
+                                        <FormControl>
+                                        <Input
+                                            placeholder="Ex: 220V"
+                                            value={char.value}
+                                            onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
+                                        />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-start gap-2 pt-2 sm:pt-0 sm:pb-1 w-full sm:w-auto">
+                            <FormField
+                                control={form.control}
+                                name={`characteristics.${index}.isPublic`}
+                                render={({ field }) => (
+                                <FormItem className="flex items-center space-x-2">
+                                    <FormControl>
+                                        <Checkbox
+                                            checked={char.isPublic}
+                                            onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
+                                        />
+                                    </FormControl>
+                                    <FormLabel className="text-sm font-normal !mt-0">
+                                    Visível publicamente?
+                                    </FormLabel>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                            <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCharacteristic(index)}
+                            className="text-destructive hover:bg-destructive/10"
+                            title="Remover Característica"
+                            >
+                            <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                  ))}
                  <Button type="button" variant="outline" size="sm" onClick={addCharacteristic}>
@@ -751,65 +755,69 @@ export default function NewAssetPage() {
                 <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
                 {/* Display existing attachments */}
                  {attachmentFields.map((field, index) => (
-                   <div key={field.id} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.name`}
-                       render={({ field }) => (
-                         <FormItem className="flex-1">
-                           <FormLabel>Nome</FormLabel>
-                           <FormControl>
-                             <Input {...field} readOnly className="bg-muted/50"/>
-                           </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.url`}
-                       render={({ field }) => (
-                         <FormItem className="flex-1">
-                           <FormLabel>URL</FormLabel>
-                           <FormControl>
-                             <Input {...field} readOnly className="bg-muted/50"/>
-                           </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.isPublic`}
-                       render={({ field: checkboxField }) => ( // Renamed field to avoid conflict
-                         <FormItem className="flex flex-col items-center space-y-1 pb-1">
-                             <FormLabel className="text-xs font-normal">Público?</FormLabel>
-                             <FormControl>
-                               <Checkbox
-                                 checked={checkboxField.value}
-                                 onCheckedChange={checkboxField.onChange}
-                               />
-                             </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <Button
-                       type="button"
-                       variant="ghost"
-                       size="icon"
-                       onClick={() => removeAttachment(index)}
-                       className="text-destructive hover:bg-destructive/10"
-                       title="Remover Anexo"
-                     >
-                       <Trash2 className="h-4 w-4" />
-                     </Button>
+                   <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
+                    <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.name`}
+                        render={({ field: inputField }) => (
+                            <FormItem className="flex-1 min-w-0">
+                            <FormLabel>Nome</FormLabel>
+                            <FormControl>
+                                <Input {...inputField} readOnly className="bg-muted/50"/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.url`}
+                        render={({ field: inputField }) => (
+                            <FormItem className="flex-1 min-w-0">
+                            <FormLabel>URL</FormLabel>
+                            <FormControl>
+                                <Input {...inputField} readOnly className="bg-muted/50"/>
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-start gap-2 pt-2 sm:pt-0 sm:pb-1 w-full sm:w-auto">
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.isPublic`}
+                        render={({ field: checkboxField }) => ( // Renamed field to avoid conflict
+                            <FormItem className="flex flex-col items-center space-y-1">
+                                <FormLabel className="text-xs font-normal">Público?</FormLabel>
+                                <FormControl>
+                                <Checkbox
+                                    checked={checkboxField.value}
+                                    onCheckedChange={checkboxField.onChange}
+                                />
+                                </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeAttachment(index)}
+                        className="text-destructive hover:bg-destructive/10"
+                        title="Remover Anexo"
+                        >
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                    </div>
                  ))}
 
                  {/* Input for new attachment */}
-                 <div className="flex items-end gap-2 mt-4">
-                    <div className="flex-1">
+                 <div className="flex flex-col sm:flex-row sm:items-end gap-2 mt-4">
+                    <div className="w-full sm:flex-1">
                         <Label htmlFor="new-attachment-name">Nome do Novo Anexo</Label>
                         <Input
                             id="new-attachment-name"
@@ -818,7 +826,7 @@ export default function NewAssetPage() {
                             onChange={(e) => setNewAttachmentName(e.target.value)}
                          />
                     </div>
-                    <div className="flex-1">
+                    <div className="w-full sm:flex-1">
                         <Label htmlFor="new-attachment-url">Link do Anexo</Label>
                         <Input
                              id="new-attachment-url"
@@ -827,7 +835,7 @@ export default function NewAssetPage() {
                              onChange={(e) => setNewAttachmentUrl(e.target.value)}
                          />
                     </div>
-                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
+                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment} className="w-full sm:w-auto">
                          <LinkIcon className="mr-2 h-4 w-4" /> {/* Added icon */}
                          Adicionar Anexo
                     </Button>
@@ -840,11 +848,11 @@ export default function NewAssetPage() {
 
 
             </CardContent>
-            <CardFooter className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => router.back()}>
+            <CardFooter className="flex flex-col sm:flex-row justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => router.back()} className="w-full sm:w-auto">
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto">
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvando...
@@ -862,5 +870,6 @@ export default function NewAssetPage() {
     </div>
   );
 }
+
 
 

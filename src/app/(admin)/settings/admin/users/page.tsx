@@ -160,7 +160,7 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
         <h1 className="text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
         <Button asChild>
           <Link href="/settings/admin/users/new">
@@ -173,15 +173,15 @@ export default function AdminUsersPage() {
         <CardHeader>
           <CardTitle>Lista de Usuários</CardTitle>
           <CardDescription>Visualize e gerencie todos os usuários vinculados a esta empresa.</CardDescription>
-          <div className="pt-4 flex flex-col md:flex-row gap-2">
+          <div className="pt-4 flex flex-col md:flex-row gap-2 flex-wrap">
             <Input
               placeholder="Buscar por nome ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-sm w-full md:w-auto"
+              className="max-w-xs w-full md:w-auto flex-grow md:flex-grow-0"
             />
             <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px] flex-grow md:flex-grow-0">
                 <SelectValue placeholder="Filtrar por Perfil" />
               </SelectTrigger>
               <SelectContent>
@@ -190,7 +190,7 @@ export default function AdminUsersPage() {
               </SelectContent>
             </Select>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px] flex-grow md:flex-grow-0">
                 <SelectValue placeholder="Filtrar por Status" />
               </SelectTrigger>
               <SelectContent>
@@ -274,7 +274,7 @@ export default function AdminUsersPage() {
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                      <DropdownMenuContent align="end" className="w-48">
                         <DropdownMenuLabel>Ações: {user.name}</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
@@ -345,4 +345,5 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
 

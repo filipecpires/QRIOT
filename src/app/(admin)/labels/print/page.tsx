@@ -403,15 +403,15 @@ export default function PrintLabelsPage() {
                 <CardHeader>
                     <CardTitle>Selecionar Ativos</CardTitle>
                     <CardDescription>Escolha os ativos para os quais deseja gerar etiquetas.</CardDescription>
-                    <div className="pt-4 flex flex-wrap gap-4">
+                    <div className="pt-4 flex flex-col sm:flex-row flex-wrap gap-2">
                         <Input
                             placeholder="Buscar por nome ou tag..."
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
-                            className="max-w-sm"
+                            className="max-w-xs w-full sm:w-auto flex-grow sm:flex-grow-0"
                         />
                          <Select value={filters.category} onValueChange={(v) => handleFilterChange('category', v)}>
-                            <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[180px] flex-grow sm:flex-grow-0">
                                 <SelectValue placeholder="Categoria" />
                             </SelectTrigger>
                             <SelectContent>
@@ -420,7 +420,7 @@ export default function PrintLabelsPage() {
                             </SelectContent>
                         </Select>
                          <Select value={filters.location} onValueChange={(v) => handleFilterChange('location', v)}>
-                            <SelectTrigger className="w-full md:w-[180px]">
+                            <SelectTrigger className="w-full sm:w-[180px] flex-grow sm:flex-grow-0">
                                 <SelectValue placeholder="Localização" />
                             </SelectTrigger>
                             <SelectContent>
@@ -428,7 +428,7 @@ export default function PrintLabelsPage() {
                                 {locations.map(loc => <SelectItem key={loc} value={loc}>{loc}</SelectItem>)}
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" onClick={() => fetchData(filters)} disabled={loading}>
+                        <Button variant="outline" onClick={() => fetchData(filters)} disabled={loading} className="w-full sm:w-auto">
                             <Search className="mr-2 h-4 w-4" /> Buscar
                         </Button>
                     </div>
@@ -484,12 +484,12 @@ export default function PrintLabelsPage() {
                             )}
                         </TableBody>
                     </Table>
-                     <div className="flex items-center justify-between space-x-2 py-4">
+                     <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0 sm:space-x-2 py-4">
                          <div className="text-sm text-muted-foreground">
                             {selectedAssets.size} de {totalAssets} ativo(s) selecionado(s).
                         </div>
                          <div className="flex items-center gap-2">
-                             <span className="text-sm text-muted-foreground">
+                             <span className="text-sm text-muted-foreground hidden sm:inline">
                                 Página {filters.page} de {totalPages}
                              </span>
                             <Button
@@ -534,11 +534,11 @@ export default function PrintLabelsPage() {
                         <p className="text-xs text-muted-foreground">Define o layout e dimensões das etiquetas no PDF.</p>
                     </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                    <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0}>
+                <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+                    <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0} className="w-full sm:w-auto">
                          <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
-                     <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating}>
+                     <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating} className="w-full sm:w-auto">
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                         Gerar PDF ({selectedAssets.size})
                     </Button>
@@ -560,4 +560,5 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
+
 

@@ -18,7 +18,7 @@ const locations = [
 export default function LocationsPage() {
   return (
     <div className="space-y-6"> {/* Use simple div instead of container */}
-      <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
         <h1 className="text-3xl font-bold">Gerenciar Locais</h1>
         <Button asChild>
           <Link href="/locations/new">
@@ -33,7 +33,7 @@ export default function LocationsPage() {
           <CardDescription>Visualize e gerencie todos os locais de instalação cadastrados.</CardDescription>
            <div className="pt-4 flex flex-col sm:flex-row gap-2">
              <Input placeholder="Buscar por nome..." className="max-w-xs w-full sm:w-auto" />
-             <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button>
+             <Button variant="outline" className="w-full sm:w-auto"><Search className="h-4 w-4 mr-2"/> Buscar</Button>
            </div>
         </CardHeader>
         <CardContent>
@@ -77,7 +77,7 @@ export default function LocationsPage() {
               ))}
                {locations.length === 0 && (
                 <TableRow>
-                    <TableCell colSpan={2} className="h-24 text-center text-muted-foreground md:colSpan={5}">
+                    <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                         Nenhum local encontrado.
                     </TableCell>
                 </TableRow>
@@ -90,4 +90,5 @@ export default function LocationsPage() {
     </div>
   );
 }
+
 

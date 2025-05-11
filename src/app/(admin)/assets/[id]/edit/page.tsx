@@ -797,53 +797,53 @@ export default function EditAssetPage() {
                 <h3 className="text-lg font-semibold mb-2">Características Adicionais (Ativas)</h3>
                  {/* Map over the local 'characteristics' state which only contains active ones */}
                  {characteristics.map((char, index) => (
-                     <div key={char.id || `active-${index}`} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
-                        {/* Use the index from the local 'characteristics' state */}
-                         <FormItem className="flex-1">
-                           <FormLabel className="text-xs">Característica</FormLabel>
-                           <FormControl>
-                              <Input
-                                 placeholder="Ex: Voltagem"
-                                 value={char.key}
-                                 onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
-                              />
-                           </FormControl>
-                           {/* Optional: Add FormMessage if you validate characteristics individually */}
-                         </FormItem>
-
-                         <FormItem className="flex-1">
-                             <FormLabel className="text-xs">Valor</FormLabel>
-                             <FormControl>
-                               <Input
-                                   placeholder="Ex: 220V"
-                                   value={char.value}
-                                   onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
-                               />
-                             </FormControl>
-                           </FormItem>
-
-                           <FormItem className="flex items-center space-x-2 pb-1">
-                             <FormControl>
-                                 <Checkbox
-                                     checked={char.isPublic}
-                                     onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
-                                  />
-                             </FormControl>
-                             <FormLabel className="text-xs font-normal !mt-0">
-                               Público?
-                             </FormLabel>
+                     <div key={char.id || `active-${index}`} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
+                        <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
+                            <FormItem className="flex-1 min-w-0">
+                            <FormLabel className="text-xs">Característica</FormLabel>
+                            <FormControl>
+                                <Input
+                                    placeholder="Ex: Voltagem"
+                                    value={char.key}
+                                    onChange={(e) => handleCharacteristicChange(index, 'key', e.target.value)}
+                                />
+                            </FormControl>
                             </FormItem>
 
-                         <Button
-                           type="button"
-                           variant="ghost"
-                           size="icon"
-                           onClick={() => removeCharacteristic(index)} // This now sets isActive=false
-                           className="text-destructive hover:bg-destructive/10"
-                           title="Desativar Característica"
-                         >
-                           <Trash2 className="h-4 w-4" />
-                         </Button>
+                            <FormItem className="flex-1 min-w-0">
+                                <FormLabel className="text-xs">Valor</FormLabel>
+                                <FormControl>
+                                <Input
+                                    placeholder="Ex: 220V"
+                                    value={char.value}
+                                    onChange={(e) => handleCharacteristicChange(index, 'value', e.target.value)}
+                                />
+                                </FormControl>
+                            </FormItem>
+                        </div>
+                        <div className="flex items-center justify-between sm:justify-start gap-2 pt-2 sm:pt-0 sm:pb-1 w-full sm:w-auto">
+                            <FormItem className="flex items-center space-x-2">
+                                <FormControl>
+                                    <Checkbox
+                                        checked={char.isPublic}
+                                        onCheckedChange={(checked) => handleCharacteristicChange(index, 'isPublic', !!checked)}
+                                    />
+                                </FormControl>
+                                <FormLabel className="text-xs font-normal !mt-0">
+                                Público?
+                                </FormLabel>
+                            </FormItem>
+                            <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeCharacteristic(index)} // This now sets isActive=false
+                            className="text-destructive hover:bg-destructive/10"
+                            title="Desativar Característica"
+                            >
+                            <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
                     </div>
                  ))}
                  <Button type="button" variant="outline" size="sm" onClick={addCharacteristic}>
@@ -931,65 +931,69 @@ export default function EditAssetPage() {
                  <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
                  {/* Display existing attachments */}
                  {attachmentFields.map((field, index) => (
-                   <div key={field.id} className="flex items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.name`}
-                       render={({ field }) => (
-                         <FormItem className="flex-1">
-                           <FormLabel>Nome</FormLabel>
-                           <FormControl>
-                             <Input {...field} />
-                           </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.url`}
-                       render={({ field }) => (
-                         <FormItem className="flex-1">
-                           <FormLabel>URL</FormLabel>
-                           <FormControl>
-                             <Input {...field} />
-                           </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <FormField
-                       control={form.control}
-                       name={`attachments.${index}.isPublic`}
-                       render={({ field: checkboxField }) => (
-                         <FormItem className="flex flex-col items-center space-y-1 pb-1">
-                           <FormLabel className="text-xs font-normal">Público?</FormLabel>
-                           <FormControl>
-                             <Checkbox
-                               checked={checkboxField.value}
-                               onCheckedChange={checkboxField.onChange} // Directly use onChange from RHF
-                             />
-                           </FormControl>
-                           <FormMessage />
-                         </FormItem>
-                       )}
-                     />
-                     <Button
-                       type="button"
-                       variant="ghost"
-                       size="icon"
-                       onClick={() => removeAttachment(index)}
-                       className="text-destructive hover:bg-destructive/10"
-                       title="Remover Anexo"
-                     >
-                       <Trash2 className="h-4 w-4" />
-                     </Button>
+                   <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
+                    <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.name`}
+                        render={({ field: inputField }) => ( // Renamed to avoid conflict with outer 'field'
+                            <FormItem className="flex-1 min-w-0">
+                            <FormLabel>Nome</FormLabel>
+                            <FormControl>
+                                <Input {...inputField} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.url`}
+                        render={({ field: inputField }) => ( // Renamed
+                            <FormItem className="flex-1 min-w-0">
+                            <FormLabel>URL</FormLabel>
+                            <FormControl>
+                                <Input {...inputField} />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <div className="flex items-center justify-between sm:justify-start gap-2 pt-2 sm:pt-0 sm:pb-1 w-full sm:w-auto">
+                        <FormField
+                        control={form.control}
+                        name={`attachments.${index}.isPublic`}
+                        render={({ field: checkboxField }) => (
+                            <FormItem className="flex flex-col items-center space-y-1">
+                            <FormLabel className="text-xs font-normal">Público?</FormLabel>
+                            <FormControl>
+                                <Checkbox
+                                checked={checkboxField.value}
+                                onCheckedChange={checkboxField.onChange} // Directly use onChange from RHF
+                                />
+                            </FormControl>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                        <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeAttachment(index)}
+                        className="text-destructive hover:bg-destructive/10"
+                        title="Remover Anexo"
+                        >
+                        <Trash2 className="h-4 w-4" />
+                        </Button>
+                    </div>
                    </div>
                  ))}
 
                  {/* Input for new attachment */}
-                 <div className="flex items-end gap-2 mt-4">
-                    <div className="flex-1">
+                 <div className="flex flex-col sm:flex-row sm:items-end gap-2 mt-4">
+                    <div className="w-full sm:flex-1">
                         <Label htmlFor="new-attachment-name">Nome do Novo Anexo</Label>
                         <Input
                             id="new-attachment-name"
@@ -998,7 +1002,7 @@ export default function EditAssetPage() {
                             onChange={(e) => setNewAttachmentName(e.target.value)}
                          />
                     </div>
-                    <div className="flex-1">
+                    <div className="w-full sm:flex-1">
                         <Label htmlFor="new-attachment-url">Link do Anexo</Label>
                         <Input
                              id="new-attachment-url"
@@ -1007,8 +1011,8 @@ export default function EditAssetPage() {
                              onChange={(e) => setNewAttachmentUrl(e.target.value)}
                          />
                     </div>
-                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment}>
-                         <LinkIcon className="mr-2 h-4 w-4" /> {/* Added icon */}
+                     <Button type="button" variant="outline" size="sm" onClick={handleAddAttachment} className="w-full sm:w-auto">
+                         <LinkIcon className="mr-2 h-4 w-4" />
                          Adicionar Anexo
                     </Button>
                  </div>
@@ -1020,15 +1024,15 @@ export default function EditAssetPage() {
 
 
             </CardContent>
-            <CardFooter className="flex justify-between">
-                 <Button type="button" variant="destructive" onClick={() => { /* Implement delete confirmation */ }}>
+            <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
+                 <Button type="button" variant="destructive" onClick={() => { /* Implement delete confirmation */ }} className="w-full sm:w-auto">
                     <Trash2 className="mr-2 h-4 w-4" /> Excluir Ativo
                  </Button>
-                 <div className="flex gap-2">
-                    <Button type="button" variant="outline" onClick={() => router.back()}>
+                 <div className="flex gap-2 w-full sm:w-auto">
+                    <Button type="button" variant="outline" onClick={() => router.back()} className="flex-1 sm:flex-none">
                         Cancelar
                     </Button>
-                    <Button type="submit" disabled={isLoading}>
+                    <Button type="submit" disabled={isLoading} className="flex-1 sm:flex-none">
                         {isLoading ? (
                         <>
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Atualizando...
@@ -1057,4 +1061,5 @@ export default function EditAssetPage() {
     </div>
   );
 }
+
 
