@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Printer, Save, Search } from 'lucide-react'; // Removed GripVertical, ArrowUp, ArrowDown. Added Search
+import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Printer, Save, Search, BringToFront, SendToBack } from 'lucide-react'; // Added BringToFront, SendToBack
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -222,6 +222,22 @@ export function LabelPreviewModal({
     if (selectedElementId === id) setSelectedElementId(null);
   };
 
+  const bringToFront = (id: string) => {
+    setElements(prev => {
+        const el = prev.find(e => e.id === id);
+        if (!el) return prev;
+        return [...prev.filter(e => e.id !== id), el];
+    });
+  };
+
+  const sendToBack = (id: string) => {
+     setElements(prev => {
+        const el = prev.find(e => e.id === id);
+        if (!el) return prev;
+        return [el, ...prev.filter(e => e.id !== id)];
+    });
+  };
+
 
   const handleLogoChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -341,6 +357,7 @@ export function LabelPreviewModal({
 
   const selectedElement = elements.find(el => el.id === selectedElementId);
   const availableCharacteristics = currentAsset.characteristics?.filter(ac => !elements.some(el => el.type === 'characteristic' && el.content === ac.key)) || [];
+  const selectedElementIndex = selectedElement ? elements.findIndex(el => el.id === selectedElement.id) : -1;
 
 
   return (
@@ -394,7 +411,7 @@ export function LabelPreviewModal({
                     minWidth: el.type === 'text' || el.type === 'custom' || el.type === 'characteristic' ? '10px' : undefined,
                     height: el.type === 'qr' ? `${el.widthPx}px` : el.type === 'logo' ? `${el.heightPx}px` : el.heightPx > 0 ? `${el.heightPx}px`: 'auto',
                     lineHeight: '1.1',
-                    zIndex: selectedElementId === el.id ? 10 : 1,
+                    zIndex: selectedElementId === el.id ? 10 : 1, // Could be improved for actual z-index based on array order
                     overflow: 'hidden', // Hide overflow for text elements if width is set
                     whiteSpace: (el.type === 'text' || el.type === 'custom' || el.type === 'characteristic') && el.widthPx > 0 ? 'normal' : 'nowrap', // Allow wrapping if width is set
                   }}
@@ -577,6 +594,28 @@ export function LabelPreviewModal({
                         </div>
                         </div>
                     )}
+                    {/* Layering Controls */}
+                     <div className="flex items-center justify-start gap-2 pt-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => sendToBack(selectedElement.id)}
+                            disabled={selectedElementIndex === 0 || elements.length <= 1}
+                            title="Enviar para Trás"
+                        >
+                            <SendToBack className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => bringToFront(selectedElement.id)}
+                            disabled={selectedElementIndex === elements.length - 1 || elements.length <= 1}
+                            title="Trazer para Frente"
+                        >
+                            <BringToFront className="h-4 w-4" />
+                        </Button>
+                         <p className="text-xs text-muted-foreground ml-2">Ordem: {selectedElementIndex + 1} de {elements.length}</p>
+                    </div>
                     </div>
                 </Card>
                 ) : (
@@ -613,7 +652,7 @@ const Command = React.forwardRef<
         className={cn("flex h-full w-full flex-col overflow-hidden rounded-md bg-popover text-popover-foreground", className)}
         {...props} />
 ));
-Command.displayName = CommandPrimitive.displayName || 'Command';
+Command.displayName = CommandPrimitive.displayName;
 
 const CommandInput = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Input>,
@@ -627,7 +666,7 @@ const CommandInput = React.forwardRef<
             {...props} />
     </div>
 ));
-CommandInput.displayName = CommandPrimitive.Input.displayName || 'CommandInput';
+CommandInput.displayName = CommandPrimitive.Input.displayName;
 
 const CommandGroup = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Group>,
@@ -638,7 +677,7 @@ const CommandGroup = React.forwardRef<
         className={cn("overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground", className)}
         {...props} />
 ));
-CommandGroup.displayName = CommandPrimitive.Group.displayName || 'CommandGroup';
+CommandGroup.displayName = CommandPrimitive.Group.displayName;
 
 const CommandItem = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Item>,
@@ -649,7 +688,7 @@ const CommandItem = React.forwardRef<
         className={cn("relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none aria-selected:bg-accent aria-selected:text-accent-foreground data-[disabled='true']:pointer-events-none data-[disabled='true']:opacity-50", className)}
         {...props} />
 ));
-CommandItem.displayName = CommandPrimitive.Item.displayName || 'CommandItem';
+CommandItem.displayName = CommandPrimitive.Item.displayName;
 
 const CommandEmpty = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Empty>,
@@ -657,4 +696,5 @@ const CommandEmpty = React.forwardRef<
 >((props, ref) => (
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
-CommandEmpty.displayName = CommandPrimitive.Empty.displayName || 'CommandEmpty';
+CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
+
