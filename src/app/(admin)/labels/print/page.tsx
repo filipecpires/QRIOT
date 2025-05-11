@@ -247,8 +247,17 @@ export default function PrintLabelsPage() {
              toast({ title: "Layout Vazio", description: "O layout da etiqueta está vazio. Edite o layout para adicionar elementos.", variant: "destructive" });
              return;
          }
-        if (!areQrCodesReady) {
-            toast({ title: "Preparando QR Codes", description: "Aguarde a preparação dos QR Codes antes de gerar o PDF.", variant: "default" });
+        
+        const selectedAssetIds = Array.from(selectedAssets);
+        const allSelectedQrsReady = selectedAssetIds.every(id => {
+            const asset = assets.find(a => a.id === id);
+            if (!asset) return false; 
+            return qrCodeDataUrls[id] && qrCodeDataUrls[id]!.length > 'data:image/png;base64,'.length;
+        });
+
+        if (!allSelectedQrsReady) {
+            toast({ title: "QR Codes Não Prontos", description: "Alguns QR codes ainda estão sendo gerados. Tente novamente em alguns segundos.", variant: "destructive" });
+            setIsGenerating(false);
             return;
         }
 
@@ -273,7 +282,6 @@ export default function PrintLabelsPage() {
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
         const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : 0);
         const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : 0);
-        // const pageW_mm = pageFormat === 'a4' ? A4_WIDTH_MM : labelW_mm; // Not used
         const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm;
 
         let assetIndex = 0;
@@ -312,15 +320,26 @@ export default function PrintLabelsPage() {
                     const qrDataUrl = qrCodeDataUrls[asset.id];
                     if (qrDataUrl) {
                         try {
-                            const qrSizeMm = Math.max(1, el_w_mm);
+                            const minQrSizeMm = 5; // Minimum 5mm QR code in PDF
+                            const requestedQrSizeMm = el_w_mm; // el_w_mm is widthPx * PX_TO_MM_SCALE
+                            const qrSizeMm = Math.max(minQrSizeMm, Math.max(1, requestedQrSizeMm)); // Ensure at least 1mm, prefer minQrSizeMm
+
                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) {
                             console.error(`Error adding QR image to PDF for asset ${asset.id}:`, e);
-                            doc.setDrawColor(255, 0, 0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Error", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
+                            doc.setFillColor(230, 230, 230);
+                            doc.rect(el_x_mm, el_y_mm, Math.max(5, el_w_mm), Math.max(5, el_w_mm), 'F');
+                            doc.setTextColor(100, 100, 100);
+                            doc.setFontSize(6);
+                            doc.text("QR Erro", el_x_mm + Math.max(5, el_w_mm)/2, el_y_mm + Math.max(5, el_w_mm)/2, {align: 'center', baseline:'middle'});
                         }
                     } else {
                         console.warn(`QR data URL not ready or invalid for asset ${asset.id}`);
-                        doc.setDrawColor(255,0,0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Missing", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
+                        doc.setFillColor(230, 230, 230);
+                        doc.rect(el_x_mm, el_y_mm, Math.max(5, el_w_mm), Math.max(5, el_w_mm), 'F');
+                        doc.setTextColor(100, 100, 100);
+                        doc.setFontSize(6);
+                        doc.text("QR Indisp.", el_x_mm + Math.max(5, el_w_mm) / 2, el_y_mm + Math.max(5, el_w_mm) / 2, { align: 'center', baseline: 'middle' });
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
                     try {
@@ -580,3 +599,4 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
+

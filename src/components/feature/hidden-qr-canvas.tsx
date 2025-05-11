@@ -38,6 +38,9 @@ export const HiddenQrCanvasWithDataUrl: React.FC<HiddenQrCanvasWithDataUrlProps>
           console.error(`Error generating QR data URL for asset ${assetId}:`, e);
           onDataUrlReady(assetId, null);
         }
+      } else {
+        console.warn(`Canvas ref not available for QR code ${assetId} during data URL generation.`);
+        onDataUrlReady(assetId, null); 
       }
     }, 50); // A small delay should be enough for canvas to update. Adjust if needed.
 
@@ -57,3 +60,4 @@ export const HiddenQrCanvasWithDataUrl: React.FC<HiddenQrCanvasWithDataUrlProps>
     />
   );
 };
+
