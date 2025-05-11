@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -12,10 +13,11 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { QRCodeCanvas } from 'qrcode.react'; // Import QRCodeCanvas
+// No need to import QRCodeCanvas directly here if HiddenQrCanvasWithDataUrl handles it
 import { jsPDF } from "jspdf";
-// import autoTable from 'jspdf-autotable'; // Currently unused, keep if needed later
+// import autoTable from 'jspdf-autotable'; // Currently unused
 import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
+import { HiddenQrCanvasWithDataUrl } from '@/components/feature/hidden-qr-canvas';
 
 // Mock data - replace with actual data fetching
 interface AssetForLabel {
@@ -24,7 +26,7 @@ interface AssetForLabel {
     tag: string;
     category: string;
     location: string;
-    characteristics?: { key: string, value: string }[]; // Add characteristics for editor
+    characteristics?: { key: string, value: string }[];
 }
 
 async function fetchAssetsForLabeling(filters: any): Promise<{ assets: AssetForLabel[], total: number }> {
@@ -86,9 +88,9 @@ const labelSizes: LabelConfig[] = [
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-const MM_TO_PT_SCALE = 2.83465; // 1mm = 2.83465 points (approx)
+// const MM_TO_PT_SCALE = 2.83465; // 1mm = 2.83465 points (approx) // Not directly used for font size if using jsPDF native units
 const PX_TO_MM_SCALE = 0.264583; // 1px approx 0.264583mm (for converting px layout to mm for PDF)
-const PX_TO_PT_SCALE = 0.75; // 1px approx 0.75pt (for web display font sizes)
+const PX_TO_PT_SCALE = 0.75; // 1px approx 0.75pt (for web display font sizes to PDF points)
 
 
 export default function PrintLabelsPage() {
@@ -99,49 +101,44 @@ export default function PrintLabelsPage() {
     const [error, setError] = useState<string | null>(null);
     const [filters, setFilters] = useState({
         search: '',
-        category: '__all__', // Default to all
-        location: '__all__', // Default to all
+        category: '__all__',
+        location: '__all__',
         page: 1,
         limit: 10,
     });
     const [totalAssets, setTotalAssets] = useState(0);
     const [labelSizeId, setLabelSizeId] = useState<string>(labelSizes[0].id);
     const [isGenerating, setIsGenerating] = useState(false);
-    const qrCanvasRefs = useRef<{ [key: string]: HTMLCanvasElement | null }>({});
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-    const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]); // Store the current layout
+    const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
+    const [qrCodeDataUrls, setQrCodeDataUrls] = useState<Record<string, string | null>>({});
 
 
     const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
     const locations = ['Escritório 1', 'Escritório 2', 'Sala de Reuniões', 'Sala de Treinamento', 'Almoxarifado'];
 
-    // --- Load saved layout when label size changes or on initial load ---
     useEffect(() => {
-         if (typeof window !== 'undefined') { // Ensure localStorage is available
+         if (typeof window !== 'undefined') {
              const savedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}`);
              if (savedLayoutJson) {
                  try {
                      const savedLayout = JSON.parse(savedLayoutJson);
-                     if (Array.isArray(savedLayout)) { // Basic validation
+                     if (Array.isArray(savedLayout)) {
                          setCurrentLabelLayout(savedLayout);
-                         console.log(`Loaded layout for ${labelSizeId} from localStorage.`);
                      } else {
-                         console.warn("Invalid layout data found in localStorage.");
-                         setCurrentLabelLayout([]); // Reset if invalid
+                         setCurrentLabelLayout([]);
                      }
                  } catch (e) {
-                     console.error("Error parsing saved layout:", e);
-                     setCurrentLabelLayout([]); // Reset on error
+                     setCurrentLabelLayout([]);
                  }
              } else {
-                 setCurrentLabelLayout([]); // Reset if no saved layout found
-                  console.log(`No saved layout found for ${labelSizeId}. Using default.`);
+                 setCurrentLabelLayout([]);
              }
          }
      }, [labelSizeId]);
 
 
-    const fetchData = async (currentFilters: typeof filters) => {
+    const fetchData = useCallback(async (currentFilters: typeof filters) => {
         setLoading(true);
         setError(null);
         try {
@@ -161,11 +158,11 @@ export default function PrintLabelsPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         fetchData(filters);
-    }, [filters]);
+    }, [filters, fetchData]);
 
     const handleFilterChange = (key: keyof typeof filters, value: any) => {
         setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
@@ -204,15 +201,13 @@ export default function PrintLabelsPage() {
         setIsPreviewOpen(true);
     };
 
-     // --- Save Layout to Local Storage ---
     const handleSaveLayout = (elements: LabelElementConfig[]) => {
-        setCurrentLabelLayout(elements); // Update current layout state
-        if (typeof window !== 'undefined') { // Ensure localStorage is available
+        setCurrentLabelLayout(elements);
+        if (typeof window !== 'undefined') {
             try {
                  const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
                  if (!selectedLabelConfig) return;
                  localStorage.setItem(`labelLayout_${selectedLabelConfig.id}`, JSON.stringify(elements));
-                 console.log(`Saved layout for ${selectedLabelConfig.name} to localStorage.`);
                  toast({ title: "Layout Salvo", description: "O layout foi salvo localmente para este tamanho de etiqueta." });
             } catch (error) {
                  console.error("Error saving layout to localStorage:", error);
@@ -221,7 +216,6 @@ export default function PrintLabelsPage() {
          }
     };
 
-    // Function to escape CSV fields
     const escapeCsvField = (field: string | number | undefined | null): string => {
         if (field === null || field === undefined) {
           return '';
@@ -235,7 +229,6 @@ export default function PrintLabelsPage() {
     };
 
 
-    // Refined PDF Generation
     const generatePdf = async (layoutToUse: LabelElementConfig[]) => {
         if (selectedAssets.size === 0) {
             toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para gerar etiquetas.", variant: "destructive" });
@@ -248,7 +241,7 @@ export default function PrintLabelsPage() {
 
         setIsGenerating(true);
         toast({ title: "Gerando PDF...", description: "Preparando etiquetas, aguarde." });
-        setIsPreviewOpen(false); // Close preview modal if open
+        setIsPreviewOpen(false);
 
         const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
         if (!selectedLabelConfig) {
@@ -261,7 +254,7 @@ export default function PrintLabelsPage() {
         const doc = new jsPDF({
             orientation: selectedLabelConfig.pageFormat === 'a4' ? 'p' : 'l',
             unit: 'mm',
-            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width, selectedLabelConfig.height] // Use exact label size for custom format
+            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width, selectedLabelConfig.height]
         });
 
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
@@ -271,11 +264,8 @@ export default function PrintLabelsPage() {
         const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm;
 
         let assetIndex = 0;
-        let pageCount = 1;
 
-        // Helper to add content to a single label at specified offset
         const addLabelContent = async (asset: AssetForLabel, x_offset_mm: number, y_offset_mm: number) => {
-            // Iterate through the saved layout elements
             for (const element of layoutToUse.filter(el => el.visible)) {
                 const el_x_mm = x_offset_mm + (element.x * PX_TO_MM_SCALE);
                 const el_y_mm = y_offset_mm + (element.y * PX_TO_MM_SCALE);
@@ -294,50 +284,32 @@ export default function PrintLabelsPage() {
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
                         doc.setFontSize(el_font_size_pt);
-                        doc.setFont(element.fontFamily || 'helvetica', 'normal');
+                        doc.setFont(element.fontFamily || 'helvetica', 'normal'); // Default font for jsPDF
                         const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95;
                         const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
                         let textXPosMm = el_x_mm;
                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
-                        doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), {
+                        doc.text(textLines, textXPosMm, el_y_mm + (el_font_size_pt * 0.35), { // Adjust Y for better baseline
                             align: textAlignJsPdf,
                             baseline: 'top'
                         });
                     }
                 } else if (element.type === 'qr') {
-                    const qrCanvas = qrCanvasRefs.current[asset.id];
-                    if (qrCanvas) {
-                         // Small delay to allow canvas to render fully before capturing
-                         await new Promise(resolve => setTimeout(resolve, 100));
+                    const qrDataUrl = qrCodeDataUrls[asset.id];
+                    if (qrDataUrl) {
                         try {
-                            const qrDataUrl = qrCanvas.toDataURL('image/png');
-                            const qrSizeMm = Math.max(1, el_w_mm); // Use width as size, ensure it's at least 1mm
-                            if (qrDataUrl && qrDataUrl.length > 'data:image/png;base64,'.length) {
-                                doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                                console.log(`Added QR for ${asset.tag} at (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}) size ${qrSizeMm.toFixed(1)}`);
-                            } else {
-                                console.warn(`QR data URL is empty or invalid for asset ${asset.id}`);
-                                // Optionally draw a placeholder rectangle
-                                doc.setDrawColor(255, 0, 0);
-                                doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                                doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
-                            }
+                            const qrSizeMm = Math.max(1, el_w_mm);
+                            doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) {
                             console.error(`Error adding QR image to PDF for asset ${asset.id}:`, e);
                             // Draw placeholder on error
-                             const qrSizeMm = Math.max(1, el_w_mm);
-                             doc.setDrawColor(255, 0, 0);
-                             doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                             doc.text("QR Error", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
+                            doc.setDrawColor(255, 0, 0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Error", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
                         }
                     } else {
-                        console.warn(`QR canvas ref not found for asset ${asset.id}`);
-                         // Draw placeholder if ref not found
-                         const qrSizeMm = Math.max(1, el_w_mm);
-                         doc.setDrawColor(255, 0, 0);
-                         doc.rect(el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
-                         doc.text("QR Missing", el_x_mm + qrSizeMm / 2, el_y_mm + qrSizeMm / 2, { align: 'center', baseline: 'middle', fontSize: 6 });
+                        console.warn(`QR data URL not ready or invalid for asset ${asset.id}`);
+                         // Draw placeholder if data URL not ready
+                        doc.setDrawColor(255,0,0); doc.rect(el_x_mm, el_y_mm, Math.max(1, el_w_mm), Math.max(1, el_w_mm)); doc.text("QR Missing", el_x_mm + el_w_mm/2, el_y_mm + el_w_mm/2, {align: 'center', baseline:'middle', fontSize:6});
                     }
                 } else if (element.type === 'logo' && element.dataUrl) {
                     try {
@@ -349,12 +321,10 @@ export default function PrintLabelsPage() {
             }
         };
 
-         // --- PDF Generation Logic ---
          if (pageFormat === 'a4') {
              for (assetIndex = 0; assetIndex < assetsToPrint.length; ) {
-                 if (assetIndex > 0 && assetIndex % (cols * rows) === 0) { // Check if we need a new page based on calculation
+                 if (assetIndex > 0 && assetIndex % (cols * rows) === 0) {
                      doc.addPage();
-                     pageCount++;
                  }
                  let currentY_mm = marginTop_mm;
                  for (let r = 0; r < rows; r++) {
@@ -368,19 +338,14 @@ export default function PrintLabelsPage() {
                      currentY_mm += labelH_mm + gapY;
                      if (assetIndex >= assetsToPrint.length) break;
                      if (currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
-                          // This row won't fit, break to start new page in the outer loop
-                           break; // Break inner loops and let outer loop handle page add
+                           break;
                      }
                  }
-                 // If we broke inner loops because page is full, ensure assetIndex hasn't reached the end yet before adding page
-                 if (assetIndex < assetsToPrint.length && currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
-                    // No need to add page here, the main loop condition will handle it
-                 }
              }
-         } else { // Custom/Thermal format (one label per "page")
+         } else {
              for (assetIndex = 0; assetIndex < assetsToPrint.length; assetIndex++) {
                  if (assetIndex > 0) {
-                     doc.addPage([labelW_mm, labelH_mm], 'l'); // Add page with custom format
+                     doc.addPage([labelW_mm, labelH_mm], 'l');
                  }
                  await addLabelContent(assetsToPrint[assetIndex], 0, 0);
              }
@@ -398,45 +363,36 @@ export default function PrintLabelsPage() {
         }
     };
 
-    // Ensure QR codes are rendered off-screen to be captured by refs
+    const handleQrDataUrlReady = useCallback((assetId: string, dataUrl: string | null) => {
+        setQrCodeDataUrls(prev => ({ ...prev, [assetId]: dataUrl }));
+    }, []);
+
     const renderHiddenQrCodes = () => {
         const assetsForQR = assets.filter(a => selectedAssets.has(a.id));
+        if (assetsForQR.length === 0) return null;
+
         return (
             <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: 1, height: 1, overflow: 'hidden' }}>
                 {assetsForQR.map((asset) => {
-                    const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : '';
-                     // Use a fixed large size for hidden canvas to ensure quality, PDF generation will resize
-                    const renderSize = 256;
+                    const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
                     return (
-                        <div key={`qr-hidden-${asset.id}`}>
-                             <QRCodeCanvas
-                                value={publicUrl || asset.tag}
-                                size={renderSize} // Render larger hidden QR for quality
-                                level="H"
-                                includeMargin={false}
-                                // Assign ref directly to the QRCodeCanvas component's underlying canvas
-                                ref={(el) => {
-                                     // el can be null during unmounts/renders
-                                     if (el) {
-                                         qrCanvasRefs.current[asset.id] = el;
-                                     }
-                                }}
-                             />
-                        </div>
+                        <HiddenQrCanvasWithDataUrl
+                            key={`qr-hidden-${asset.id}`}
+                            assetId={asset.id}
+                            value={publicUrl}
+                            onDataUrlReady={handleQrDataUrlReady}
+                        />
                     );
                 })}
             </div>
         );
     };
 
-    // Callback function for the modal to trigger PDF generation using the *current* layout state
     const handleGenerateRequest = (layout: LabelElementConfig[]) => {
-        // The modal passes its current state, which might be different from saved state
-        // We use the layout passed from the modal for generation
         generatePdf(layout);
     };
 
-    const selectedAssetsData = assets.filter(a => selectedAssets.has(a.id)); // Data for modal preview
+    const selectedAssetsData = assets.filter(a => selectedAssets.has(a.id));
 
 
     return (
@@ -582,7 +538,6 @@ export default function PrintLabelsPage() {
                     <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0}>
                          <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
-                     {/* Button inside the modal now triggers generation */}
                      <Button onClick={() => generatePdf(currentLabelLayout)} disabled={selectedAssets.size === 0 || isGenerating}>
                         {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
                         Gerar PDF ({selectedAssets.size})
@@ -590,7 +545,6 @@ export default function PrintLabelsPage() {
                 </CardFooter>
             </Card>
 
-            {/* Label Preview Modal */}
              {isPreviewOpen && selectedAssetsData.length > 0 && (
                 <LabelPreviewModal
                     isOpen={isPreviewOpen}
@@ -598,11 +552,12 @@ export default function PrintLabelsPage() {
                     initialAsset={selectedAssetsData[0]}
                     selectedAssetsData={selectedAssetsData}
                     labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
-                    onSave={handleSaveLayout} // Pass the save handler
-                    onGenerateRequest={handleGenerateRequest} // Pass the generation handler
-                    initialLayout={currentLabelLayout} // Pass the currently loaded/edited layout
+                    onSave={handleSaveLayout}
+                    onGenerateRequest={handleGenerateRequest}
+                    initialLayout={currentLabelLayout}
                 />
              )}
         </div>
     );
 }
+
