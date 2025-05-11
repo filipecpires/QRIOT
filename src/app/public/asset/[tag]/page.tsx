@@ -66,27 +66,27 @@ async function fetchPublicAssetData(tag: string): Promise<PublicAssetData | null
     if (tag === 'AB12C') { // Example: TI-NB-001 became AB12C
         return {
             id: 'ASSET001',
-            name: 'Notebook Dell Latitude 7400',
+            name: 'Notebook Dell Latitude 7400 XPS Ultra Pro Max Special Edition',
             category: 'Eletrônicos',
             tag: 'AB12C', // Use the new tag
-            location: { name: 'Escritório 1' },
-            responsible: { name: 'João Silva' },
-            description: 'Notebook corporativo para desenvolvimento.',
+            location: { name: 'Escritório 1, Sala de Reuniões Principal Alpha Centauri' },
+            responsible: { name: 'João Silva de Albuquerque e Castro' },
+            description: 'Notebook corporativo para desenvolvimento avançado e projetos de alta performance. Este equipamento possui configurações de ponta para garantir a máxima produtividade.',
             characteristics: [
-                { key: 'Processador', value: 'Intel Core i7', isPublic: true },
-                { key: 'Memória RAM', value: '16GB', isPublic: true },
-                { key: 'Armazenamento', value: '512GB SSD', isPublic: true },
-                { key: 'Número de Série', value: 'ABC123XYZ', isPublic: false }, // Example non-public
-                { key: 'Voltagem', value: 'Bivolt', isPublic: true },
-                { key: 'Ano Fabricação', value: '2022', isPublic: true},
+                { key: 'Processador', value: 'Intel Core i7 de 13ª Geração com Turbo Boost', isPublic: true },
+                { key: 'Memória RAM', value: '16GB DDR5 5200MHz', isPublic: true },
+                { key: 'Armazenamento', value: '512GB SSD NVMe PCIe Gen4', isPublic: true },
+                { key: 'Número de Série', value: 'ABC123XYZ789-ULTRA', isPublic: false }, // Example non-public
+                { key: 'Voltagem', value: 'Bivolt Automático (100-240V)', isPublic: true },
+                { key: 'Ano Fabricação', value: '2023', isPublic: true},
             ],
             photos: [
-                { url: 'https://picsum.photos/seed/asset001/600/400', description: 'Vista frontal' },
-                 { url: 'https://picsum.photos/seed/asset001_2/600/400', description: 'Vista lateral' }
+                { url: 'https://picsum.photos/seed/asset001/600/400', description: 'Vista frontal do notebook' },
+                 { url: 'https://picsum.photos/seed/asset001_2/600/400', description: 'Vista lateral detalhada' }
             ],
             attachments: [
-                { id: 'attach1', name: 'Manual do Usuário', url: 'https://example.com/manual.pdf', isPublic: true }, // Public
-                { id: 'attach2', name: 'Nota Fiscal', url: 'https://example.com/invoice.pdf', isPublic: false } // Not Public
+                { id: 'attach1', name: 'Manual Completo do Usuário (PDF)', url: 'https://example.com/manual.pdf', isPublic: true }, // Public
+                { id: 'attach2', name: 'Nota Fiscal de Compra (Interno)', url: 'https://example.com/invoice.pdf', isPublic: false } // Not Public
             ],
             status: 'active',
             lastInventoryDate: '2024-05-10'
@@ -94,17 +94,17 @@ async function fetchPublicAssetData(tag: string): Promise<PublicAssetData | null
     } else if (tag === 'GH56I') { // Example: MOB-CAD-012 became GH56I
          return {
             id: 'ASSET003',
-            name: 'Cadeira de Escritório',
+            name: 'Cadeira de Escritório Ergonômica Executiva',
             category: 'Mobiliário',
             tag: 'GH56I', // Use the new tag
-            location: { name: 'Sala de Reuniões' },
-            responsible: { name: 'Carlos Pereira' },
-            description: 'Cadeira ergonômica.',
+            location: { name: 'Sala de Reuniões Beta' },
+            responsible: { name: 'Carlos Pereira da Nóbrega' },
+            description: 'Cadeira ergonômica com múltiplos ajustes para conforto prolongado durante o trabalho. Ideal para longas horas de uso.',
             characteristics: [
-                 { key: 'Cor', value: 'Preta', isPublic: true },
-                 { key: 'Material', value: 'Tecido', isPublic: true },
+                 { key: 'Cor', value: 'Preta com detalhes cromados', isPublic: true },
+                 { key: 'Material', value: 'Tecido respirável e base de alumínio', isPublic: true },
             ],
-            photos: [{ url: 'https://picsum.photos/seed/asset003/600/400', description: 'Cadeira' }],
+            photos: [{ url: 'https://picsum.photos/seed/asset003/600/400', description: 'Cadeira ergonômica modelo executivo' }],
             attachments: [],
             status: 'lost', // Marked as lost
             lastInventoryDate: '2024-01-15'
@@ -208,13 +208,19 @@ export default function PublicAssetPage() {
 
     return (
          <div className="container mx-auto max-w-4xl py-10 px-4 bg-secondary/50"> {/* Light gray background for page */}
-             <div className="flex justify-between items-start mb-4">
+             <div className="flex flex-col sm:flex-row sm:justify-between items-start gap-4 mb-6">
                  <div>
                      <h1 className="text-3xl font-bold text-primary">{asset.name}</h1>
-                     <Badge variant="outline" className="mt-1">{asset.tag}</Badge>
-                     {asset.category && <Badge variant="secondary" className="mt-1 ml-2">{asset.category}</Badge>}
+                     <div className="mt-2 flex flex-wrap gap-2">
+                        <Badge variant="outline">{asset.tag}</Badge>
+                        {asset.category && <Badge variant="secondary">{asset.category}</Badge>}
+                     </div>
                  </div>
-                  {/* Optionally add a logo or branding here */}
+                 {/* Optionally add a logo or branding here:
+                     <div className="sm:ml-auto self-center sm:self-start">
+                        <Image src="/logo-placeholder.svg" alt="Company Logo" width={100} height={40} />
+                     </div>
+                 */}
              </div>
 
              {asset.status === 'lost' && (
@@ -306,6 +312,7 @@ export default function PublicAssetPage() {
                                             fill
                                             style={{ objectFit: 'cover' }}
                                             sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, 33vw"
+                                            data-ai-hint="asset photo"
                                             />
                                         {photo.description && (
                                                 <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs p-1 text-center">
@@ -354,3 +361,5 @@ export default function PublicAssetPage() {
     );
 }
 
+
+    
