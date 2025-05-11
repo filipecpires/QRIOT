@@ -609,15 +609,15 @@ export default function EditAssetPage() {
                          <RadioGroup
                            onValueChange={field.onChange}
                            defaultValue={field.value}
-                           className="flex space-x-4"
+                           className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0"
                          >
-                           <FormItem className="flex items-center space-x-2 space-y-0">
+                           <FormItem className="flex items-center space-x-2">
                              <FormControl>
                                <RadioGroupItem value="own" />
                              </FormControl>
                              <FormLabel className="font-normal">Próprio</FormLabel>
                            </FormItem>
-                           <FormItem className="flex items-center space-x-2 space-y-0">
+                           <FormItem className="flex items-center space-x-2">
                              <FormControl>
                                <RadioGroupItem value="rented" />
                              </FormControl>
@@ -1061,5 +1061,6 @@ export default function EditAssetPage() {
     </div>
   );
 }
+
 
 
