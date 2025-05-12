@@ -26,73 +26,84 @@ const PwaInstallContext = createContext<PwaInstallContextType | undefined>(undef
 export const PwaInstallProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [isPwaInstalled, setIsPwaInstalled] = useState(false);
-  const [canInstall, setCanInstall] = useState(false); // Initial state is false
+  const [canInstall, setCanInstall] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('[PWAContext] useEffect setup running.');
+    console.log('[PWAContext] Initializing PWA context and event listeners.');
 
-    // Check initial installed state
-    if (typeof window !== 'undefined') {
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            console.log('[PWAContext] Initial check: App is running in standalone mode.');
-            setIsPwaInstalled(true);
-            setCanInstall(false);
-        } else {
-            console.log('[PWAContext] Initial check: App is NOT in standalone mode.');
-            setIsPwaInstalled(false); // Explicitly set if not standalone
-            // canInstall remains false until beforeinstallprompt fires
+    const checkInstallationStatus = () => {
+      if (typeof window !== 'undefined') {
+        const installed = window.matchMedia('(display-mode: standalone)').matches;
+        console.log(`[PWAContext] Initial installation status check: ${installed ? 'Standalone (Installed)' : 'Browser Tab'}`);
+        setIsPwaInstalled(installed);
+        if (installed) {
+          setCanInstall(false); // If already installed, can't install again
         }
-    } else {
-        console.log('[PWAContext] Initial check: Window not defined (SSR or pre-hydration).');
-    }
+      } else {
+        console.log('[PWAContext] Window not available for installation status check (SSR/pre-hydration).');
+      }
+    };
+    checkInstallationStatus(); // Check on mount
 
     const handleBeforeInstallPrompt = (event: Event) => {
       console.log('[PWAContext] "beforeinstallprompt" event fired.');
-      event.preventDefault(); // Prevent the mini-infobar from appearing on mobile
+      event.preventDefault();
       const typedEvent = event as BeforeInstallPromptEvent;
       
-      // Check again for standalone mode, as this event might fire after initial checks
+      // Re-check standalone status, as this event might fire after initial checks or if manifest changes
       if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('[PWAContext] "beforeinstallprompt": Detected standalone mode, setting app as installed.');
+        console.log('[PWAContext] "beforeinstallprompt": Detected standalone mode again, app is installed.');
         setIsPwaInstalled(true);
         setCanInstall(false);
-        setInstallPromptEvent(null); // Clear any stored prompt
+        setInstallPromptEvent(null);
       } else {
-        console.log('[PWAContext] "beforeinstallprompt": Storing prompt event, setting canInstall = true.');
+        console.log('[PWAContext] "beforeinstallprompt": Storing prompt event. Setting canInstall = true.');
         setInstallPromptEvent(typedEvent);
-        setCanInstall(true); // Now the app can be installed via the prompt
+        setCanInstall(true);
+        setIsPwaInstalled(false); // Explicitly set not installed if prompt is available
       }
     };
 
     const handleAppInstalled = () => {
-      console.log('[PWAContext] "appinstalled" event fired.');
+      console.log('[PWAContext] "appinstalled" event fired. App installation confirmed.');
       setIsPwaInstalled(true);
       setCanInstall(false);
-      setInstallPromptEvent(null); // Clear the saved prompt event
+      setInstallPromptEvent(null);
     };
 
-    console.log('[PWAContext] Adding event listeners for "beforeinstallprompt" and "appinstalled".');
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Cleanup function
     return () => {
-      console.log('[PWAContext] Cleaning up event listeners.');
+      console.log('[PWAContext] Cleaning up PWA event listeners.');
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
-  }, []); // Empty dependency array, runs once on mount
+  }, []); // Empty dependency array ensures this runs once on mount and unmount
 
   const triggerInstallPrompt = useCallback(async () => {
     if (!installPromptEvent) {
-      console.warn('[PWAContext] triggerInstallPrompt: No installPromptEvent available. App might be installed, prompt dismissed, or criteria not met.');
-      toast({
-        title: 'Instalação não disponível',
-        description: isPwaInstalled ? 'O app já está instalado.' : 'O prompt de instalação não pôde ser exibido agora. Tente mais tarde ou verifique as configurações do navegador.',
-        variant: 'default',
-      });
-      setCanInstall(false); // Ensure canInstall is false if prompt isn't available
+      console.warn('[PWAContext] triggerInstallPrompt: No installPromptEvent available.');
+      if (isPwaInstalled) {
+        toast({
+          title: 'App Já Instalado',
+          description: 'O QRIoT.app já está funcionando como um aplicativo no seu dispositivo.',
+          variant: 'default',
+        });
+      } else {
+        toast({
+          title: 'Instalação Indisponível no Momento',
+          description: 'Não foi possível exibir o prompt de instalação. Isso pode ocorrer se os critérios de PWA não forem atendidos, se o prompt já foi dispensado ou se o navegador não suportar esta ação agora. Tente novamente mais tarde ou verifique as configurações do navegador.',
+          variant: 'default',
+          duration: 8000,
+        });
+      }
+      // Ensure canInstall is false if the prompt wasn't available/shown
+      // (it should already be false if installPromptEvent is null, but this is a safeguard)
+      if (!isPwaInstalled) {
+        setCanInstall(false);
+      }
       return;
     }
 
@@ -106,7 +117,7 @@ export const PwaInstallProvider: React.FC<{ children: ReactNode }> = ({ children
           title: 'App Instalado!',
           description: 'QRIoT.app foi adicionado à sua tela inicial.',
         });
-        setIsPwaInstalled(true); // This will also be caught by 'appinstalled' event, but good to set here.
+        // isPwaInstalled will be set by the 'appinstalled' event listener
       } else {
         toast({
           title: 'Instalação Cancelada',
@@ -121,10 +132,10 @@ export const PwaInstallProvider: React.FC<{ children: ReactNode }> = ({ children
         variant: 'destructive',
       });
     }
-    // The prompt can only be used once.
+    // The prompt can only be used once. Clear it and set canInstall to false.
     setInstallPromptEvent(null);
     setCanInstall(false);
-    console.log('[PWAContext] triggerInstallPrompt: Prompt used or failed, canInstall set to false.');
+    console.log('[PWAContext] triggerInstallPrompt: Prompt used or failed. installPromptEvent cleared, canInstall set to false.');
   }, [installPromptEvent, toast, isPwaInstalled]);
 
   return (
