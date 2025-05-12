@@ -2,7 +2,7 @@
 'use client'; // Sidebar needs client-side hooks for interactivity and state
 
 import type { ReactNode } from 'react';
-import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { QrCode, LayoutDashboard, MapPin, Users, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     const userAvatar = `https://i.pravatar.cc/40?u=${userEmail}`; // Placeholder avatar
     const userRole = "Administrador"; // Mock role
 
+    const { isMobile, setOpenMobile } = useSidebar();
+
+    const handleMobileMenuClick = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
+
   return (
     <SidebarProvider defaultOpen={true}>
       {/* The actual sidebar component */}
@@ -48,7 +56,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <SidebarMenu className="p-2 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1"> {/* Adjusted padding */}
             {/* Dashboard */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Dashboard" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Dashboard" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/dashboard">
                   <LayoutDashboard />
                   <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
@@ -57,7 +65,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Assets */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Ativos" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Ativos" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/assets">
                   <QrCode />
                   <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
@@ -66,7 +74,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Asset Tree */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Árvore de Ativos" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Árvore de Ativos" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/assets/tree">
                   <GitMerge />
                   <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
@@ -75,7 +83,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Inventory Scan */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Inventário (Scan)" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Inventário (Scan)" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/inventory/scan">
                   <CheckSquare />
                   <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
@@ -84,7 +92,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Characteristic Scan */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/characteristics/scan">
                   <ScanLine />
                   <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
@@ -93,7 +101,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Locations */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Locais" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Locais" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/locations">
                   <MapPin />
                   <span className="group-data-[collapsible=icon]:hidden">Locais</span>
@@ -102,7 +110,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Maintenance */}
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Manutenção" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Manutenção" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/maintenance/work-orders">
                   <MaintenanceIcon />
                   <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
@@ -111,7 +119,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
              {/* Print Labels */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/labels/print">
                   <Printer />
                   <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
@@ -120,7 +128,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </SidebarMenuItem>
             {/* Audit Log */}
              <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Log de Auditoria" className="group-data-[collapsible=icon]:justify-center">
+              <SidebarMenuButton asChild tooltip="Log de Auditoria" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
                 <Link href="/audit-log">
                   <History />
                   <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
