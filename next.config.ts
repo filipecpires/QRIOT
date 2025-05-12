@@ -6,7 +6,7 @@ const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: process.env.NODE_ENV === "development", // Disable PWA in development
+  disable: false, // Enable PWA in development
   sw: "sw.js",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
@@ -77,3 +77,4 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA(nextConfig);
+
