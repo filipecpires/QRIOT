@@ -17,6 +17,9 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 
+// import { sendPasswordResetEmail } from "firebase/auth";
+// import { auth } from "@/lib/firebase";
+
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
 });
@@ -43,22 +46,24 @@ export default function ForgotPasswordPage() {
     setSuccessMessage(null);
     console.log('Forgot password attempt:', data);
 
-    // --- TODO: Implement Firebase Password Reset ---
+    // --- Firebase Password Reset Example ---
     // try {
     //   await sendPasswordResetEmail(auth, data.email);
     //   setSuccessMessage(`Um email de redefinição de senha foi enviado para ${data.email}, caso exista uma conta associada.`);
     //   toast({ title: 'Verifique seu Email', description: 'Instruções para redefinir a senha foram enviadas.' });
-    //   form.reset(); // Clear the form
-    // } catch (error: any) {
-    //   console.error('Password reset failed:', error);
-    //   // Don't reveal if email exists or not for security, show generic message.
-    //   // Firebase error codes like 'auth/user-not-found' could be handled silently.
-    //   setSuccessMessage(`Se ${data.email} estiver associado a uma conta, um email de redefinição foi enviado.`);
+    //   form.reset(); 
+    // } catch (fbError: any) {
+    //   console.error('Password reset failed:', fbError);
+    //   // For security, don't reveal if an email exists or not.
+    //   // Show a generic success message regardless, or handle specific errors silently if preferred.
+    //   // Firebase errors like 'auth/user-not-found' should typically lead to the same generic success message.
+    //   setSuccessMessage(`Se ${data.email} estiver associado a uma conta QRIoT.app, um email com instruções para redefinir sua senha foi enviado.`);
     //   toast({ title: 'Email Enviado (se aplicável)', description: 'Verifique sua caixa de entrada para redefinir a senha.' });
-    //   // setError('Falha ao enviar email de redefinição. Tente novamente.');
+    //   // If you absolutely need to show an error for other cases:
+    //   // setError('Falha ao enviar email de redefinição. Tente novamente mais tarde.');
     //   // toast({
-    //   //   title: 'Erro',
-    //   //   description: 'Falha ao enviar email de redefinição.',
+    //   //   title: 'Erro Inesperado',
+    //   //   description: 'Não foi possível processar sua solicitação no momento.',
     //   //   variant: 'destructive',
     //   // });
     // } finally {
@@ -66,7 +71,7 @@ export default function ForgotPasswordPage() {
     // }
     // --- End Firebase Password Reset ---
 
-    // Simulate API call
+    // Simulate API call (Remove this block after Firebase integration)
     await new Promise((resolve) => setTimeout(resolve, 1000));
     setSuccessMessage(`Se ${data.email} estiver associado a uma conta QRIoT.app, um email com instruções para redefinir sua senha foi enviado.`);
     toast({ title: 'Verifique seu Email (Simulado)', description: 'Instruções para redefinir a senha foram enviadas.' });

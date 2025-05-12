@@ -16,6 +16,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+// import { signInWithEmailAndPassword } from "firebase/auth";
+// import { auth } from "@/lib/firebase"; 
+
 const loginSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
   password: z.string().min(1, { message: 'A senha é obrigatória.' }),
@@ -42,18 +45,18 @@ export default function LoginPage() {
     setError(null); 
     console.log('Login attempt:', data);
 
-    // --- TODO: Implement Firebase Authentication ---
+    // --- Firebase Authentication Example ---
     // try {
     //   const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
     //   console.log('Login successful:', userCredential.user);
     //   toast({ title: 'Login realizado com sucesso!' });
-    //   router.push('/my-dashboard'); // Redirect to user's specific dashboard
-    // } catch (error: any) {
-    //   console.error('Login failed:', error);
+    //   router.push('/my-dashboard'); 
+    // } catch (fbError: any) {
+    //   console.error('Firebase Login failed:', fbError);
     //   let errorMessage = 'Falha no login. Verifique suas credenciais.';
-    //   if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+    //   if (fbError.code === 'auth/user-not-found' || fbError.code === 'auth/wrong-password' || fbError.code === 'auth/invalid-credential') {
     //     errorMessage = 'Email ou senha inválidos.';
-    //   } else if (error.code === 'auth/too-many-requests') {
+    //   } else if (fbError.code === 'auth/too-many-requests') {
     //     errorMessage = 'Muitas tentativas de login falharam. Tente novamente mais tarde.';
     //   }
     //   setError(errorMessage);
@@ -67,24 +70,24 @@ export default function LoginPage() {
     // }
     // --- End Firebase Authentication ---
 
-    // Simulate API call
+    // Simulate API call (Remove this block after Firebase integration)
     await new Promise((resolve) => setTimeout(resolve, 1000));
     if (data.email === 'demo@qriot.app' && data.password === 'demopass') {
         toast({ title: 'Login realizado com sucesso! (Demo)' });
-        router.push('/my-dashboard'); // Redirect to the user's dashboard
-    } else if (data.email.includes('fail')) {
-         setError('Email ou senha inválidos.');
-         toast({ title: 'Erro no Login', description: 'Email ou senha inválidos.', variant: 'destructive'});
+        router.push('/my-dashboard'); 
     } else {
-        // For any other login, simulate success and redirect to a general dashboard
-        toast({ title: 'Login realizado com sucesso!' });
-        router.push('/dashboard'); 
+        setError('Email ou senha inválidos (Simulado).');
+        toast({ title: 'Erro no Login', description: 'Email ou senha inválidos (Simulado).', variant: 'destructive'});
     }
     setIsLoading(false);
   }
 
    const handleDemoLogin = async () => {
-        await onSubmit({ email: 'demo@qriot.app', password: 'demopass' });
+        // Direct field population for demo login
+        form.setValue('email', 'demo@qriot.app');
+        form.setValue('password', 'demopass');
+        // Trigger form submission
+        await form.handleSubmit(onSubmit)();
     };
 
   return (

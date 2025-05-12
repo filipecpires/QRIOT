@@ -16,6 +16,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
+// import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
+// import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+// import { auth, db } from "@/lib/firebase";
+
 const registerSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -49,48 +53,53 @@ export default function RegisterPage() {
     setError(null);
     console.log('Registration attempt:', data);
 
-    // --- TODO: Implement Firebase Registration ---
+    // --- Firebase Registration Example ---
     // try {
     //   // 1. Create user in Firebase Auth
     //   const userCredential = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    //   const user = userCredential.user;
-    //   console.log('User created in Auth:', user);
+    //   const fbUser = userCredential.user;
+    //   console.log('User created in Auth:', fbUser);
     //
-    //   // 2. (Optional but recommended) Update user profile in Auth (add display name)
-    //   await updateProfile(user, { displayName: data.name });
+    //   // 2. Update user profile in Auth (add display name)
+    //   if (fbUser) { // Check if fbUser is not null
+    //     await updateProfile(fbUser, { displayName: data.name });
+    //   }
     //
     //   // 3. Create company document in Firestore for the new user
-    //   const companyRef = doc(db, 'companies', user.uid); // Use user UID as company ID for simplicity
+    //   // For simplicity, using user UID as company ID, and admin of their own company
+    //   const companyId = fbUser.uid; 
+    //   const companyRef = doc(db, 'companies', companyId); 
     //   await setDoc(companyRef, {
-    //       name: `${data.name}'s Company`, // Or prompt for company name later
-    //       ownerId: user.uid,
-    //       planName: 'Gratuito', // Free plan on registration
-    //       assetLimit: 5, // Free tier limit
+    //       name: `${data.name}'s Company`, // Or prompt for company name during onboarding
+    //       ownerId: fbUser.uid,
+    //       planName: 'Gratuito', 
+    //       assetLimit: 5, 
     //       status: 'active',
     //       createdAt: serverTimestamp(),
     //   });
-    //   console.log('Company document created for user:', user.uid);
+    //   console.log('Company document created for user:', fbUser.uid);
     //
-    //  // 4. Create user document in Firestore (within the company subcollection)
-    //  const userDocRef = doc(db, `companies/${user.uid}/users`, user.uid);
-    //  await setDoc(userDocRef, {
-    //      name: data.name,
-    //      email: data.email,
-    //      role: 'Administrador', // First user is admin of their company
-    //      isActive: true,
-    //      createdAt: serverTimestamp(),
-    //      companyId: user.uid // Link user to their company
-    //  });
+    //   // 4. Create user document in Firestore (within the company subcollection or a top-level users collection)
+    //   const userDocRef = doc(db, `users`, fbUser.uid); // Example: top-level users collection
+    //   await setDoc(userDocRef, {
+    //       name: data.name,
+    //       email: data.email,
+    //       role: 'Administrador', // First user is admin of their company
+    //       isActive: true,
+    //       createdAt: serverTimestamp(),
+    //       companyId: companyId, // Link user to their company
+    //   });
+    //   console.log('User document created in Firestore for:', fbUser.uid);
     //
     //   toast({ title: 'Registro realizado com sucesso!' });
-    //   router.push('/my-dashboard'); // Redirect to user's dashboard after successful registration
+    //   router.push('/my-dashboard'); 
     //
-    // } catch (error: any) {
-    //   console.error('Registration failed:', error);
+    // } catch (fbError: any) {
+    //   console.error('Registration failed:', fbError);
     //   let errorMessage = 'Falha no registro. Tente novamente.';
-    //   if (error.code === 'auth/email-already-in-use') {
+    //   if (fbError.code === 'auth/email-already-in-use') {
     //     errorMessage = 'Este email já está em uso. Tente fazer login.';
-    //   } else if (error.code === 'auth/weak-password') {
+    //   } else if (fbError.code === 'auth/weak-password') {
     //     errorMessage = 'A senha é muito fraca. Use pelo menos 8 caracteres.';
     //   }
     //   setError(errorMessage);
@@ -104,14 +113,14 @@ export default function RegisterPage() {
     // }
     // --- End Firebase Registration ---
 
-    // Simulate API call
+    // Simulate API call (Remove this block after Firebase integration)
     await new Promise((resolve) => setTimeout(resolve, 1000));
      if (data.email.includes('exists')) {
          setError('Este email já está em uso. Tente fazer login.');
          toast({ title: 'Erro no Registro', description: 'Este email já está em uso.', variant: 'destructive'});
      } else {
          toast({ title: 'Registro realizado com sucesso! (Simulado)' });
-         router.push('/my-dashboard'); // Simulate success and redirect to user's dashboard
+         router.push('/my-dashboard');
      }
     setIsLoading(false);
   }
