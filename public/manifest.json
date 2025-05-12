@@ -55,7 +55,7 @@
   ],
   "start_url": "/my-dashboard",
   "display": "standalone",
-  "background_color": "#D6D6D6",
+  "background_color": "#FFFFFF",
   "theme_color": "#003049",
   "scope": "/",
   "orientation": "portrait-primary",
@@ -77,3 +77,4 @@
     }
   ]
 }
+
