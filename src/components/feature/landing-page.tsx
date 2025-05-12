@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Removed CardFooter as it's not used
 import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react'; 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation'; 
@@ -31,57 +31,61 @@ export default function LandingPage() {
             icon: QrCode,
             title: "Identificação Rápida com QR Code",
             description: "Acesse informações detalhadas de cada ativo instantaneamente escaneando um QR Code único. Simples e eficiente.",
-            color: "text-primary"
         },
         {
             icon: CheckCircle,
             title: "Inventário Simplificado e Ágil",
             description: "Realize inventários completos de forma rápida, escaneando QR Codes. Diga adeus às planilhas complexas!",
-            color: "text-accent"
         },
         {
             icon: MapPin,
             title: "Controle Total de Localização",
             description: "Monitore a localização exata dos seus ativos com GPS, saiba quem é o responsável e o histórico de movimentações.",
-            color: "text-green-600"
         },
         {
             icon: Users,
             title: "Hierarquia e Permissões Detalhadas",
             description: "Gerencie usuários com diferentes níveis de acesso e controle a visibilidade dos ativos conforme a estrutura da sua empresa.",
-            color: "text-blue-600"
         },
         {
             icon: ShieldCheck,
             title: "Auditoria Completa e Segura",
             description: "Rastreie todas as alterações em ativos e características. Garanta segurança, conformidade e transparência.",
-            color: "text-purple-600"
         },
         {
             icon: Printer,
             title: "Impressão Flexível de Etiquetas",
             description: "Gere e imprima etiquetas personalizadas com QR Code em diversos tamanhos, compatíveis com impressoras comuns e térmicas.",
-            color: "text-orange-600"
         },
         {
             icon: Package,
             title: "Gestão de Ativos Próprios e Alugados",
             description: "Diferencie e gerencie ativos próprios e alugados, controlando contratos, datas de vencimento e custos.",
-            color: "text-teal-600"
         },
         {
             icon: FileText,
             title: "Registro Detalhado de Características",
             description: "Cadastre todas as especificações importantes de cada ativo, como voltagem, capacidade, ano de fabricação e mais.",
-            color: "text-indigo-600"
         },
          {
             icon: Edit,
             title: "Página Pública Personalizável",
             description: "Decida quais informações de cada ativo são visíveis publicamente ao escanear o QR Code.",
-            color: "text-pink-600"
         }
     ];
+
+    const featureStyles = [
+        { container: "bg-primary", icon: "text-primary-foreground" },
+        { container: "bg-accent", icon: "text-accent-foreground" },
+        { container: "bg-secondary", icon: "text-secondary-foreground" },
+        { container: "bg-primary/80", icon: "text-primary-foreground" }, // Variation
+        { container: "bg-accent/80", icon: "text-accent-foreground" },   // Variation
+        { container: "bg-muted", icon: "text-muted-foreground" },
+        { container: "bg-primary", icon: "text-primary-foreground" },
+        { container: "bg-accent", icon: "text-accent-foreground" },
+        { container: "bg-secondary", icon: "text-secondary-foreground" },
+    ];
+
 
     const howItWorksSteps = [
         {
@@ -222,17 +226,20 @@ export default function LandingPage() {
                     </p>
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {features.map((feature, index) => (
-                        <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 bg-card/80 backdrop-blur-sm border-primary/10 animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
-                             <CardContent className="p-6 flex flex-col items-start text-left">
-                                <div className={cn(`p-3 rounded-lg bg-gradient-to-br from-${feature.color.replace('text-','')} to-${feature.color.replace('text-','')} filter saturate-150 brightness-110 mb-4 shadow-md`, feature.color)}>
-                                    <feature.icon className={`h-7 w-7 text-white`} />
-                                </div>
-                                <h3 className="text-lg font-semibold mb-2 text-card-foreground">{feature.title}</h3>
-                                <p className="text-sm text-muted-foreground flex-grow">{feature.description}</p>
-                            </CardContent>
-                        </Card>
-                    ))}
+                    {features.map((feature, index) => {
+                        const style = featureStyles[index % featureStyles.length];
+                        return (
+                            <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 bg-card/80 backdrop-blur-sm border-primary/10 animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
+                                 <CardContent className="p-6 flex flex-col items-start text-left">
+                                    <div className={cn(`p-3 rounded-lg mb-4 shadow-md`, style.container)}>
+                                        <feature.icon className={cn(`h-7 w-7`, style.icon)} />
+                                    </div>
+                                    <h3 className="text-lg font-semibold mb-2 text-card-foreground">{feature.title}</h3>
+                                    <p className="text-sm text-muted-foreground flex-grow">{feature.description}</p>
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
                 </div>
             </section>
 
@@ -298,13 +305,13 @@ export default function LandingPage() {
                                 <ul className="space-y-2">
                                     {plan.features.map((feature, fIndex) => (
                                         <li key={fIndex} className="flex items-start gap-2 text-sm">
-                                            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <CheckCircle className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
                                             <span className="text-muted-foreground">{feature}</span>
                                         </li>
                                     ))}
                                 </ul>
                             </CardContent>
-                            <CardFooter className="mt-auto p-6">
+                            <div className="mt-auto p-6"> {/* Changed CardFooter to div to avoid import error if CardFooter is not exported from ui/card */}
                                 <Button asChild size="lg" className={cn("w-full shadow-md transition-colors", plan.popular ? "bg-primary hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90")}>
                                     {plan.href.startsWith('mailto:') ? (
                                         <a href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</a>
@@ -312,7 +319,7 @@ export default function LandingPage() {
                                         <Link href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</Link>
                                     )}
                                 </Button>
-                            </CardFooter>
+                            </div>
                         </Card>
                     ))}
                 </div>

@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { cn } from '@/lib/utils';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email({ message: 'Por favor, insira um email válido.' }),
@@ -94,7 +95,7 @@ export default function ForgotPasswordPage() {
               </Alert>
             )}
             {successMessage && (
-              <Alert variant="default" className="bg-green-100 border-green-300 text-green-800 dark:bg-green-900/30 dark:border-green-700 dark:text-green-300">
+              <Alert variant="default" className="bg-accent/20 border-accent text-accent-foreground dark:bg-accent/30 dark:border-accent/70 dark:text-accent-foreground [&>svg]:text-accent">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Instruções Enviadas</AlertTitle>
                 <AlertDescription>{successMessage}</AlertDescription>

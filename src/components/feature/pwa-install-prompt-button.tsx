@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, CheckCircle, AlertCircle } from 'lucide-react';
 import { usePwaInstall } from '@/contexts/PwaInstallContext';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 export function PwaInstallPromptButton() {
   const { canInstall, isPwaInstalled, triggerInstallPrompt } = usePwaInstall();
@@ -32,7 +33,15 @@ export function PwaInstallPromptButton() {
 
   if (isPwaInstalled) {
     return (
-      <Button variant="outline" disabled className="w-full justify-start text-left text-green-700 dark:text-green-400 border-green-500">
+      <Button 
+        variant="outline" 
+        disabled 
+        className={cn(
+            "w-full justify-start text-left",
+            "text-accent border-accent dark:text-accent dark:border-accent/70",
+            "[&>svg]:text-accent"
+        )}
+       >
         <CheckCircle className="mr-2 h-4 w-4" /> App Instalado
       </Button>
     );
