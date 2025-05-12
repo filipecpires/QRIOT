@@ -28,7 +28,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
+import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; // Import the PWA install button
 
 // Schema for editing - password becomes optional
 const userEditSchema = z.object({
@@ -44,6 +45,14 @@ type UserEditFormData = z.infer<typeof userEditSchema>;
 
 // Mock data - replace with actual data fetching later
 const roles = ['Administrador', 'Gerente', 'Técnico', 'Inventariante'];
+const initialUsers = [ // Added for fetchUserData mock
+  { id: 'user1', name: 'João Silva', email: 'joao.silva@example.com', role: 'Administrador', managerId: null, status: 'active' },
+  { id: 'user2', name: 'Maria Oliveira', email: 'maria.oliveira@example.com', role: 'Gerente', managerId: 'user1', status: 'active' },
+  { id: 'user3', name: 'Carlos Pereira', email: 'carlos.pereira@example.com', role: 'Técnico', managerId: 'user2', status: 'active' },
+  { id: 'user4', name: 'Ana Costa', email: 'ana.costa@example.com', role: 'Inventariante', managerId: 'user2', status: 'inactive' },
+  { id: 'user5', name: 'Pedro Santos', email: 'pedro.santos@example.com', role: 'Técnico', managerId: 'user2', status: 'active' },
+  { id: 'other-company-user', name: 'Outro Usuário', email: 'outro@empresa.com', role: 'Técnico', managerId: null, status: 'active' }
+];
 const initialManagers = [ // Should exclude the current user being edited and be filtered by company
   { id: 'user1', name: 'João Silva (Admin)' },
   { id: 'user2', name: 'Maria Oliveira (Gerente)' },
@@ -412,11 +421,11 @@ export default function AdminEditUserPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gerente Direto (Opcional)</FormLabel>
-                      <Select
+                       <Select
                          onValueChange={field.onChange}
                          value={field.value || '__none__'}
                          disabled={!canEdit() || isLoadingManagers}
-                       >
+                        >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder={isLoadingManagers ? "Carregando..." : "Selecione o gerente"} />
@@ -458,16 +467,18 @@ export default function AdminEditUserPage() {
                     )}
                 />
 
-                 <Button
-                    type="button"
-                    variant="outline"
-                    onClick={resetPasswordAction}
-                    disabled={!canResetPassword() || isLoading}
-                    className="w-fit"
-                 >
-                   <KeyRound className="mr-2 h-4 w-4" /> Redefinir Senha por Email
-                </Button>
-
+                 <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={resetPasswordAction}
+                        disabled={!canResetPassword() || isLoading}
+                        className="w-full sm:w-fit"
+                    >
+                    <KeyRound className="mr-2 h-4 w-4" /> Redefinir Senha por Email
+                    </Button>
+                    <PwaInstallPromptButton />
+                 </div>
 
             </CardContent>
              <CardFooter className="flex justify-between">
@@ -519,3 +530,4 @@ export default function AdminEditUserPage() {
     </div>
   );
 }
+
