@@ -1,9 +1,8 @@
-
 'use client'; // Sidebar needs client-side hooks for interactivity and state
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare } from 'lucide-react';
+import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -35,13 +34,16 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     const userAvatar = `https://i.pravatar.cc/40?u=${userEmail}`; // Placeholder avatar
     const userRole = "Administrador"; // Mock role
 
-    const { isMobile, setOpenMobile } = useSidebar();
+    const { isMobile, setOpenMobile, open } = useSidebar();
 
     const handleMobileMenuClick = () => {
         if (isMobile) {
             setOpenMobile(false);
         }
     };
+
+    const sidebarCollapsibleStyle = open ? {} : { justifyContent: 'center' };
+
 
     return (
         <>
@@ -54,19 +56,28 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-0"> {/* Remove padding from content if items handle it */}
-                    <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1"> {/* Adjusted padding and added space-y-1 */}
+                    <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1">
                         {/* Dashboard */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Dashboard" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                             <SidebarMenuButton asChild tooltip="Dashboard" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/dashboard">
                                     <LayoutDashboard />
                                     <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
                                 </Link>
                             </SidebarMenuButton>
                         </SidebarMenuItem>
+                         {/* Meu Painel */}
+                         <SidebarMenuItem>
+                             <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                <Link href="/my-dashboard">
+                                    <UserSquare />
+                                    <span className="group-data-[collapsible=icon]:hidden">Meu Painel</span>
+                                </Link>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
                         {/* Assets */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Ativos" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                             <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/assets">
                                     <QrCode />
                                     <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
@@ -75,7 +86,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Asset Tree */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Árvore de Ativos" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                             <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/assets/tree">
                                     <GitMerge />
                                     <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
@@ -84,7 +95,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Inventory Scan */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Inventário (Scan)" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                             <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/inventory/scan">
                                     <CheckSquare />
                                     <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
@@ -93,7 +104,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Characteristic Scan */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                             <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/characteristics/scan">
                                     <ScanLine />
                                     <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
@@ -102,7 +113,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Locations */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Locais" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                            <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/locations">
                                     <MapPin />
                                     <span className="group-data-[collapsible=icon]:hidden">Locais</span>
@@ -111,7 +122,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Maintenance */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Manutenção" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                            <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/maintenance/work-orders">
                                     <MaintenanceIcon />
                                     <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
@@ -120,7 +131,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Print Labels */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                            <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/labels/print">
                                     <Printer />
                                     <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
@@ -129,7 +140,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </SidebarMenuItem>
                         {/* Audit Log */}
                         <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Log de Auditoria" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
+                            <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/audit-log">
                                     <History />
                                     <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
@@ -177,45 +188,35 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
                                     <Link href="/profile">
-                                        <span className="flex items-center w-full">
-                                            <UserCircle className="mr-2 h-4 w-4" />
-                                            <span>Meu Perfil</span>
-                                        </span>
+                                        <UserCircle className="mr-2 h-4 w-4" />
+                                        <span>Meu Perfil</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href="/licensing">
-                                        <span className="flex items-center w-full">
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            <span>Licença</span>
-                                        </span>
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        <span>Licença</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem asChild>
                                     <Link href="/settings">
-                                        <span className="flex items-center w-full">
-                                            <Settings className="mr-2 h-4 w-4" />
-                                            <span>Configurações</span>
-                                        </span>
+                                        <Settings className="mr-2 h-4 w-4" />
+                                        <span>Configurações</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 {userRole === 'Administrador' && (
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings/admin">
-                                            <span className="flex items-center w-full">
-                                                <Briefcase className="mr-2 h-4 w-4" />
-                                                <span>Administração</span>
-                                            </span>
+                                            <Briefcase className="mr-2 h-4 w-4" />
+                                            <span>Administração</span>
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
                                     <Link href="/logout">
-                                        <span className="flex items-center w-full">
-                                            <LogOut className="mr-2 h-4 w-4" />
-                                            <span>Sair</span>
-                                        </span>
+                                        <LogOut className="mr-2 h-4 w-4" />
+                                        <span>Sair</span>
                                     </Link>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -239,4 +240,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
