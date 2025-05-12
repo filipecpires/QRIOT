@@ -13,63 +13,55 @@ export function PwaInstallPrompt() {
   const [toastId, setToastId] = useState<string | null>(null); // Store toast ID
 
   useEffect(() => {
-    // Check if a toast has already been shown this session from sessionStorage
     const sessionToastShown = sessionStorage.getItem('pwaInstallToastShown');
     
     if (canInstall && !isPwaInstalled && sessionToastShown !== 'true') {
-      // If a toast is already active from a previous render of this effect, dismiss it first
-      if (toastId) {
-        dismiss(toastId);
-      }
-
-      const newToastId = toast({
-        title: 'Instalar QRIoT.app',
-        description: 'Adicione nosso app à sua tela inicial para uma melhor experiência e acesso offline!',
-        duration: Infinity, 
-        action: (
-          <div className="flex flex-col gap-2 items-stretch w-full mt-2">
-            <Button
-              size="sm"
-              onClick={async () => {
-                await triggerInstallPrompt();
-                dismiss(newToastId); 
-                sessionStorage.setItem('pwaInstallToastShown', 'true'); 
-              }}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
-            >
-              <Download className="mr-2 h-4 w-4" /> Instalar Agora
-            </Button>
-             <Button
-                variant="ghost"
+      // Only show a new toast if one isn't already active from this specific prompt logic
+      if (!toastId) { 
+        const newToast = toast({
+          title: 'Instalar QRIoT.app',
+          description: 'Adicione nosso app à sua tela inicial para uma melhor experiência e acesso offline!',
+          duration: Infinity, 
+          action: (
+            <div className="flex flex-col gap-2 items-stretch w-full mt-2">
+              <Button
                 size="sm"
-                onClick={() => {
-                    dismiss(newToastId);
-                    sessionStorage.setItem('pwaInstallToastShown', 'true'); 
+                onClick={async () => {
+                  await triggerInstallPrompt();
+                  // It's important that newToast.id is from the closure of when the toast was created
+                  dismiss(newToast.id); 
+                  sessionStorage.setItem('pwaInstallToastShown', 'true'); 
                 }}
-                className="text-xs w-full text-muted-foreground hover:text-foreground"
-            >
-                Lembrar Mais Tarde
-            </Button>
-          </div>
-        ),
-      }).id;
-      setToastId(newToastId);
-    } else if ((!canInstall || isPwaInstalled) && toastId) {
-      // If conditions no longer met (e.g., installed elsewhere, or prompt no longer available), dismiss active toast
-      dismiss(toastId);
-      setToastId(null);
+                className="bg-primary text-primary-foreground hover:bg-primary/90 w-full"
+              >
+                <Download className="mr-2 h-4 w-4" /> Instalar Agora
+              </Button>
+               <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                      // It's important that newToast.id is from the closure of when the toast was created
+                      dismiss(newToast.id);
+                      sessionStorage.setItem('pwaInstallToastShown', 'true'); 
+                  }}
+                  className="text-xs w-full text-muted-foreground hover:text-foreground"
+              >
+                  Lembrar Mais Tarde
+              </Button>
+            </div>
+          ),
+        });
+        setToastId(newToast.id); 
+      }
+    } else {
+      // Conditions to show toast are not met
+      if (toastId) { // If there's an active toast managed by this component, dismiss it
+        dismiss(toastId);
+        setToastId(null); 
+      }
     }
 
-    // Cleanup the toast if the component unmounts or dependencies change causing a re-run
-    // This specific toastId is from the closure of this effect run.
-    const currentToastIdForCleanup = toastId;
-    return () => {
-      if (currentToastIdForCleanup) {
-        dismiss(currentToastIdForCleanup);
-      }
-    };
-  }, [canInstall, isPwaInstalled, triggerInstallPrompt, toast, dismiss]); // Removed toastId from dependency array
+  }, [canInstall, isPwaInstalled, triggerInstallPrompt, toast, dismiss, toastId]); 
 
-  return null; // This component only manages the toast
+  return null; 
 }
-
