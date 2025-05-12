@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  BarChart as RechartsBarChart, // Renamed to avoid conflict
+  BarChart as RechartsBarChart,
   Bar,
   LineChart,
   Line,
@@ -38,7 +38,7 @@ import {
     FileWarning,
     TrendingUp,
     TrendingDown,
-    BarChart // Lucide icon
+    BarChart as LucideBarChart // Renamed Lucide BarChart
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -456,7 +456,7 @@ export default function DashboardPage() {
                 icon={MapPin}
                 description={
                    <Link href="/locations" className="text-primary hover:underline flex items-center text-xs">
-                        <span>Gerenciar Locais</span> <ArrowRight className="ml-1 h-3 w-3" />
+                        Gerenciar Locais <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -466,8 +466,8 @@ export default function DashboardPage() {
                 value={userCount.toLocaleString()}
                 icon={Users}
                  description={
-                   <Link href="/settings/admin/users" className="text-primary hover:underline flex items-center text-xs"> {/* Updated link */}
-                        <span>Gerenciar Usuários</span> <ArrowRight className="ml-1 h-3 w-3" />
+                   <Link href="/settings/admin/users" className="text-primary hover:underline flex items-center text-xs">
+                        Gerenciar Usuários <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -478,7 +478,7 @@ export default function DashboardPage() {
                 icon={CheckSquare}
                 description={
                      <Link href="/inventory/scan" className="text-primary hover:underline flex items-center text-xs">
-                        <span>Iniciar Inventário</span> <ArrowRight className="ml-1 h-3 w-3" />
+                        Iniciar Inventário <ArrowRight className="ml-1 h-3 w-3" />
                     </Link>
                 }
                 isLoading={loading}
@@ -656,7 +656,11 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link href="/assets?filter=rented_expiring"><span>Ver Todas Locações</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                            <Link href="/assets?filter=rented_expiring">
+                                <span className="flex items-center justify-center w-full h-full">
+                                Ver Todas Locações <ArrowRight className="ml-1 h-4 w-4" />
+                                </span>
+                            </Link>
                         </Button>
                     </CardFooter>
                 </Card>
@@ -690,14 +694,18 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                             <Link href="/assets?filter=lost"><span>Ver Todos Perdidos</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                             <Link href="/assets?filter=lost">
+                                <span className="flex items-center justify-center w-full h-full">
+                                Ver Todos Perdidos <ArrowRight className="ml-1 h-4 w-4" />
+                                </span>
+                            </Link>
                         </Button>
                     </CardFooter>
                 </Card>
             </div>
 
              {/* Recent Activity - Full Width Row */}
-             <div className="grid gap-6">
+             <div className="grid grid-cols-1 gap-6"> {/* Ensure this is a single column grid cell */}
                  <Card className="flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
@@ -726,7 +734,11 @@ export default function DashboardPage() {
                    </CardContent>
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
-                            <Link href="/audit-log"><span>Ver Log Completo</span> <ArrowRight className="inline ml-1 h-4 w-4" /></Link>
+                            <Link href="/audit-log">
+                                <span className="flex items-center justify-center w-full h-full">
+                                Ver Log Completo <ArrowRight className="ml-1 h-4 w-4" />
+                                </span>
+                            </Link>
                         </Button>
                     </CardFooter>
                 </Card>

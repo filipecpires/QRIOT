@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -37,19 +38,27 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
-  // children prop is implicitly part of React.ButtonHTMLAttributes
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, children, ...props }, ref) => { // Explicitly destructure children
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
+    // If asChild is true, and children is a single React element, Slot will clone it.
+    // If children is not a single React element (e.g. text node, array), Slot might error or wrap it.
+    // The error "React.Children.only expected to receive a single React element child"
+    // means that `Slot` (which is `Comp` here) is receiving children that it cannot process
+    // with React.Children.only, which it uses internally when cloning the child.
+    // This often happens if `children` is not a single valid React element.
+    // For example, `<Button asChild> <Link>...</Link> <AnotherElement/> </Button>` would fail.
+    // Or `<Button asChild> Text <Link>...</Link> </Button>` would fail.
+    // It must be `<Button asChild><Link>...</Link></Button>`.
     return (
       <Comp
         className={cn(buttonVariants({ variant, size, className }))}
         ref={ref}
-        {...props} // Spread the rest of the props
+        {...props}
       >
-        {children} {/* Pass children as direct children to Comp */}
+        {children}
       </Comp>
     )
   }
@@ -57,3 +66,4 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }
+

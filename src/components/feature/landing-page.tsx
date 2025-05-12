@@ -54,9 +54,9 @@ export default function LandingPage() {
                          <UserCheck className="mr-2 h-5 w-5" /> Acessar Conta Demo
                     </Button>
                     <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
-                        <Link href="/login">
-                          Acessar Sistema
-                        </Link>
+                          <Link href="/login">
+                            Acessar Sistema
+                          </Link>
                     </Button>
                  </div>
                   <div className="mt-8 h-48 sm:h-64 md:h-80 lg:h-96 w-full max-w-3xl bg-muted rounded-lg shadow-lg flex items-center justify-center text-muted-foreground p-2 sm:p-4">
@@ -163,9 +163,9 @@ export default function LandingPage() {
                             </Link>
                         </Button>
                          <Button asChild size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto">
-                            <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app" className="flex items-center justify-center">
-                                    <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
-                            </Link>
+                             <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app" className="flex items-center justify-center">
+                                     <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
+                             </Link>
                         </Button>
                     </div>
                 </div>
@@ -181,6 +181,3 @@ export default function LandingPage() {
         </div>
     );
 }
-
-
-    
