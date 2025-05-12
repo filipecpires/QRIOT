@@ -61,12 +61,15 @@ export function PwaInstallPrompt() {
     }
 
     // Cleanup the toast if the component unmounts or dependencies change causing a re-run
+    // This specific toastId is from the closure of this effect run.
+    const currentToastIdForCleanup = toastId;
     return () => {
-      if (toastId) {
-        dismiss(toastId);
+      if (currentToastIdForCleanup) {
+        dismiss(currentToastIdForCleanup);
       }
     };
-  }, [canInstall, isPwaInstalled, triggerInstallPrompt, toast, dismiss, toastId]); // Added toastId to deps
+  }, [canInstall, isPwaInstalled, triggerInstallPrompt, toast, dismiss]); // Removed toastId from dependency array
 
   return null; // This component only manages the toast
 }
+
