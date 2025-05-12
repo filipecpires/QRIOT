@@ -38,7 +38,7 @@ import {
     FileWarning,
     TrendingUp,
     TrendingDown,
-    BarChart as LucideBarChart // Renamed Lucide BarChart
+    BarChart as LucideBarChart
 } from 'lucide-react';
 import { format, subDays, differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -97,13 +97,13 @@ interface LostAsset {
 interface AssetCountByCategory {
     category: string;
     count: number;
-    fill?: string; // Make fill optional, can be derived from config
+    fill?: string;
 }
 
 interface AssetStatusCount {
     status: 'active' | 'lost' | 'inactive';
     count: number;
-    fill?: string; // Make fill optional
+    fill?: string;
 }
 
 // --- Mock Fetch Functions ---
@@ -121,7 +121,7 @@ async function fetchDashboardData(): Promise<{
     inventoryProgress: number;
     lastUpdatedAt: Date;
 }> {
-  await new Promise(resolve => setTimeout(resolve, 1200)); // Simulate delay
+  await new Promise(resolve => setTimeout(resolve, 1200));
 
   const summary: AssetSummary = {
     total: 1234,
@@ -141,7 +141,6 @@ async function fetchDashboardData(): Promise<{
     { locationName: 'Outros Locais', count: 349 },
   ].sort((a, b) => b.count - a.count).slice(0, 5);
 
-   // Assign colors in the fetch or derive later using config
    const byCategory: AssetCountByCategory[] = [
        { category: 'Eletrônicos', count: 600 },
        { category: 'Mobiliário', count: 300 },
@@ -151,9 +150,9 @@ async function fetchDashboardData(): Promise<{
    ].sort((a,b) => b.count - a.count);
 
    const byStatus: AssetStatusCount[] = [
-        { status: 'active', count: summary.active }, // Fill derived from config
-        { status: 'lost', count: summary.lost },   // Fill derived from config
-        { status: 'inactive', count: summary.inactive }, // Fill derived from config
+        { status: 'active', count: summary.active },
+        { status: 'lost', count: summary.lost },
+        { status: 'inactive', count: summary.inactive },
     ];
 
    const assetHistory: AssetTimeSeries[] = Array.from({ length: 30 }).map((_, i) => {
@@ -202,7 +201,6 @@ async function fetchDashboardData(): Promise<{
   };
 }
 
-// Action Descriptions and Icons Helper
 const getActionDetails = (log: RecentActivityLog) => {
     switch (log.action) {
         case 'CREATE': return { icon: PlusCircle, text: `criou ${log.entityType.toLowerCase()} ${log.entityName}`, color: 'text-green-600' };
@@ -214,49 +212,42 @@ const getActionDetails = (log: RecentActivityLog) => {
     }
 };
 
-
-// Chart Configs
 const pastelColors = [
-  'hsl(38, 95%, 80%)', // Pastel Yellow
-  'hsl(160, 70%, 80%)', // Pastel Mint
-  'hsl(210, 100%, 85%)', // Pastel Blue
-  'hsl(300, 80%, 85%)', // Pastel Purple
-  'hsl(0, 80%, 85%)', // Pastel Red/Pink
-  'hsl(25, 85%, 80%)', // Pastel Orange
+  'hsl(38, 95%, 80%)', 
+  'hsl(160, 70%, 80%)',
+  'hsl(210, 100%, 85%)',
+  'hsl(300, 80%, 85%)',
+  'hsl(0, 80%, 85%)',
+  'hsl(25, 85%, 80%)',
 ];
-
 
 const statusChartConfig = {
     count: { label: "Ativos" },
-    active: { label: "Ativos", color: "hsl(140 60% 70%)" }, // Pastel Green
-    lost: { label: "Perdidos", color: "hsl(0 80% 85%)" },   // Pastel Red/Pink
-    inactive: { label: "Inativos", color: "hsl(45 80% 80%)" }, // Pastel Gray/Yellow
+    active: { label: "Ativos", color: "hsl(140 60% 70%)" },
+    lost: { label: "Perdidos", color: "hsl(0 80% 85%)" },
+    inactive: { label: "Inativos", color: "hsl(45 80% 80%)" },
 } satisfies ChartConfig;
 
-// Base config for categories, colors will be added dynamically
 const baseCategoryChartConfig = {
     count: { label: "Ativos" },
-    // Labels will be added dynamically
 } satisfies ChartConfig;
 
-// Pie Chart Active Index State Handler
 const renderActiveShape = (props: any) => {
     const RADIAN = Math.PI / 180;
     const { cx, cy, midAngle, innerRadius, outerRadius, startAngle, endAngle, fill, payload, percent, value } = props;
     const sin = Math.sin(-RADIAN * midAngle);
     const cos = Math.cos(-RADIAN * midAngle);
-    const sx = cx + (outerRadius + 5) * cos; // Adjusted offset
+    const sx = cx + (outerRadius + 5) * cos;
     const sy = cy + (outerRadius + 5) * sin;
-    const mx = cx + (outerRadius + 15) * cos; // Adjusted offset
+    const mx = cx + (outerRadius + 15) * cos;
     const my = cy + (outerRadius + 15) * sin;
-    const ex = mx + (cos >= 0 ? 1 : -1) * 12; // Adjusted length
+    const ex = mx + (cos >= 0 ? 1 : -1) * 12;
     const ey = my;
     const textAnchor = cos >= 0 ? 'start' : 'end';
-    const categoryLabel = payload.category || 'Desconhecido'; // Use payload.category
+    const categoryLabel = payload.category || 'Desconhecido';
 
     return (
       <g>
-        {/* Center text removed for cleaner look */}
         <Sector
           cx={cx}
           cy={cy}
@@ -266,7 +257,6 @@ const renderActiveShape = (props: any) => {
           endAngle={endAngle}
           fill={fill}
         />
-        {/* Outer ring */}
         <Sector
           cx={cx}
           cy={cy}
@@ -276,12 +266,9 @@ const renderActiveShape = (props: any) => {
           outerRadius={outerRadius + 6}
           fill={fill}
         />
-        {/* Connector line and text */}
         <path d={`M${sx},${sy}L${mx},${my}L${ex},${ey}`} stroke={fill} fill="none" />
         <circle cx={ex} cy={ey} r={2} fill={fill} stroke="none" />
-         {/* Display category name and count */}
          <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} textAnchor={textAnchor} fill="hsl(var(--foreground))" className="text-xs font-medium">{categoryLabel}</text>
-        {/* Display percentage below */}
         <text x={ex + (cos >= 0 ? 1 : -1) * 8} y={ey} dy={12} textAnchor={textAnchor} fill="hsl(var(--muted-foreground))" className="text-xs">
           {`${value} (${(percent * 100).toFixed(1)}%)`}
         </text>
@@ -295,9 +282,9 @@ export default function DashboardPage() {
     const [error, setError] = useState<string | null>(null);
     const [data, setData] = useState<Awaited<ReturnType<typeof fetchDashboardData>> | null>(null);
     const [lastUpdatedAt, setLastUpdatedAt] = useState<Date | null>(null);
-    const [pieActiveIndex, setPieActiveIndex] = useState(0); // State for active pie segment
+    const [pieActiveIndex, setPieActiveIndex] = useState(0);
 
-     const loadData = useCallback(async (showLoading = true) => { // Wrap loadData in useCallback
+     const loadData = useCallback(async (showLoading = true) => {
             if (showLoading) setLoading(true);
             setError(null);
             try {
@@ -310,55 +297,47 @@ export default function DashboardPage() {
             } finally {
                  if (showLoading) setLoading(false);
             }
-        }, []); // Empty dependency array means this function is created once
+        }, []); 
 
     useEffect(() => {
         loadData();
-    }, [loadData]); // Add loadData to dependency array
+    }, [loadData]);
 
-    // Effect for relative time update
     useEffect(() => {
         if (!lastUpdatedAt) return;
         const interval = setInterval(() => {
-            // Create a new Date object to trigger state update if needed,
-            // although formatDistanceToNow handles the relative time itself.
             setLastUpdatedAt(new Date(lastUpdatedAt));
-        }, 60000); // Update every minute
+        }, 60000);
         return () => clearInterval(interval);
     }, [lastUpdatedAt]);
 
-    // Memoize chart data and configs to prevent unnecessary recalculations
     const assetHistoryChartData = useMemo(() => data?.assetHistory || [], [data?.assetHistory]);
     const assetHistoryChartConfig = useMemo(() => ({
         count: { label: "Ativos", color: "hsl(var(--primary))" },
     }), []);
 
-    // Memoize category data and dynamic config
     const categoryChartData = useMemo(() => {
         return (data?.byCategory || []).map((cat, index) => ({
             ...cat,
-            fill: cat.fill || pastelColors[index % pastelColors.length], // Assign pastel color if not present
+            fill: cat.fill || pastelColors[index % pastelColors.length],
         }));
     }, [data?.byCategory]);
 
     const dynamicCategoryChartConfig = useMemo(() => {
         const config: ChartConfig = { ...baseCategoryChartConfig };
         categoryChartData.forEach(cat => {
-            // Use the 'category' field from the data as the key
             if (cat.category) {
                  config[cat.category] = { label: cat.category, color: cat.fill };
             }
         });
         return config;
-    }, [categoryChartData]); // Depend on the processed categoryChartData
+    }, [categoryChartData]);
 
 
-    // Memoize status data and use config colors
      const statusChartData = useMemo(() => {
         return (data?.byStatus || []).map(stat => ({
              ...stat,
-             // Get color from the static config, falling back to gray if status not found
-             fill: statusChartConfig[stat.status as keyof typeof statusChartConfig]?.color || 'hsl(0, 0%, 80%)',
+             fill: (statusChartConfig[stat.status as keyof typeof statusChartConfig] as { color: string })?.color || 'hsl(0, 0%, 80%)',
         }));
      }, [data?.byStatus]);
 
@@ -366,7 +345,6 @@ export default function DashboardPage() {
     const assetTrend = useMemo(() => {
         if (!data?.assetHistory || data.assetHistory.length < 2) return 0;
         const currentCount = data.assetHistory[data.assetHistory.length - 1].count;
-        // Find count from ~30 days ago (first element)
         const pastCount = data.assetHistory[0].count;
         return currentCount - pastCount;
     }, [data?.assetHistory]);
@@ -379,9 +357,9 @@ export default function DashboardPage() {
      );
 
 
-    if (loading && !data) { // Show skeleton only on initial load
+    if (loading && !data) {
         return (
-            <div className="space-y-6">
+            <div className="space-y-6 min-w-0">
                  <Skeleton className="h-8 w-32 mb-6" />
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <Skeleton className="h-32" />
@@ -393,12 +371,10 @@ export default function DashboardPage() {
                      <Skeleton className="h-80" />
                      <Skeleton className="h-80" />
                  </div>
-                 <div className="grid gap-6 lg:grid-cols-3">
-                    <Skeleton className="h-[400px]" />
+                 <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
                     <Skeleton className="h-[400px]" />
                     <Skeleton className="h-[400px]" />
                 </div>
-                 {/* Placeholder for the activity row */}
                  <div className="grid gap-6">
                     <Skeleton className="h-[300px]" />
                 </div>
@@ -408,7 +384,7 @@ export default function DashboardPage() {
 
     if (error) {
         return (
-             <div className="flex flex-col items-center justify-center h-64 text-destructive">
+             <div className="flex flex-col items-center justify-center h-64 text-destructive min-w-0">
                 <AlertTriangle className="mr-2 h-6 w-6" />
                 <p>{error}</p>
                 <Button onClick={() => loadData()} variant="outline" className="mt-4">Tentar Novamente</Button>
@@ -417,13 +393,13 @@ export default function DashboardPage() {
     }
 
     if (!data) {
-        return null; // Should not happen if loading/error handled, but good practice
+        return null;
     }
 
     const { summary, recentActivity, expiringRentals, lostAssets, locationCount, userCount, inventoryProgress } = data;
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 min-w-0">
            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                <h1 className="text-3xl font-bold">Dashboard Geral</h1>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -436,7 +412,6 @@ export default function DashboardPage() {
                   </span>
                </div>
            </div>
-          {/* Summary Cards using StatsCard */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
              <StatsCard
                 title="Total de Ativos"
@@ -485,9 +460,7 @@ export default function DashboardPage() {
              />
           </div>
 
-           {/* Charts Section - Row 1 */}
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-                 {/* Asset History */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Histórico de Ativos (Últimos 30 dias)</CardTitle>
@@ -502,7 +475,7 @@ export default function DashboardPage() {
                                     tickLine={false}
                                     axisLine={false}
                                     tickMargin={8}
-                                    tickFormatter={(value) => format(new Date(value + 'T00:00:00'), 'dd/MM')} // Add T00:00:00 for correct timezone handling
+                                    tickFormatter={(value) => format(new Date(value + 'T00:00:00'), 'dd/MM')}
                                 />
                                 <YAxis tickLine={false} axisLine={false} tickMargin={8} width={30} />
                                 <ChartTooltip
@@ -515,7 +488,6 @@ export default function DashboardPage() {
                     </CardContent>
                  </Card>
 
-                 {/* Assets by Status */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Distribuição por Status</CardTitle>
@@ -538,7 +510,7 @@ export default function DashboardPage() {
                                         axisLine={false}
                                         tickMargin={10}
                                         width={60}
-                                        tickFormatter={(value) => statusChartConfig[value as keyof typeof statusChartConfig]?.label || value}
+                                        tickFormatter={(value) => (statusChartConfig[value as keyof typeof statusChartConfig] as { label: string })?.label || value}
                                     />
                                     <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel />} />
                                     <Bar dataKey="count" layout="vertical" radius={4}>
@@ -553,35 +525,31 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-           {/* Charts Section - Row 2 */}
             <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-                {/* Assets by Category */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Ativos por Categoria</CardTitle>
                         <CardDescription>Distribuição dos ativos por categoria principal.</CardDescription>
                     </CardHeader>
                      <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
-                         {/* Ensure config has keys matching the data's 'category' field */}
                           <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                     {/* Use nameKey="category" to match data structure */}
                                      <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="category" />} />
                                      <Pie
                                         data={categoryChartData}
                                         dataKey="count"
-                                        nameKey="category" // Map to the category name in your data
+                                        nameKey="category"
                                         cx="50%"
                                         cy="50%"
-                                        innerRadius={50} // Adjusted for smaller screens
-                                        outerRadius={70} // Adjusted for smaller screens
+                                        innerRadius={50}
+                                        outerRadius={70}
                                         activeIndex={pieActiveIndex}
                                         activeShape={renderActiveShape}
                                         onMouseEnter={onPieEnter}
                                      >
                                         {categoryChartData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.fill} name={entry.category}/> // Add name prop here
+                                            <Cell key={`cell-${index}`} fill={entry.fill} name={entry.category}/>
                                         ))}
                                     </Pie>
                                     <ChartLegend content={<ChartLegendContent nameKey="category" />} />
@@ -591,14 +559,12 @@ export default function DashboardPage() {
                     </CardContent>
                 </Card>
 
-                 {/* Assets by Location (Top 5) */}
                  <Card>
                     <CardHeader>
                         <CardTitle>Ativos por Localização (Top 5)</CardTitle>
                          <CardDescription>Concentração de ativos nos principais locais.</CardDescription>
                     </CardHeader>
                     <CardContent className="aspect-video h-[200px] sm:h-[250px]">
-                         {/* Create a simple config just for the color */}
                           <ChartContainer config={{ count: { label: "Ativos", color: "hsl(var(--primary))" } }} className="w-full h-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <RechartsBarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
@@ -614,9 +580,7 @@ export default function DashboardPage() {
                  </Card>
             </div>
 
-            {/* Rentals & Lost Assets - Row */}
             <div className="grid gap-6 lg:grid-cols-2">
-                 {/* Expiring Rentals */}
                  <Card className="lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-orange-600"><CalendarClock className="h-5 w-5"/> Locações Vencendo</CardTitle>
@@ -627,7 +591,7 @@ export default function DashboardPage() {
                          <div className="space-y-3">
                              {expiringRentals
                                 .sort((a,b) => a.rentalEndDate.getTime() - b.rentalEndDate.getTime())
-                                .slice(0, 5) // Limit to 5 for dashboard view
+                                .slice(0, 5) 
                                 .map(rental => {
                                     const daysLeft = differenceInDays(rental.rentalEndDate, new Date());
                                     const isUrgent = daysLeft <= 7;
@@ -657,15 +621,12 @@ export default function DashboardPage() {
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
                             <Link href="/assets?filter=rented_expiring">
-                                <span className="flex items-center justify-center w-full h-full">
                                 Ver Todas Locações <ArrowRight className="ml-1 h-4 w-4" />
-                                </span>
                             </Link>
                         </Button>
                     </CardFooter>
                 </Card>
 
-                {/* Lost Assets */}
                  <Card className="border-destructive lg:col-span-1 flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2 text-destructive"><FileWarning className="h-5 w-5"/> Ativos Perdidos</CardTitle>
@@ -695,17 +656,14 @@ export default function DashboardPage() {
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
                              <Link href="/assets?filter=lost">
-                                <span className="flex items-center justify-center w-full h-full">
                                 Ver Todos Perdidos <ArrowRight className="ml-1 h-4 w-4" />
-                                </span>
                             </Link>
                         </Button>
                     </CardFooter>
                 </Card>
             </div>
 
-             {/* Recent Activity - Full Width Row */}
-             <div className="grid grid-cols-1 gap-6"> {/* Ensure this is a single column grid cell */}
+             <div className="grid grid-cols-1 gap-6">
                  <Card className="flex flex-col h-full">
                    <CardHeader>
                        <CardTitle className="flex items-center gap-2"><History className="h-5 w-5"/> Atividade Recente</CardTitle>
@@ -718,9 +676,9 @@ export default function DashboardPage() {
                              return (
                                 <div key={log.id} className="flex items-start gap-3 text-sm">
                                      <actionInfo.icon className={`mt-1 h-4 w-4 flex-shrink-0 ${actionInfo.color}`} />
-                                    <div className="flex-1">
+                                    <div className="flex-1 min-w-0"> {/* Added min-w-0 here */}
                                         <span className="font-medium">{log.userName}</span>{' '}
-                                        <span className="text-muted-foreground">{actionInfo.text}</span>
+                                        <span className="text-muted-foreground break-words">{actionInfo.text}</span> {/* Added break-words */}
                                         <p className="text-xs text-muted-foreground" title={format(log.timestamp, "Pp", { locale: ptBR })}>
                                             {formatDistanceToNow(log.timestamp, { addSuffix: true, locale: ptBR })}
                                         </p>
@@ -735,9 +693,7 @@ export default function DashboardPage() {
                     <CardFooter>
                         <Button variant="outline" size="sm" className="w-full" asChild>
                             <Link href="/audit-log">
-                                <span className="flex items-center justify-center w-full h-full">
                                 Ver Log Completo <ArrowRight className="ml-1 h-4 w-4" />
-                                </span>
                             </Link>
                         </Button>
                     </CardFooter>
