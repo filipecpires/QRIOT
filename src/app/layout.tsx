@@ -1,5 +1,5 @@
 
-import type { Metadata } from 'next'; // Removed Viewport import
+import type { Metadata, Viewport } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { cn } from '@/lib/utils';
@@ -24,15 +24,19 @@ export const metadata: Metadata = {
     { name: "Firebase Studio" },
     {
       name: "Firebase Studio",
-      url: "https://firebase.google.com/studio", // Replace with actual URL if available
+      url: "https://firebase.google.com/studio", 
     },
   ],
-   // Removed PWA specific keys like manifest, generator, themeColor etc.
-   // openGraph: { ... }, // Keep OpenGraph tags if needed
-   // icons: { ... }, // Keep icon tags if needed (favicon, apple-touch-icon)
+  manifest: "/manifest.json", // Added manifest link
 };
 
-// Removed Viewport Configuration as PWA functionality was removed.
+export const viewport: Viewport = {
+  themeColor: "#003049", // Added theme color matching primary color
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1, // Optional: restrict zoom for a more app-like feel
+  userScalable: false, // Optional: restrict zoom
+};
 
 
 export default function RootLayout({
@@ -42,7 +46,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-       {/* Removed manifest link */}
+      <head>
+        {/* Meta tag for theme color is handled by viewport export now */}
+      </head>
       <body className={cn(geistSans.variable, geistMono.variable, 'antialiased')}>
         {children}
         <Toaster />
