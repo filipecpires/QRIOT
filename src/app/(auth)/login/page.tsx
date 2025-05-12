@@ -7,12 +7,11 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { QrCode, LogIn, Loader2, Mail, KeyRound, UserCheck, Info } from 'lucide-react';
+import { QrCode, LogIn, Loader2, Mail, KeyRound, UserCheck, Info, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -28,7 +27,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null); // State for login errors
+  const [error, setError] = useState<string | null>(null); 
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -40,7 +39,7 @@ export default function LoginPage() {
 
   async function onSubmit(data: LoginFormData) {
     setIsLoading(true);
-    setError(null); // Clear previous errors
+    setError(null); 
     console.log('Login attempt:', data);
 
     // --- TODO: Implement Firebase Authentication ---
@@ -48,7 +47,7 @@ export default function LoginPage() {
     //   const userCredential = await signInWithEmailAndPassword(auth, data.email, data.password);
     //   console.log('Login successful:', userCredential.user);
     //   toast({ title: 'Login realizado com sucesso!' });
-    //   router.push('/dashboard'); // Redirect to dashboard after successful login
+    //   router.push('/my-dashboard'); // Redirect to user's specific dashboard
     // } catch (error: any) {
     //   console.error('Login failed:', error);
     //   let errorMessage = 'Falha no login. Verifique suas credenciais.';
@@ -72,19 +71,19 @@ export default function LoginPage() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     if (data.email === 'demo@qriot.app' && data.password === 'demopass') {
         toast({ title: 'Login realizado com sucesso! (Demo)' });
-        router.push('/dashboard');
+        router.push('/my-dashboard'); // Redirect to the user's dashboard
     } else if (data.email.includes('fail')) {
          setError('Email ou senha inválidos.');
          toast({ title: 'Erro no Login', description: 'Email ou senha inválidos.', variant: 'destructive'});
     } else {
+        // For any other login, simulate success and redirect to a general dashboard
         toast({ title: 'Login realizado com sucesso!' });
-        router.push('/dashboard'); // Simulate success for other emails for now
+        router.push('/dashboard'); 
     }
     setIsLoading(false);
   }
 
    const handleDemoLogin = async () => {
-        // Directly call onSubmit with demo credentials
         await onSubmit({ email: 'demo@qriot.app', password: 'demopass' });
     };
 
@@ -131,7 +130,7 @@ export default function LoginPage() {
                 <FormItem>
                   <div className="flex items-center justify-between">
                       <FormLabel>Senha</FormLabel>
-                      <Link href="/forgot-password" // TODO: Create forgot password page
+                      <Link href="/forgot-password" 
                          className="text-xs text-muted-foreground hover:text-primary underline">
                         Esqueceu a senha?
                       </Link>
@@ -159,13 +158,13 @@ export default function LoginPage() {
                 </>
               )}
             </Button>
-             <Button type="button" variant="secondary" className="w-full" onClick={handleDemoLogin} disabled={isLoading}>
-                <UserCheck className="mr-2 h-4 w-4" /> Acessar com Conta Demo
+             <Button type="button" variant="outline" className="w-full border-primary text-primary hover:bg-primary/5" onClick={handleDemoLogin} disabled={isLoading}>
+                <UserCheck className="mr-2 h-4 w-4" /> Acessar Conta Demo
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               Não tem uma conta?{' '}
               <Link href="/register" className="font-medium text-primary hover:underline">
-                Registre-se gratuitamente
+                Crie sua Conta Gratuita
               </Link>
             </p>
           </CardFooter>

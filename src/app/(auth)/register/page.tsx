@@ -12,7 +12,6 @@ import { QrCode, UserPlus, Loader2, Mail, KeyRound, User, Info } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -24,7 +23,7 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem.',
-  path: ['confirmPassword'], // Attach error to confirmPassword field
+  path: ['confirmPassword'], 
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -65,7 +64,7 @@ export default function RegisterPage() {
     //   await setDoc(companyRef, {
     //       name: `${data.name}'s Company`, // Or prompt for company name later
     //       ownerId: user.uid,
-    //       planName: 'Gratuito',
+    //       planName: 'Gratuito', // Free plan on registration
     //       assetLimit: 5, // Free tier limit
     //       status: 'active',
     //       createdAt: serverTimestamp(),
@@ -84,7 +83,7 @@ export default function RegisterPage() {
     //  });
     //
     //   toast({ title: 'Registro realizado com sucesso!' });
-    //   router.push('/dashboard'); // Redirect to dashboard after successful registration
+    //   router.push('/my-dashboard'); // Redirect to user's dashboard after successful registration
     //
     // } catch (error: any) {
     //   console.error('Registration failed:', error);
@@ -112,7 +111,7 @@ export default function RegisterPage() {
          toast({ title: 'Erro no Registro', description: 'Este email já está em uso.', variant: 'destructive'});
      } else {
          toast({ title: 'Registro realizado com sucesso! (Simulado)' });
-         router.push('/dashboard'); // Simulate success
+         router.push('/my-dashboard'); // Simulate success and redirect to user's dashboard
      }
     setIsLoading(false);
   }
@@ -125,7 +124,7 @@ export default function RegisterPage() {
           QRIoT.app
         </Link>
         <CardTitle className="text-2xl">Criar Conta Gratuita</CardTitle>
-        <CardDescription>Comece a gerenciar até 5 ativos gratuitamente.</CardDescription>
+        <CardDescription>Gerencie até 5 ativos sem custo. Perfeito para começar!</CardDescription>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -179,7 +178,7 @@ export default function RegisterPage() {
                     <div className="relative">
                         <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <FormControl>
-                            <Input type="password" placeholder="********" className="pl-10" {...field} />
+                            <Input type="password" placeholder="Mínimo 8 caracteres" className="pl-10" {...field} />
                         </FormControl>
                     </div>
                     <FormMessage />
@@ -195,7 +194,7 @@ export default function RegisterPage() {
                      <div className="relative">
                         <KeyRound className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <FormControl>
-                            <Input type="password" placeholder="********" className="pl-10" {...field} />
+                            <Input type="password" placeholder="Repita a senha" className="pl-10" {...field} />
                         </FormControl>
                     </div>
                     <FormMessage />
@@ -203,6 +202,9 @@ export default function RegisterPage() {
                 )}
                 />
              </div>
+             <p className="text-xs text-muted-foreground px-1">
+                Ao se registrar, você concorda com nossos <Link href="/terms" className="underline hover:text-primary">Termos de Uso</Link> e <Link href="/privacy" className="underline hover:text-primary">Política de Privacidade</Link>.
+            </p>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={isLoading}>
@@ -212,7 +214,7 @@ export default function RegisterPage() {
                 </>
               ) : (
                 <>
-                  <UserPlus className="mr-2 h-4 w-4" /> Criar Conta
+                  <UserPlus className="mr-2 h-4 w-4" /> Criar Conta Gratuita
                 </>
               )}
             </Button>
