@@ -4,7 +4,8 @@ import { Geist } from 'next/font/google'; // Using Geist directly
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
-import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Import PWA Install Prompt
+import { PwaInstallProvider } from '@/contexts/PwaInstallContext'; // Import the provider
+import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Import PWA Install Prompt (toast version)
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -25,28 +26,23 @@ export const metadata: Metadata = {
       url: "https://firebase.google.com/studio", 
     },
   ],
-  manifest: "/manifest.json", // Ensure your manifest.json is in public folder
-  appleWebApp: { // iOS specific PWA settings
+  manifest: "/manifest.json", 
+  appleWebApp: { 
     capable: true,
-    statusBarStyle: "default", // or "black-translucent"
+    statusBarStyle: "default", 
     title: "QRIoT.app",
   },
   formatDetection: {
     telephone: false,
   },
-  // icons: [ // Example of specifying multiple icons for PWA
-  //   { rel: "apple-touch-icon", sizes: "180x180", url: "/icons/apple-touch-icon.png" },
-  //   { rel: "icon", type: "image/png", sizes: "32x32", url: "/icons/favicon-32x32.png" },
-  //   { rel: "icon", type: "image/png", sizes: "16x16", url: "/icons/favicon-16x16.png" },
-  // ],
 };
 
 export const viewport: Viewport = {
-  themeColor: "#003049", // Matches globals.css --primary (Dark Blue)
+  themeColor: "#003049", 
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Changed from 1 to allow some zoom if necessary, though PWA usually locks this.
-  userScalable: false, // Changed from false, generally good for accessibility to allow zoom.
+  maximumScale: 1, 
+  userScalable: false, 
 };
 
 
@@ -58,12 +54,13 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <head>
-        {/* Meta tags related to PWA are handled by next.config.ts and metadata object */}
       </head>
       <body className={cn(geistSans.variable, 'antialiased')}>
-        {children}
-        <Toaster />
-        <PwaInstallPrompt /> {/* Add PWA Install Prompt globally */}
+        <PwaInstallProvider>
+          {children}
+          <Toaster />
+          <PwaInstallPrompt /> {/* This will now trigger the initial install toast */}
+        </PwaInstallProvider>
       </body>
     </html>
   );

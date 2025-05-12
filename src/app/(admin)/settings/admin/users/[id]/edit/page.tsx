@@ -29,7 +29,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; // Import the PWA install button
+// PwaInstallPromptButton removed from here
 
 // Schema for editing - password becomes optional
 const userEditSchema = z.object({
@@ -477,7 +477,7 @@ export default function AdminEditUserPage() {
                     >
                     <KeyRound className="mr-2 h-4 w-4" /> Redefinir Senha por Email
                     </Button>
-                    <PwaInstallPromptButton />
+                    {/* PwaInstallPromptButton removed from here, moved to AdminLayout */}
                  </div>
 
             </CardContent>
@@ -530,4 +530,3 @@ export default function AdminEditUserPage() {
     </div>
   );
 }
-

@@ -1,136 +1,65 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Download, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { usePwaInstall } from '@/contexts/PwaInstallContext';
 import { useToast } from '@/hooks/use-toast';
-
-interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: Array<string>;
-  readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
-    platform: string;
-  }>;
-  prompt(): Promise<void>;
-}
+import { Button } from '@/components/ui/button';
+import { Download, X } from 'lucide-react';
 
 export function PwaInstallPrompt() {
-  const [installPromptEvent, setInstallPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
-  const [showInstallBanner, setShowInstallBanner] = useState(false);
-  const [isPwaInstalled, setIsPwaInstalled] = useState(false);
-  const { toast } = useToast();
+  const { canInstall, isPwaInstalled, triggerInstallPrompt } = usePwaInstall();
+  const { toast, dismiss } = useToast();
+  const [toastShownThisSession, setToastShownThisSession] = useState(false);
 
   useEffect(() => {
-    const handleBeforeInstallPrompt = (event: Event) => {
-      event.preventDefault(); // Prevent the mini-infobar from appearing on mobile
-      const typedEvent = event as BeforeInstallPromptEvent;
-      
-      // Check if already installed (PWA mode)
-      if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('App is already installed as PWA.');
-        setIsPwaInstalled(true);
-        setShowInstallBanner(false);
-      } else {
-        setInstallPromptEvent(typedEvent);
-        setShowInstallBanner(true);
-        console.log('PWA installation available.');
-      }
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    const handleAppInstalled = () => {
-      console.log('PWA has been installed');
-      setIsPwaInstalled(true);
-      setShowInstallBanner(false);
-      setInstallPromptEvent(null); // Clear the event
-    };
-
-    window.addEventListener('appinstalled', handleAppInstalled);
-    
-    // Initial check for PWA installed status
-     if (typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches) {
-        setIsPwaInstalled(true);
-        setShowInstallBanner(false);
-     }
-
-
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
+    // Check if a toast has already been shown this session from sessionStorage
+    const sessionToastShown = sessionStorage.getItem('pwaInstallToastShown');
+    if (sessionToastShown === 'true') {
+      setToastShownThisSession(true);
+    }
   }, []);
 
-  const handleInstallClick = async () => {
-    if (!installPromptEvent) {
-      toast({
-        title: 'Instalação não disponível',
-        description: 'O prompt de instalação não está pronto ou já foi usado.',
-        variant: 'destructive',
+  useEffect(() => {
+    if (canInstall && !isPwaInstalled && !toastShownThisSession) {
+      const { id } = toast({
+        title: 'Instalar QRIoT.app',
+        description: 'Adicione nosso app à sua tela inicial para uma melhor experiência!',
+        duration: Infinity, // Keep toast until action or dismissed
+        action: (
+          <div className="flex flex-col gap-2 items-stretch w-full">
+            <Button
+              size="sm"
+              onClick={async () => {
+                await triggerInstallPrompt();
+                dismiss(id);
+                setToastShownThisSession(true);
+                sessionStorage.setItem('pwaInstallToastShown', 'true');
+              }}
+              className="bg-accent text-accent-foreground hover:bg-accent/90 w-full"
+            >
+              <Download className="mr-2 h-4 w-4" /> Instalar
+            </Button>
+             <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                    dismiss(id);
+                    setToastShownThisSession(true); // Dismiss for this session
+                    sessionStorage.setItem('pwaInstallToastShown', 'true');
+                }}
+                className="text-xs w-full"
+            >
+                Agora Não
+            </Button>
+          </div>
+        ),
       });
-      return;
+      // Mark as shown for this session to prevent re-triggering on navigation
+      // setToastShownThisSession(true); // This is handled by the dismiss actions
     }
+  }, [canInstall, isPwaInstalled, triggerInstallPrompt, toast, dismiss, toastShownThisSession]);
 
-    try {
-      await installPromptEvent.prompt(); // Show the browser's install dialog
-      const { outcome } = await installPromptEvent.userChoice;
-      if (outcome === 'accepted') {
-        toast({
-          title: 'App Instalado!',
-          description: 'QRIoT.app foi adicionado à sua tela inicial.',
-        });
-        setShowInstallBanner(false); // Hide banner after accepted prompt
-        setIsPwaInstalled(true);
-      } else {
-        toast({
-          title: 'Instalação Cancelada',
-          description: 'Você pode instalar o app mais tarde pelo menu do navegador.',
-        });
-        // Don't hide banner if dismissed, user might change their mind,
-        // but browser might not show prompt again soon.
-      }
-    } catch (error) {
-      console.error('Error during PWA install prompt:', error);
-      toast({
-        title: 'Erro na Instalação',
-        description: 'Não foi possível iniciar a instalação do app.',
-        variant: 'destructive',
-      });
-    }
-    // The prompt can only be used once.
-    setInstallPromptEvent(null);
-  };
-
-  if (isPwaInstalled || !showInstallBanner || !installPromptEvent) {
-    return null;
-  }
-
-  return (
-    <Alert className="fixed bottom-4 right-4 z-50 max-w-md shadow-lg bg-primary text-primary-foreground border-accent">
-      <Download className="h-4 w-4 text-accent-foreground" />
-      <AlertTitle className="font-semibold">Instalar QRIoT.app</AlertTitle>
-      <AlertDescription className="text-sm text-primary-foreground/90">
-        Adicione nosso app à sua tela inicial para acesso rápido e offline!
-      </AlertDescription>
-      <div className="mt-3 flex gap-2">
-        <Button
-          onClick={handleInstallClick}
-          size="sm"
-          className="bg-accent text-accent-foreground hover:bg-accent/90"
-        >
-          <Download className="mr-2 h-4 w-4" /> Instalar Agora
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowInstallBanner(false)}
-          className="text-primary-foreground/70 hover:text-primary-foreground hover:bg-primary/80"
-        >
-          <X className="mr-1 h-4 w-4" /> Dispensar
-        </Button>
-      </div>
-    </Alert>
-  );
+  // This component no longer renders UI itself, it just triggers a toast.
+  return null;
 }

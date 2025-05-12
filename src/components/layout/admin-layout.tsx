@@ -1,5 +1,5 @@
 
-'use client'; // Sidebar needs client-side hooks for interactivity and state
+'use client'; 
 
 import type { ReactNode } from 'react';
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-// import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Removed, moved to RootLayout
+import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -57,7 +57,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
                     </Link>
                 </SidebarHeader>
-                <SidebarContent className="p-0"> {/* Remove padding from content if items handle it */}
+                <SidebarContent className="p-0"> 
                     <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1">
                         {/* Dashboard */}
                         <SidebarMenuItem>
@@ -81,7 +81,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         <SidebarMenuItem>
                              <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                 <Link href="/assets">
-                                    <QrCode />
+                                    <Briefcase /> 
                                     <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
                                 </Link>
                             </SidebarMenuButton>
@@ -209,11 +209,16 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 {userRole === 'Administrador' && (
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings/admin">
-                                            <Briefcase className="mr-2 h-4 w-4" />
+                                            <ShieldCheck className="mr-2 h-4 w-4" />
                                             <span>Administração</span>
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem asChild>
+                                    {/* PWA Install Button */}
+                                    <PwaInstallPromptButton />
+                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
                                     <Link href="/logout">
@@ -225,9 +230,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                {/* The actual page content rendered here */}
-                 <main className="flex-1 p-1 xs:p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto relative"> {/* Added relative for potential absolutely positioned children like PWA prompt */}
-                    {/* <PwaInstallPrompt /> Removed from here, moved to RootLayout */}
+                 <main className="flex-1 p-1 xs:p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> 
                     {children}
                 </main>
             </SidebarInset>
@@ -243,4 +246,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
