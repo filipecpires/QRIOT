@@ -11,17 +11,22 @@ export function PwaInstallPromptButton() {
   const { toast } = useToast();
 
   const handleInstallClick = async () => {
-    if (!canInstall || isPwaInstalled) {
-      // This case should ideally be handled by disabling the button,
-      // but good to have a fallback toast.
+    if (isPwaInstalled) {
       toast({
-        title: 'Instalação Indisponível',
-        description: isPwaInstalled ? 'O app já está instalado.' : 'O navegador não ofereceu a opção de instalação no momento.',
+        title: 'App Já Instalado',
+        description: 'O QRIoT.app já está instalado no seu dispositivo.',
         variant: 'default',
       });
       return;
     }
-    // triggerInstallPrompt already handles toasts for success/dismissal
+    if (!canInstall) {
+      toast({
+        title: 'Instalação Indisponível',
+        description: 'O navegador não ofereceu a opção de instalação no momento. Verifique se os critérios de PWA são atendidos ou tente mais tarde.',
+        variant: 'default',
+      });
+      return;
+    }
     await triggerInstallPrompt();
   };
 
@@ -37,11 +42,12 @@ export function PwaInstallPromptButton() {
     <Button 
       onClick={handleInstallClick} 
       variant="outline" 
-      disabled={!canInstall}
+      disabled={!canInstall && !isPwaInstalled} // Disable if not installable AND not already installed
       className="w-full justify-start text-left"
-      title={!canInstall ? "Opção de instalação não disponível no momento." : "Instalar QRIoT.app"}
+      title={!canInstall && !isPwaInstalled ? "Opção de instalação não disponível no momento. Verifique o console para mais detalhes." : "Instalar QRIoT.app"}
     >
       <Download className="mr-2 h-4 w-4" /> {canInstall ? 'Instalar App' : 'Instalar App (Indisponível)'}
     </Button>
   );
 }
+
