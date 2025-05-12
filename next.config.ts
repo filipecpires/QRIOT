@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 import withPWAInit from "@ducanh2912/next-pwa";
 
@@ -5,11 +6,16 @@ const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
-  // disable: process.env.NODE_ENV === "development", // Consider enabling this to disable PWA in development
+  disable: process.env.NODE_ENV === "development", // Disable PWA in development
   sw: "sw.js",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
   reloadOnOnline: true,
+  // fallbacks: { // Example fallbacks for offline
+  //   document: '/_offline', // You'll need to create this page
+  //   // image: '/static/images/fallback.png',
+  //   // font: '/static/fonts/fallback.woff2',
+  // },
 });
 
 const nextConfig: NextConfig = {
@@ -30,7 +36,6 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Add security headers, especially important for public pages
   async headers() {
     return [
       {
@@ -42,8 +47,6 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            // Updated CSP: added 'unsafe-eval' for dev service worker, and service-worker-src 'self' (though next-pwa might add this too)
-            // For production, review if 'unsafe-eval' is truly needed by the SW or can be replaced by 'wasm-unsafe-eval' if applicable.
             value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self'; connect-src 'self'; service-worker-src 'self';",
           },
           {
@@ -56,17 +59,16 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Permissions-Policy',
-            value: "camera=(), microphone=(), geolocation=()", // Adjust permissions as needed
+            value: "camera=(), microphone=(), geolocation=()", 
           },
         ],
       },
-       // Stricter policy specifically for public asset pages if needed
       {
         source: '/public/asset/:tag*',
          headers: [
            {
              key: 'Content-Security-Policy',
-             value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self';", // More restrictive for public pages
+             value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self';", 
            },
          ],
       }
