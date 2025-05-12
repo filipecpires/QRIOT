@@ -41,8 +41,7 @@ export const viewport: Viewport = {
   themeColor: "#003049", 
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, 
-  userScalable: false, 
+  // Removed maximumScale and userScalable to allow user zooming for accessibility
 };
 
 
