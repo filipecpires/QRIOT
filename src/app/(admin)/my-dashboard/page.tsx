@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation'; // Ensure useRouter is imported
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -86,20 +87,7 @@ async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
 async function reportAssetLost(assetId: string, assetName: string): Promise<{ success: boolean }> {
     console.log(`Reporting asset ${assetName} (ID: ${assetId}) as lost.`);
     await new Promise(resolve => setTimeout(resolve, 700));
-    return { success: true };
-}
-
-async function requestMaintenance(assetId: string, assetName: string): Promise<{ success: boolean }> {
-    console.log(`Requesting maintenance for asset ${assetName} (ID: ${assetId}).`);
-    // This would likely navigate to a new work order page or open a modal
-    await new Promise(resolve => setTimeout(resolve, 700));
-    return { success: true };
-}
-
-async function performInventoryAction(assetId: string, assetName: string): Promise<{ success: boolean }> {
-    console.log(`Performing inventory for asset ${assetName} (ID: ${assetId}).`);
-    // This would likely open a scan interface or confirm inventory date
-    await new Promise(resolve => setTimeout(resolve, 700));
+    // In a real app, update asset status in Firestore
     return { success: true };
 }
 
@@ -145,8 +133,10 @@ export default function MyDashboardPage() {
 
   const confirmReportLost = async () => {
     if (!assetToAction) return;
-    const { success } = await reportAssetLost(assetToAction.id, assetToAction.name);
-    if (success) {
+    // Simulate API call
+    const result = await reportAssetLost(assetToAction.id, assetToAction.name);
+    if (result.success) {
+      // Update local state
       setMyAssets(prev => prev.map(a => a.id === assetToAction.id ? { ...a, status: 'lost' } : a));
       toast({ title: "Ativo Reportado", description: `${assetToAction.name} foi marcado como perdido.` });
     } else {
@@ -157,26 +147,26 @@ export default function MyDashboardPage() {
   };
 
   const handleRequestMaintenance = (asset: AssetForMyDashboard) => {
-    // For now, just a toast. Ideally, navigate to a new Work Order page pre-filled.
-    router.push('/maintenance/work-orders/new'); // Example navigation
+    // Navigate to new Work Order page, pre-filling assetId if possible (query param or state management)
+    router.push(`/maintenance/work-orders/new?assetId=${asset.id}&assetName=${encodeURIComponent(asset.name)}`);
     toast({ title: "Solicitar Manutenção", description: `Redirecionando para criar OS para ${asset.name}...` });
   };
   
   const handlePerformInventory = (asset: AssetForMyDashboard) => {
-    // For now, just a toast. Ideally, open scanner or modal.
-    router.push('/inventory/scan'); // Example navigation
-    toast({ title: "Inventariar Ativo", description: `Iniciando inventário para ${asset.name}...` });
+    // Navigate to inventory scan page, potentially pre-selecting or focusing on this asset if scan page supports it
+    router.push('/inventory/scan'); // Could pass asset.tag as query param if scan page can use it
+    toast({ title: "Inventariar Ativo", description: `Redirecionando para inventário. Escaneie ${asset.name}...` });
   };
 
   const handleChangeLocation = (asset: AssetForMyDashboard) => {
-    // For now, just a toast. Ideally, navigate to edit page or modal.
-    router.push(`/assets/${asset.id}/edit`); // Example navigation to asset edit page
+    // Navigate to asset edit page to change location or other details
+    router.push(`/assets/${asset.id}/edit`); 
     toast({ title: "Alterar Local", description: `Redirecionando para editar local de ${asset.name}...` });
   };
   
   const handleTransferResponsibility = (asset: AssetForMyDashboard) => {
-    // This is a complex feature. Placeholder toast for now.
-    toast({ title: "Transferir Ativo", description: `Funcionalidade de transferência para ${asset.name} pendente.` });
+    router.push(`/my-dashboard/transfer/${asset.id}`);
+    // Toast can be shown on the transfer page upon successful initiation
   };
 
   const getStatusBadge = (status: AssetForMyDashboard['status']) => {
