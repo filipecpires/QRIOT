@@ -1,9 +1,8 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // Added useSearchParams
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -75,6 +74,7 @@ async function fetchUsersForSelect(): Promise<SimpleUser[]> {
 
 export default function NewWorkOrderPage() {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Get query parameters
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [assets, setAssets] = useState<SimpleAsset[]>([]);
@@ -83,34 +83,6 @@ export default function NewWorkOrderPage() {
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [assetSearchTerm, setAssetSearchTerm] = useState('');
 
-   // Fetch assets and users
-   useEffect(() => {
-        const loadData = async () => {
-            setIsLoadingAssets(true);
-            setIsLoadingUsers(true);
-            try {
-                const [fetchedAssets, fetchedUsers] = await Promise.all([
-                    fetchAssetsForSelect(),
-                    fetchUsersForSelect()
-                ]);
-                setAssets(fetchedAssets);
-                setUsers(fetchedUsers);
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                toast({ title: "Erro", description: "Não foi possível carregar ativos ou usuários.", variant: "destructive" });
-            } finally {
-                 setIsLoadingAssets(false);
-                 setIsLoadingUsers(false);
-            }
-        };
-        loadData();
-    }, [toast]);
-
-    // Filter assets based on search term
-    const filteredAssets = assets.filter(asset =>
-        asset.name.toLowerCase().includes(assetSearchTerm.toLowerCase()) ||
-        asset.tag.toLowerCase().includes(assetSearchTerm.toLowerCase())
-    );
 
   const form = useForm<WorkOrderFormData>({
     resolver: zodResolver(workOrderSchema),
@@ -123,6 +95,55 @@ export default function NewWorkOrderPage() {
       dueDate: undefined,
     },
   });
+
+   // Fetch assets and users & pre-fill from query params
+   useEffect(() => {
+        const loadData = async () => {
+            setIsLoadingAssets(true);
+            setIsLoadingUsers(true);
+            try {
+                const [fetchedAssets, fetchedUsers] = await Promise.all([
+                    fetchAssetsForSelect(),
+                    fetchUsersForSelect()
+                ]);
+                setAssets(fetchedAssets);
+                setUsers(fetchedUsers);
+
+                // Check for query params to pre-fill asset
+                const queryAssetId = searchParams.get('assetId');
+                const queryAssetName = searchParams.get('assetName');
+
+                if (queryAssetId) {
+                    const assetExists = fetchedAssets.some(a => a.id === queryAssetId);
+                    if (assetExists) {
+                        form.setValue('assetId', queryAssetId);
+                        // Optionally set assetSearchTerm if you want the dropdown to show the pre-selected asset filtered
+                        // This depends on how the Select component handles default value vs search term for initial display
+                        if (queryAssetName) {
+                             setAssetSearchTerm(queryAssetName); // This might help show it in the search
+                        }
+                    } else {
+                        toast({ title: "Ativo Não Encontrado", description: `O ativo com ID ${queryAssetId} não foi encontrado na lista.`, variant: "destructive" });
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+                toast({ title: "Erro", description: "Não foi possível carregar ativos ou usuários.", variant: "destructive" });
+            } finally {
+                 setIsLoadingAssets(false);
+                 setIsLoadingUsers(false);
+            }
+        };
+        loadData();
+    }, [toast, searchParams, form]); // Add searchParams and form to dependency array
+
+    // Filter assets based on search term
+    const filteredAssets = assets.filter(asset =>
+        asset.name.toLowerCase().includes(assetSearchTerm.toLowerCase()) ||
+        asset.tag.toLowerCase().includes(assetSearchTerm.toLowerCase())
+    );
+
 
   async function onSubmit(data: WorkOrderFormData) {
     setIsLoading(true);
@@ -166,6 +187,8 @@ export default function NewWorkOrderPage() {
     // }
      // --- REMOVE THIS BLOCK AFTER API IMPLEMENTATION ---
        setIsLoading(false);
+        // Simulate successful save and redirect:
+       // router.push('/maintenance/work-orders');
     // --- END REMOVE BLOCK ---
   }
 
@@ -193,7 +216,7 @@ export default function NewWorkOrderPage() {
                     <FormLabel>Ativo</FormLabel>
                     <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value} // Use field.value for controlled component
                         disabled={isLoadingAssets}
                     >
                         <FormControl>
@@ -241,7 +264,7 @@ export default function NewWorkOrderPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Tipo de Manutenção</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione o tipo" />
@@ -262,7 +285,7 @@ export default function NewWorkOrderPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Prioridade</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Selecione a prioridade" />
