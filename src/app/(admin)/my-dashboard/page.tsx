@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -51,51 +52,14 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-
-// --- Mock Data Structures ---
-interface AssetForMyDashboard {
-  id: string;
-  name: string;
-  tag: string;
-  status: 'active' | 'lost' | 'inactive' | 'maintenance'; // Added maintenance status
-  locationName: string;
-  category: string;
-}
-
-interface TransferRequest {
-  id: string; // Transfer request ID
-  assetId: string;
-  assetName: string;
-  assetTag: string;
-  fromUserId: string;
-  fromUserName: string;
-  toUserId: string; // Logged-in user
-  requestDate: Date;
-  status: 'pending' | 'accepted' | 'rejected';
-  processedDate?: Date;
-}
-
-
-// Mock Logged-in User ID (replace with actual auth context)
-const MOCK_LOGGED_IN_USER_ID = 'user1'; // João Silva
-const MOCK_LOGGED_IN_USER_NAME = 'João Silva';
-
-
-// Mock All Assets (same as in assets/page.tsx for consistency, with responsibleUserId)
-let allAssetsMockData = [
-  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'AB12C', location: 'Escritório 1', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'active', ownership: 'own' },
-  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'DE34F', location: 'Escritório 2', responsibleUserId: 'user2', status: 'active', ownership: 'own' },
-  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'GH56I', location: 'Sala de Reuniões', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'lost', ownership: 'rented' },
-  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'JK78L', location: 'Sala de Treinamento', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'maintenance', ownership: 'own' },
-  { id: 'ASSET005', name: 'Teclado Gamer RGB', category: 'Eletrônicos', tag: 'MN90P', location: 'Escritório 1', responsibleUserId: 'user2', status: 'inactive', ownership: 'own' },
-  { id: 'ASSET006', name: 'Impressora Multifuncional HP', category: 'Eletrônicos', tag: 'QR12S', location: 'Recepção', responsibleUserId: 'user3', status: 'active', ownership: 'own' },
-];
-
-let mockTransferRequests: TransferRequest[] = [
-    { id: 'transfer1', assetId: 'ASSET002', assetName: 'Monitor LG 27"', assetTag: 'DE34F', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: 'pending' },
-    { id: 'transfer2', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB', assetTag: 'MN90P', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: 'pending' },
-    { id: 'transfer3', assetId: 'ASSET006', assetName: 'Impressora Multifuncional HP', assetTag: 'QR12S', fromUserId: 'user3', fromUserName: 'Carlos Pereira', toUserId: MOCK_LOGGED_IN_USER_ID, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 23 * 60 * 60 * 1000) },
-];
+import {
+  allAssetsMockData,
+  mockTransferRequests,
+  MOCK_LOGGED_IN_USER_ID,
+  MOCK_LOGGED_IN_USER_NAME,
+  type AssetForMyDashboard,
+  type TransferRequest
+} from '@/lib/mock-data';
 
 
 // --- Mock Fetch Functions ---
@@ -103,19 +67,20 @@ async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return allAssetsMockData
     .filter(asset => asset.responsibleUserId === userId)
-    .map(asset => ({
+    .map(asset => ({ // Ensure mapping matches the AssetForMyDashboard structure
       id: asset.id,
       name: asset.name,
       tag: asset.tag,
-      status: asset.status as AssetForMyDashboard['status'], // Cast status
-      locationName: asset.location,
+      status: asset.status as AssetForMyDashboard['status'],
+      locationName: asset.locationName, // Assuming locationName is directly available
       category: asset.category,
+      responsibleUserId: asset.responsibleUserId,
+      ownership: asset.ownership,
     }));
 }
 
 async function fetchTransferRequestsForUser(userId: string): Promise<TransferRequest[]> {
     await new Promise(resolve => setTimeout(resolve, 800));
-    // Return all transfers involving the user, both incoming and outgoing pending
     return mockTransferRequests.filter(req => 
         (req.toUserId === userId && req.status === 'pending') || 
         (req.fromUserId === userId && req.status === 'pending')
@@ -312,7 +277,7 @@ export default function MyDashboardPage() {
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground mb-0.5">
                                         <UserIcon className="h-3 w-3"/>
-                                        <span>{isIncoming ? `De: ${transfer.fromUserName}` : `Para: ${transfer.toUserId === 'user2' ? 'Maria Oliveira' : transfer.toUserId}`}</span>
+                                        <span>{isIncoming ? `De: ${transfer.fromUserName}` : `Para: ${transfer.toUserName || transfer.toUserId}`}</span>
                                     </div>
                                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                         <CalendarDays className="h-3 w-3"/>

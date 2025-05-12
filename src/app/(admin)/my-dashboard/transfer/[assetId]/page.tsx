@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -15,6 +16,16 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { 
+    allAssetsMockData, 
+    mockTransferRequests, 
+    mockUsersForSelect, 
+    MOCK_LOGGED_IN_USER_ID,
+    MOCK_LOGGED_IN_USER_NAME,
+    type AssetForMyDashboard as AssetDetails, // Re-alias for clarity in this context
+    type UserForSelect,
+    type TransferRequest
+} from '@/lib/mock-data';
 
 // Schema for transfer request
 const transferSchema = z.object({
@@ -23,54 +34,68 @@ const transferSchema = z.object({
 
 type TransferFormData = z.infer<typeof transferSchema>;
 
-interface AssetDetails {
-  id: string;
-  name: string;
-  tag: string;
-}
 
-interface UserForSelect {
-  id: string;
-  name: string;
-}
-
-// Mock function to fetch asset details by ID (replace with actual API call)
+// Mock function to fetch asset details by ID
 async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetails | null> {
   console.log(`Fetching asset details for transfer: ${assetId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
-  const mockAssets: AssetDetails[] = [
-    { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', tag: 'AB12C' },
-    { id: 'ASSET003', name: 'Cadeira de Escritório', tag: 'GH56I' },
-    { id: 'ASSET004', name: 'Projetor Epson PowerLite', tag: 'JK78L' },
-  ];
-  return mockAssets.find(asset => asset.id === assetId) || null;
+  // Find from the shared mock data
+  const asset = allAssetsMockData.find(a => a.id === assetId);
+  if (asset) {
+    // Map to the simplified AssetDetails structure if needed, or ensure AssetForMyDashboard is sufficient
+    return {
+        id: asset.id,
+        name: asset.name,
+        tag: asset.tag,
+        category: asset.category,
+        locationName: asset.locationName,
+        status: asset.status,
+        responsibleUserId: asset.responsibleUserId,
+        ownership: asset.ownership,
+    };
+  }
+  return null;
 }
 
 // Mock function to fetch users for transfer (excluding current user)
 async function fetchUsersForTransfer(currentUserId: string): Promise<UserForSelect[]> {
   console.log(`Fetching users for transfer, excluding ${currentUserId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
-  const allUsers: UserForSelect[] = [
-    { id: 'user1', name: 'João Silva' },
-    { id: 'user2', name: 'Maria Oliveira' },
-    { id: 'user3', name: 'Carlos Pereira' },
-    { id: 'user4', name: 'Ana Costa' },
-  ];
-  return allUsers.filter(user => user.id !== currentUserId);
+  return mockUsersForSelect.filter(user => user.id !== currentUserId);
 }
 
-// Mock function to initiate transfer (replace with actual API call)
-async function initiateAssetTransfer(assetId: string, assetName: string, newResponsibleUserId: string, newResponsibleUserName: string): Promise<{ success: boolean; message?: string }> {
-  console.log(`Initiating transfer of asset ${assetName} (ID: ${assetId}) to user ${newResponsibleUserName} (ID: ${newResponsibleUserId})`);
+// Mock function to initiate transfer
+async function initiateAssetTransfer(
+    assetId: string, 
+    assetName: string, 
+    assetTag: string,
+    fromUserId: string,
+    fromUserName: string,
+    newResponsibleUserId: string, 
+    newResponsibleUserName: string
+): Promise<{ success: boolean; message?: string }> {
+  console.log(`Initiating transfer of asset ${assetName} (ID: ${assetId}) from ${fromUserName} to user ${newResponsibleUserName} (ID: ${newResponsibleUserId})`);
   await new Promise(resolve => setTimeout(resolve, 1000));
-  // In a real app:
-  // 1. Create a transfer request document in Firestore (e.g., status 'pending', fromUser, toUser, assetId).
-  // 2. Notify the `newResponsibleUserId` (e.g., via email, in-app notification).
+
+  const newTransferRequest: TransferRequest = {
+    id: `transfer-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+    assetId,
+    assetName,
+    assetTag,
+    fromUserId,
+    fromUserName,
+    toUserId: newResponsibleUserId,
+    toUserName: newResponsibleUserName,
+    requestDate: new Date(),
+    status: 'pending',
+  };
+
+  mockTransferRequests.push(newTransferRequest); // Add to the shared mutable array
+  console.log("Updated mockTransferRequests:", mockTransferRequests);
+
   return { success: true, message: `Solicitação de transferência para ${newResponsibleUserName} enviada.` };
 }
 
-// Mock Logged-in User ID (replace with actual auth context)
-const MOCK_LOGGED_IN_USER_ID = 'user1';
 
 export default function TransferAssetPage() {
   const router = useRouter();
@@ -135,7 +160,15 @@ export default function TransferAssetPage() {
     }
 
     try {
-      const result = await initiateAssetTransfer(assetDetails.id, assetDetails.name, data.newResponsibleUserId, selectedUser.name);
+      const result = await initiateAssetTransfer(
+        assetDetails.id, 
+        assetDetails.name, 
+        assetDetails.tag,
+        MOCK_LOGGED_IN_USER_ID,
+        MOCK_LOGGED_IN_USER_NAME,
+        data.newResponsibleUserId, 
+        selectedUser.name
+      );
       if (result.success) {
         toast({
           title: 'Sucesso!',
@@ -206,7 +239,7 @@ export default function TransferAssetPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Transferir para:</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoading || usersForTransfer.length === 0}>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={isLoading || usersForTransfer.length === 0}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder={usersForTransfer.length === 0 ? "Nenhum usuário disponível" : "Selecione o novo responsável"} />
@@ -257,4 +290,3 @@ export default function TransferAssetPage() {
     </div>
   );
 }
-
