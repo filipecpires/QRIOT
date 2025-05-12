@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ArrowRight, ShieldCheck, Printer, UserCheck } from 'lucide-react';
+import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, UserCheck } from 'lucide-react';
 import Image from 'next/image';
 
 export default function LandingPage() {
@@ -33,7 +33,9 @@ export default function LandingPage() {
                             Demo
                          </Button>
                          <Button asChild size="sm">
-                            <Link href="/login">Acessar</Link>
+                           <Link href="/login">
+                             Acessar
+                           </Link>
                          </Button>
                     </nav>
                 </div>
@@ -53,7 +55,7 @@ export default function LandingPage() {
                     </Button>
                     <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
                         <Link href="/login">
-                           Acessar Sistema
+                          Acessar Sistema
                         </Link>
                     </Button>
                  </div>
@@ -156,15 +158,15 @@ export default function LandingPage() {
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4 w-full max-w-md sm:max-w-lg mx-auto">
                          <Button asChild size="lg" variant="secondary" className="w-full sm:w-auto">
-                            <Link href="/register">Registrar Grátis</Link>
-                         </Button>
-                         <Button asChild size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto">
-                            <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app">
-                                <div className="flex items-center">
-                                    <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
-                                </div>
+                            <Link href="/register">
+                                Registrar Grátis
                             </Link>
-                         </Button>
+                        </Button>
+                         <Button asChild size="lg" variant="outline" className="border-secondary text-secondary hover:bg-secondary/10 hover:text-secondary w-full sm:w-auto">
+                            <Link href="mailto:contato@qriot.app?subject=Demonstração QRIoT.app" className="flex items-center justify-center">
+                                    <Phone className="mr-2 h-4 w-4 sm:h-5 sm:w-5" /> Solicitar Demonstração
+                            </Link>
+                        </Button>
                     </div>
                 </div>
             </section>
@@ -180,3 +182,5 @@ export default function LandingPage() {
     );
 }
 
+
+    
