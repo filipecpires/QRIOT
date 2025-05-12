@@ -8,6 +8,14 @@ export default {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
   theme: {
+    screens: { // Add custom screens or extend
+        'xs': '320px', // Extra small screen breakpoint
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1536px',
+    },
   	extend: {
   		colors: {
   			background: 'hsl(var(--background))',

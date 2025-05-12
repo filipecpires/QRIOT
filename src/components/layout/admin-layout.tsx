@@ -54,7 +54,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-0"> {/* Remove padding from content if items handle it */}
-                    <SidebarMenu className="p-2 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1"> {/* Adjusted padding */}
+                    <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1"> {/* Adjusted padding and added space-y-1 */}
                         {/* Dashboard */}
                         <SidebarMenuItem>
                             <SidebarMenuButton asChild tooltip="Dashboard" className="group-data-[collapsible=icon]:justify-center" onClick={handleMobileMenuClick}>
@@ -223,7 +223,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                     </div>
                 </header>
                 {/* The actual page content rendered here */}
-                <main className="flex-1 p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> {/* Increased padding for larger screens */}
+                 <main className="flex-1 p-1 xs:p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> {/* Adjusted padding for very small screens */}
                     {children}
                 </main>
             </SidebarInset>
@@ -239,3 +239,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
