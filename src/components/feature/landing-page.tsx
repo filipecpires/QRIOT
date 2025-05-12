@@ -3,12 +3,13 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, UserCheck, ArrowRight, Package, MapPin, History, Edit, FileText, Badge as BadgeIcon } from 'lucide-react'; // Renamed Badge to BadgeIcon to avoid conflict with ui/badge
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react'; 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation'; 
 import { useToast } from '@/hooks/use-toast'; 
-import { Badge } from '@/components/ui/badge'; // Using Badge from ui
+import { Badge } from '@/components/ui/badge'; 
+import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
     const router = useRouter();
@@ -21,7 +22,7 @@ export default function LandingPage() {
         });
         // Simulate redirection after a short delay
         setTimeout(() => {
-            router.push('/my-dashboard'); // Assuming demo user logs into my-dashboard
+            router.push('/my-dashboard'); 
         }, 1500);
     };
 
@@ -103,6 +104,60 @@ export default function LandingPage() {
         }
     ];
 
+    const plans = [
+        {
+            name: "Gratuito",
+            price: "R$0",
+            frequency: "/ mês",
+            description: "Perfeito para começar e testar os recursos essenciais.",
+            features: [
+                "Até 5 Ativos",
+                "Usuários Ilimitados",
+                "Funcionalidades Essenciais de Gestão",
+                "Suporte Comunitário"
+            ],
+            cta: "Crie sua Conta",
+            href: "/register",
+            popular: false,
+            badgeText: null,
+        },
+        {
+            name: "Profissional",
+            price: "R$49",
+            frequency: "/ mês",
+            description: "Ideal para pequenas e médias empresas que buscam controle total.",
+            features: [
+                "Até 500 Ativos",
+                "Usuários Ilimitados",
+                "Todas as Funcionalidades Avançadas",
+                "Relatórios Personalizados",
+                "Suporte Prioritário por Email"
+            ],
+            cta: "Experimente Grátis",
+            href: "/register", // Or specific trial link
+            popular: true,
+            badgeText: "Mais Popular",
+        },
+        {
+            name: "Empresarial",
+            price: "Personalizado",
+            frequency: "",
+            description: "Solução sob medida para grandes corporações com necessidades específicas.",
+            features: [
+                "Ativos Ilimitados",
+                "Usuários Ilimitados",
+                "Recursos Dedicados e SLAs",
+                "Integrações Customizadas",
+                "Suporte Premium e Consultoria"
+            ],
+            cta: "Entre em Contato",
+            href: "mailto:contato@qriot.app?subject=Consulta%20Plano%20Empresarial%20QRIoT.app",
+            popular: false,
+            badgeText: null,
+        }
+    ];
+
+
     return (
         <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/5 to-background">
             {/* Header */}
@@ -114,13 +169,11 @@ export default function LandingPage() {
                     </Link>
                     <nav className="flex items-center gap-2 sm:gap-4">
                          <Button size="sm" variant="ghost" onClick={handleDemoLogin} className="text-primary hover:bg-primary/10">
-                             <UserCheck className="mr-1 sm:mr-2 h-4 w-4" />
+                             <BadgeCheck className="mr-1 sm:mr-2 h-4 w-4" />
                             Acesso Demo
                          </Button>
                          <Button asChild size="sm" className="shadow-md hover:shadow-lg transition-shadow">
-                           <Link href="/login">
-                             Entrar
-                           </Link>
+                           <Link href="/login">Entrar</Link>
                          </Button>
                     </nav>
                 </div>
@@ -137,13 +190,14 @@ export default function LandingPage() {
                  </p>
                  <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md sm:max-w-none justify-center animate-fade-in-up animation-delay-600">
                     <Button asChild size="lg" className="shadow-lg hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                        <Link href="/register">
+                        <Link href="/register" className="flex items-center justify-center">
                             Comece Gratuitamente
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
                     </Button>
                      <Button size="lg" variant="outline" onClick={handleDemoLogin} className="border-primary text-primary hover:bg-primary/5 hover:text-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
-                         <UserCheck className="mr-2 h-5 w-5" /> Ver Demonstração
+                         <BadgeCheck className="mr-2 h-5 w-5" />
+                         Ver Demonstração
                     </Button>
                  </div>
                   <div className="mt-12 w-full max-w-4xl aspect-video bg-muted rounded-xl shadow-2xl p-2 sm:p-4 border border-primary/20 animate-fade-in-up animation-delay-800">
@@ -171,7 +225,7 @@ export default function LandingPage() {
                     {features.map((feature, index) => (
                         <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 bg-card/80 backdrop-blur-sm border-primary/10 animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
                              <CardContent className="p-6 flex flex-col items-start text-left">
-                                <div className={`p-3 rounded-lg bg-gradient-to-br from-${feature.color.replace('text-','')} to-${feature.color.replace('text-','')} filter saturate-150 brightness-110 mb-4 shadow-md`}>
+                                <div className={cn(`p-3 rounded-lg bg-gradient-to-br from-${feature.color.replace('text-','')} to-${feature.color.replace('text-','')} filter saturate-150 brightness-110 mb-4 shadow-md`, feature.color)}>
                                     <feature.icon className={`h-7 w-7 text-white`} />
                                 </div>
                                 <h3 className="text-lg font-semibold mb-2 text-card-foreground">{feature.title}</h3>
@@ -208,6 +262,65 @@ export default function LandingPage() {
                  </div>
              </section>
 
+            {/* Pricing Section */}
+            <section id="pricing" className="container py-16 md:py-24 px-4">
+                <div className="text-center mb-12 md:mb-16">
+                    <h2 className="text-3xl sm:text-4xl font-bold tracking-tight">Planos Flexíveis para Todos os Tamanhos</h2>
+                    <p className="mt-3 text-md sm:text-lg text-muted-foreground max-w-2xl mx-auto">
+                        Escolha o plano que melhor se adapta às necessidades da sua empresa. Cancele quando quiser.
+                    </p>
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
+                    {plans.map((plan, index) => (
+                        <Card 
+                            key={plan.name} 
+                            className={cn(
+                                "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 animate-fade-in-up",
+                                plan.popular ? "border-2 border-primary ring-2 ring-primary/30" : "border-border",
+                                "bg-card/80 backdrop-blur-sm"
+                            )}
+                            style={{ animationDelay: `${200 + index * 150}ms` }}
+                        >
+                            {plan.popular && (
+                                <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground py-1 px-3 text-xs">
+                                    {plan.badgeText || "Mais Popular"}
+                                </Badge>
+                            )}
+                            <CardHeader className="pt-8">
+                                <CardTitle className="text-2xl font-semibold text-center text-card-foreground">{plan.name}</CardTitle>
+                                <CardDescription className="text-center text-muted-foreground h-10">{plan.description}</CardDescription>
+                                <div className="text-center mt-4">
+                                    <span className="text-4xl font-extrabold text-foreground">{plan.price}</span>
+                                    {plan.frequency && <span className="text-sm text-muted-foreground">{plan.frequency}</span>}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-grow space-y-3 pt-2 pb-6 px-6">
+                                <ul className="space-y-2">
+                                    {plan.features.map((feature, fIndex) => (
+                                        <li key={fIndex} className="flex items-start gap-2 text-sm">
+                                            <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                                            <span className="text-muted-foreground">{feature}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </CardContent>
+                            <CardFooter className="mt-auto p-6">
+                                <Button asChild size="lg" className={cn("w-full shadow-md transition-colors", plan.popular ? "bg-primary hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90")}>
+                                    {plan.href.startsWith('mailto:') ? (
+                                        <a href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</a>
+                                    ) : (
+                                        <Link href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</Link>
+                                    )}
+                                </Button>
+                            </CardFooter>
+                        </Card>
+                    ))}
+                </div>
+                 <p className="text-center text-sm text-muted-foreground mt-12">
+                    Todos os planos incluem usuários ilimitados. Precisa de algo diferente? <a href="mailto:contato@qriot.app?subject=Consulta%20Plano%20Personalizado" className="text-primary hover:underline">Fale conosco</a>.
+                 </p>
+            </section>
+
 
             {/* Call to Action Section */}
             <section id="cta" className="py-16 md:py-24 bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground">
@@ -219,15 +332,15 @@ export default function LandingPage() {
                     </p>
                     <div className="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-lg mx-auto">
                          <Button asChild size="lg" variant="secondary" className="text-primary bg-secondary hover:bg-secondary/90 shadow-lg transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
-                            <Link href="/register">
+                            <Link href="/register" className="flex items-center justify-center">
                                 Criar Conta Gratuita
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
                          <Button asChild size="lg" variant="outline" className="text-background border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
-                             <Link href="mailto:contato@qriot.app?subject=Demonstração%20QRIoT.app" className="flex items-center justify-center">
+                             <a href="mailto:contato@qriot.app?subject=Demonstração%20QRIoT.app" className="flex items-center justify-center">
                                 <Phone className="mr-2 h-5 w-5" /> Solicitar Demonstração
-                             </Link>
+                             </a>
                         </Button>
                     </div>
                 </div>
@@ -249,4 +362,3 @@ export default function LandingPage() {
         </div>
     );
 }
-
