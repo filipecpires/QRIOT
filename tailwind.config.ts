@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -90,13 +91,54 @@ export default {
   				to: {
   					height: '0'
   				}
-  			}
+  			},
+        'fade-in-up': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(20px)'
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)'
+          },
+        },
+        'pulse_slow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '.5' },
+        }
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
-  		}
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+        'fade-in-up': 'fade-in-up 0.5s ease-out forwards',
+        'pulse_slow': 'pulse_slow 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+  		},
+      animationDelay: { // Custom animation delays
+        '100': '100ms',
+        '200': '200ms',
+        '300': '300ms',
+        '400': '400ms',
+        '500': '500ms',
+        '600': '600ms',
+        '700': '700ms',
+        '800': '800ms',
+        '900': '900ms',
+        '1000': '1000ms',
+      }
   	}
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [
+    require("tailwindcss-animate"),
+    function ({ addUtilities }: { addUtilities: any}) {
+      const newUtilities: Record<string, any> = {};
+      const delays = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000];
+      delays.forEach(delay => {
+        newUtilities[`.animation-delay-${delay}`] = {
+          'animation-delay': `${delay}ms`,
+        };
+      });
+      addUtilities(newUtilities, ['responsive', 'hover']);
+    }
+  ],
 } satisfies Config;
+

@@ -4,10 +4,11 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, UserCheck, ArrowRight, Package, MapPin, History, Edit, FileText, Badge } from 'lucide-react';
+import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, UserCheck, ArrowRight, Package, MapPin, History, Edit, FileText, Badge as BadgeIcon } from 'lucide-react'; // Renamed Badge to BadgeIcon to avoid conflict with ui/badge
 import Image from 'next/image';
 import { useRouter } from 'next/navigation'; 
 import { useToast } from '@/hooks/use-toast'; 
+import { Badge } from '@/components/ui/badge'; // Using Badge from ui
 
 export default function LandingPage() {
     const router = useRouter();
@@ -18,8 +19,9 @@ export default function LandingPage() {
             title: 'Acesso Demo',
             description: 'Você será redirecionado para o painel de demonstração.',
         });
+        // Simulate redirection after a short delay
         setTimeout(() => {
-            router.push('/my-dashboard');
+            router.push('/my-dashboard'); // Assuming demo user logs into my-dashboard
         }, 1500);
     };
 
@@ -126,14 +128,14 @@ export default function LandingPage() {
 
             {/* Hero Section */}
             <section className="container flex flex-col items-center justify-center gap-6 py-16 md:py-24 text-center px-4">
-                 <Badge variant="outline" className="border-primary/50 text-primary py-1 px-3 text-sm">Gestão Inteligente de Ativos</Badge>
-                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl leading-tight">
+                 <Badge variant="outline" className="border-primary/50 text-primary py-1 px-3 text-sm animate-fade-in-up">Gestão Inteligente de Ativos</Badge>
+                 <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl xl:text-7xl leading-tight animate-fade-in-up animation-delay-200">
                     Transforme a Gestão dos Seus Ativos com <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent">QRIoT.app</span>
                  </h1>
-                 <p className="max-w-3xl text-base sm:text-lg text-muted-foreground">
+                 <p className="max-w-3xl text-base sm:text-lg text-muted-foreground animate-fade-in-up animation-delay-400">
                     Simplifique o controle, rastreamento e inventário do seu patrimônio. O QRIoT.app oferece uma solução completa e intuitiva, utilizando a tecnologia de QR Codes para otimizar seus processos e reduzir perdas.
                  </p>
-                 <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md sm:max-w-none justify-center">
+                 <div className="flex flex-col sm:flex-row gap-4 mt-6 w-full max-w-md sm:max-w-none justify-center animate-fade-in-up animation-delay-600">
                     <Button asChild size="lg" className="shadow-lg hover:bg-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
                         <Link href="/register">
                             Comece Gratuitamente
@@ -144,7 +146,7 @@ export default function LandingPage() {
                          <UserCheck className="mr-2 h-5 w-5" /> Ver Demonstração
                     </Button>
                  </div>
-                  <div className="mt-12 w-full max-w-4xl aspect-video bg-muted rounded-xl shadow-2xl p-2 sm:p-4 border border-primary/20">
+                  <div className="mt-12 w-full max-w-4xl aspect-video bg-muted rounded-xl shadow-2xl p-2 sm:p-4 border border-primary/20 animate-fade-in-up animation-delay-800">
                     <Image 
                         src="https://picsum.photos/seed/qriot-dashboard/1200/675" 
                         alt="Dashboard do QRIoT.app em um notebook e celular" 
@@ -167,7 +169,7 @@ export default function LandingPage() {
                 </div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {features.map((feature, index) => (
-                        <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 bg-card/80 backdrop-blur-sm border-primary/10">
+                        <Card key={index} className="shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 bg-card/80 backdrop-blur-sm border-primary/10 animate-fade-in-up" style={{ animationDelay: `${index * 100}ms` }}>
                              <CardContent className="p-6 flex flex-col items-start text-left">
                                 <div className={`p-3 rounded-lg bg-gradient-to-br from-${feature.color.replace('text-','')} to-${feature.color.replace('text-','')} filter saturate-150 brightness-110 mb-4 shadow-md`}>
                                     <feature.icon className={`h-7 w-7 text-white`} />
@@ -191,7 +193,7 @@ export default function LandingPage() {
                     </div>
                     <div className="grid md:grid-cols-3 gap-8 items-start">
                         {howItWorksSteps.map((step, index) => (
-                            <div key={step.step} className="flex flex-col items-center text-center p-4 rounded-lg transition-all hover:bg-card hover:shadow-lg">
+                            <div key={step.step} className="flex flex-col items-center text-center p-4 rounded-lg transition-all hover:bg-card hover:shadow-lg animate-fade-in-up" style={{ animationDelay: `${index * 200}ms` }}>
                                 <div className="relative mb-6">
                                     <div className="absolute -inset-2 bg-primary/10 rounded-full blur-md opacity-50 animate-pulse_slow" style={{animationDelay: `${index * 0.2}s`}}></div>
                                     <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg">
@@ -210,7 +212,7 @@ export default function LandingPage() {
             {/* Call to Action Section */}
             <section id="cta" className="py-16 md:py-24 bg-gradient-to-br from-primary via-primary/90 to-accent text-primary-foreground">
                 <div className="container text-center px-4">
-                    <Zap className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-6 text-background" />
+                    <Zap className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-6 text-background animate-pulse" />
                     <h2 className="text-3xl sm:text-4xl font-bold mb-6">Pronto para Modernizar a Gestão dos Seus Ativos?</h2>
                     <p className="max-w-2xl mx-auto mb-10 text-primary-foreground/90 text-md sm:text-lg">
                          Experimente o QRIoT.app gratuitamente com até 5 ativos ou entre em contato para uma demonstração personalizada e descubra o plano ideal para sua empresa.
@@ -247,3 +249,4 @@ export default function LandingPage() {
         </div>
     );
 }
+
