@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { QrCode, CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit, CalendarDays, Plus, Trash2, Settings } from 'lucide-react'; // Added Plus, Trash2, Settings
+import { CheckCircle, XCircle, Loader2, ListPlus, ScanLine, Info, Tag, Edit, CalendarDays, Plus, Trash2, Settings } from 'lucide-react'; 
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,42 +18,37 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'; // Import Dialog components
-import { cn } from '@/lib/utils'; // Import cn for conditional classes
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'; 
+import { cn } from '@/lib/utils'; 
 
-// Define structure for a characteristic to be applied
 interface AppliedCharacteristic {
     key: string;
     value: any;
-    // Potentially add isPublic flag if needed during scan
 }
 
-// Define structure for a NEW characteristic category to be added during scan
 interface NewCharacteristicCategory {
-    id: string; // Temporary ID for state management
-    key: string; // The name of the new characteristic category
-    defaultValue?: string | number | boolean | Date; // Optional default value
-    valueType: 'text' | 'number' | 'boolean' | 'date'; // Type for potential default value input
+    id: string; 
+    key: string; 
+    defaultValue?: string | number | boolean | Date; 
+    valueType: 'text' | 'number' | 'boolean' | 'date'; 
 }
 
-// Combined template structure for existing characteristics
 interface CharacteristicTemplate {
     id: string;
-    key: string; // Name of the characteristic (e.g., 'Voltagem', 'Localização Prateleira')
-    valueType: 'text' | 'number' | 'boolean' | 'date' | 'predefined'; // Type of value expected
-    predefinedValues?: string[]; // Options if valueType is 'predefined'
-    defaultValue?: string | number | boolean | Date; // Updated to include Date
+    key: string; 
+    valueType: 'text' | 'number' | 'boolean' | 'date' | 'predefined'; 
+    predefinedValues?: string[]; 
+    defaultValue?: string | number | boolean | Date; 
 }
 
 interface ScannedAssetInfo {
     tag: string;
-    name: string; // Fetched after scan
+    name: string; 
     status: 'pending' | 'success' | 'error';
     message?: string;
-    appliedCharacteristics?: AppliedCharacteristic[]; // Store applied values temporarily
+    appliedCharacteristics?: AppliedCharacteristic[]; 
 }
 
-// Mock fetch functions
 async function fetchCharacteristicTemplates(): Promise<CharacteristicTemplate[]> {
     await new Promise(resolve => setTimeout(resolve, 500));
     return [
@@ -68,34 +63,22 @@ async function fetchCharacteristicTemplates(): Promise<CharacteristicTemplate[]>
 async function fetchAssetNameByTag(tag: string): Promise<string | null> {
     await new Promise(resolve => setTimeout(resolve, 300));
     const mockAssets: { [tag: string]: string } = {
-        'TI-NB-001': 'Notebook Dell Latitude 7400',
-        'AB12C': 'Notebook Dell Latitude 7400', // Also accept new tag format for demo
-        'TI-MN-005': 'Monitor LG 27"',
+        'AB12C': 'Notebook Dell Latitude 7400',
         'DE34F': 'Monitor LG 27"',
-        'MOB-CAD-012': 'Cadeira de Escritório',
         'GH56I': 'Cadeira de Escritório',
-        'TI-PROJ-002': 'Projetor Epson PowerLite',
         'JK78L': 'Projetor Epson PowerLite',
-        'ALM-PAL-001': 'Paleteira Manual',
-        'TU34V': 'Paleteira Manual',
+        'MN90P': 'Teclado Mecânico Gamer',
+        'QR12S': 'Mouse Sem Fio Ergonômico',
+        'TU34V': 'Impressora Multifuncional',
     };
     return mockAssets[tag] || null;
 }
 
-// Updated function to apply both existing and NEW characteristics
 async function applyCharacteristicsToAsset(tag: string, characteristics: AppliedCharacteristic[]): Promise<{ success: boolean; message?: string }> {
     console.log(`Applying characteristics to ${tag}:`, characteristics);
-    await new Promise(resolve => setTimeout(resolve, 600)); // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 600)); 
 
-    // Replace with actual API call:
-    // 1. Find asset by tag.
-    // 2. Iterate through 'characteristics'.
-    // 3. For each characteristic:
-    //    - Check if a characteristic with the same 'key' already exists for the asset.
-    //    - If it exists, UPDATE its value (and potentially isPublic, isActive).
-    //    - If it DOES NOT exist, CREATE a new characteristic for the asset with the given key, value, and default visibility/status.
-
-    const shouldFail = Math.random() < 0.1; // Simulate occasional failure
+    const shouldFail = Math.random() < 0.1; 
     if (shouldFail) {
         return { success: false, message: 'Erro simulado ao salvar.' };
     }
@@ -107,14 +90,13 @@ export default function CharacteristicScanPage() {
     const [templates, setTemplates] = useState<CharacteristicTemplate[]>([]);
     const [selectedTemplates, setSelectedTemplates] = useState<CharacteristicTemplate[]>([]);
     const [characteristicValues, setCharacteristicValues] = useState<{ [templateId: string]: any }>({});
-    const [newCategories, setNewCategories] = useState<NewCharacteristicCategory[]>([]); // State for new categories
+    const [newCategories, setNewCategories] = useState<NewCharacteristicCategory[]>([]); 
     const [scannedAssets, setScannedAssets] = useState<ScannedAssetInfo[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
     const [isLoadingAsset, setIsLoadingAsset] = useState(false);
-    // const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display // Replaced by isScanning
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); // null = checking, true = granted, false = denied
-    const [showConfirmationModal, setShowConfirmationModal] = useState(false); // For confirmation popup
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); 
+    const [showConfirmationModal, setShowConfirmationModal] = useState(false); 
     const [lastScannedDataForModal, setLastScannedDataForModal] = useState<{tag: string, name: string, characteristics: AppliedCharacteristic[]} | null>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const lastScannedTag = useRef<string | null>(null);
@@ -135,58 +117,58 @@ export default function CharacteristicScanPage() {
         loadTemplates();
     }, [toast]);
 
-    // Camera Permission Effect - Triggered by isScanning state
     useEffect(() => {
         let stream: MediaStream | null = null;
 
         const getCameraPermission = async () => {
             console.log("Attempting to get camera permission...");
-            setHasCameraPermission(null); // Start in checking state
+            setHasCameraPermission(null); 
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); // Prefer back camera
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); 
                 console.log("Camera permission granted.");
                 setHasCameraPermission(true);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    videoRef.current.play().catch(playErr => console.error("Video play error:", playErr)); // Attempt to play
+                    videoRef.current.onloadedmetadata = () => { // Ensure metadata is loaded before playing
+                        videoRef.current?.play().catch(playErr => console.error("Video play error:", playErr));
+                    }
                 } else {
                     console.warn("videoRef not available when stream was ready.");
                 }
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 setHasCameraPermission(false);
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso à Câmera Negado',
-                    description: 'Permita o acesso à câmera nas configurações do navegador para escanear.',
-                    duration: 5000,
-                });
-                setIsScanning(false); // Stop scanning if permission denied
+                 if (isScanning) { // Only show toast if user actually tried to scan
+                    toast({
+                        variant: 'destructive',
+                        title: 'Acesso à Câmera Negado',
+                        description: 'Permita o acesso à câmera nas configurações do navegador para escanear.',
+                        duration: 5000,
+                    });
+                }
+                setIsScanning(false); 
             }
         };
 
         if (isScanning) {
             getCameraPermission();
         } else {
-            // Stop camera stream if scanning stops or component unmounts
             if (videoRef.current?.srcObject) {
                 const currentStream = videoRef.current.srcObject as MediaStream;
                 currentStream.getTracks().forEach(track => track.stop());
                 videoRef.current.srcObject = null;
             }
-             setHasCameraPermission(null); // Reset permission status when not scanning
+            setHasCameraPermission(null); 
         }
-
-        // Cleanup function
         return () => {
-            console.log("Cleaning up camera effect");
+            console.log("Cleaning up camera effect for CharacteristicScanPage");
             if (videoRef.current?.srcObject) {
                 const currentStream = videoRef.current.srcObject as MediaStream;
                 currentStream.getTracks().forEach(track => track.stop());
                  videoRef.current.srcObject = null;
             }
         };
-    }, [isScanning, toast]); // Rerun when isScanning changes
+    }, [isScanning, toast]); 
 
 
     const handleTemplateSelection = (template: CharacteristicTemplate) => {
@@ -195,19 +177,16 @@ export default function CharacteristicScanPage() {
                 ? prev.filter(t => t.id !== template.id)
                 : [...prev, template]
         );
-        // Initialize default value if selected and has default
         if (!characteristicValues[template.id] && template.defaultValue !== undefined) {
              handleValueChange(template.id, template.defaultValue);
         }
     };
 
     const handleValueChange = (templateId: string, value: any) => {
-        // Convert date to ISO string if it's a Date object for consistent storage/handling
         const processedValue = value instanceof Date ? value.toISOString() : value;
         setCharacteristicValues(prev => ({ ...prev, [templateId]: processedValue }));
     };
 
-    // --- New Category Functions ---
     const addNewCategory = () => {
         setNewCategories(prev => [
             ...prev,
@@ -224,68 +203,48 @@ export default function CharacteristicScanPage() {
             cat.id === id ? { ...cat, [field]: value } : cat
         ));
     };
-    // --- End New Category Functions ---
-
 
     const startScanSession = () => {
         if (selectedTemplates.length === 0 && newCategories.length === 0) {
             toast({ title: 'Atenção', description: 'Selecione ou adicione pelo menos uma característica para aplicar.', variant: 'destructive' });
             return;
         }
-        // Validate new categories have names
         if (newCategories.some(cat => !cat.key.trim())) {
              toast({ title: 'Atenção', description: 'Todas as novas características adicionadas devem ter um nome.', variant: 'destructive' });
              return;
         }
-        setScannedAssets([]); // Clear previous session
+        setScannedAssets([]); 
         setIsScanning(true);
-        // setShowCameraFeed(true); // Camera feed is now controlled by isScanning
-        // Initialize QR Scanner library here
         console.log("Starting scan session with existing characteristics:", selectedTemplates.map(t => ({ key: t.key, value: characteristicValues[t.id] })));
         console.log("Starting scan session with NEW characteristics:", newCategories);
-         // TODO: Add QR scanner initialization logic
-         // Request camera permission if not already granted (handled by useEffect)
     };
 
     const stopScanSession = () => {
         setIsScanning(false);
-        // setShowCameraFeed(false); // Camera feed is now controlled by isScanning
-        lastScannedTag.current = null; // Reset last scanned tag
-        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); // Clear any pending timeout
-        // Deinitialize QR Scanner library here
+        lastScannedTag.current = null; 
+        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); 
         console.log("Stopping scan session");
-        // TODO: Add QR scanner deinitialization logic
     };
-
-    // --- MOCK QR CODE SCANNING ---
-    // Replace this with your actual QR code scanning library integration
-    // const simulateScan = (tag: string) => {
-    //     if (!isScanning) return;
-    //     console.log("Simulating scan:", tag);
-    //     handleQrCodeResult(tag);
-    // };
-    // --- END MOCK QR CODE SCANNING ---
 
     const handleQrCodeResult = useCallback(async (tag: string) => {
         if (!isScanning || isLoadingAsset) return;
 
-        // Debounce: Prevent processing the same tag multiple times in quick succession
         if (tag === lastScannedTag.current) {
             console.log("Debounced repeated scan:", tag);
             return;
         }
         lastScannedTag.current = tag;
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); // Reset after 1.5 seconds
+        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); 
 
 
-        setIsLoadingAsset(true); // Indicate loading for this specific asset
+        setIsLoadingAsset(true); 
 
         const existingAssetIndex = scannedAssets.findIndex(a => a.tag === tag);
         if (existingAssetIndex !== -1) {
              toast({ title: 'Ativo Já Escaneado', description: `O ativo ${tag} já está na lista.`, variant: 'default' });
              setIsLoadingAsset(false);
-             return; // Don't re-process if already in the list for this session
+             return; 
         }
 
 
@@ -296,39 +255,35 @@ export default function CharacteristicScanPage() {
             return;
         }
 
-        // Prepare characteristics to apply (from selected templates)
         const characteristicsFromTemplates = selectedTemplates.map(template => ({
             key: template.key,
             value: characteristicValues[template.id] ?? template.defaultValue ?? (template.valueType === 'boolean' ? false : ''),
         }));
 
-        // Prepare characteristics to apply (from new categories)
         const characteristicsFromNew = newCategories.map(cat => ({
             key: cat.key,
-            value: cat.defaultValue ?? (cat.valueType === 'boolean' ? false : ''), // Use default value if provided
+            value: cat.defaultValue ?? (cat.valueType === 'boolean' ? false : ''), 
         }));
 
         const allCharacteristicsToApply = [...characteristicsFromTemplates, ...characteristicsFromNew];
 
-        // --- Show Confirmation Modal ---
         setLastScannedDataForModal({ tag, name: assetName, characteristics: allCharacteristicsToApply });
         setShowConfirmationModal(true);
-        // Do not proceed with saving yet, wait for modal confirmation
-        setIsLoadingAsset(false); // Stop loading indicator while modal is shown
+        setIsLoadingAsset(false); 
 
 
-    }, [isScanning, isLoadingAsset, scannedAssets, selectedTemplates, characteristicValues, newCategories, toast]); // Added newCategories and toast dependency
+    }, [isScanning, isLoadingAsset, scannedAssets, selectedTemplates, characteristicValues, newCategories, toast]); 
 
 
     const confirmApplyCharacteristics = async () => {
         if (!lastScannedDataForModal) return;
 
         const { tag, name, characteristics } = lastScannedDataForModal;
-        setShowConfirmationModal(false); // Close modal
-        setIsLoadingAsset(true); // Show loading indicator again
+        setShowConfirmationModal(false); 
+        setIsLoadingAsset(true); 
 
          const newAssetInfo: ScannedAssetInfo = { tag, name, status: 'pending', appliedCharacteristics: characteristics };
-         setScannedAssets(prev => [newAssetInfo, ...prev]); // Add to list optimistically
+         setScannedAssets(prev => [newAssetInfo, ...prev]); 
 
         try {
             const result = await applyCharacteristicsToAsset(tag, characteristics);
@@ -339,10 +294,8 @@ export default function CharacteristicScanPage() {
             ));
             if (result.success) {
                  toast({title: "Sucesso", description: `Características aplicadas a ${tag}.`, variant: "default"});
-                 // Optional: Play a success sound/vibration
             } else {
                 toast({title: "Erro", description: `Falha ao aplicar características a ${tag}: ${result.message}`, variant: "destructive"});
-                // Optional: Play an error sound/vibration
             }
         } catch (error) {
             console.error("Error applying characteristics:", error);
@@ -352,36 +305,32 @@ export default function CharacteristicScanPage() {
                     ? { ...asset, status: 'error', message: 'Erro inesperado ao salvar.' }
                     : asset
             ));
-             // Optional: Play an error sound/vibration
         } finally {
             setIsLoadingAsset(false);
-            setLastScannedDataForModal(null); // Clear modal data
+            setLastScannedDataForModal(null); 
         }
      };
 
      const cancelApplyCharacteristics = () => {
         setShowConfirmationModal(false);
         setLastScannedDataForModal(null);
-        // Optional: Provide feedback that the operation was cancelled
         toast({ title: "Cancelado", description: `Aplicação de características para ${lastScannedDataForModal?.tag} cancelada.`, variant: "default"});
-         lastScannedTag.current = null; // Allow rescanning immediately after cancel
+         lastScannedTag.current = null; 
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
 
     return (
-        <div className="space-y-6"> {/* Use simple div instead of container */}
+        <div className="space-y-6"> 
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><Tag className="h-6 w-6"/> Registrar Características via Scan</CardTitle>
                     <CardDescription>Selecione características existentes ou adicione novas, defina valores e escaneie QR Codes para aplicá-las em massa.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* 1. Select/Add Characteristics */}
                     <div className="space-y-4">
                         <Label className="text-lg font-semibold">1. Configure as Características</Label>
                          <p className="text-sm text-muted-foreground">Selecione características existentes da lista ou adicione novas categorias que serão aplicadas aos ativos escaneados.</p>
 
-                        {/* Existing Templates */}
                          <div className="space-y-2 border p-4 rounded-md">
                             <Label className="font-medium">Características Existentes</Label>
                             {isLoadingTemplates ? (
@@ -412,7 +361,6 @@ export default function CharacteristicScanPage() {
                             )}
                         </div>
 
-                        {/* Add New Categories */}
                          <div className="space-y-3 border p-4 rounded-md">
                              <Label className="font-medium">Adicionar Novas Características</Label>
                              {newCategories.map((cat) => (
@@ -445,8 +393,7 @@ export default function CharacteristicScanPage() {
                                      </div>
                                      <div className="flex-1 space-y-1 w-full sm:w-auto">
                                          <Label htmlFor={`new-cat-default-${cat.id}`} className="text-xs">Valor Padrão (Opcional)</Label>
-                                          {/* Render input based on valueType */}
-                                         {cat.valueType === 'boolean' ? (
+                                          {cat.valueType === 'boolean' ? (
                                              <Switch
                                                  id={`new-cat-default-${cat.id}`}
                                                  checked={!!cat.defaultValue}
@@ -485,7 +432,6 @@ export default function CharacteristicScanPage() {
                          </div>
                     </div>
 
-                    {/* 2. Define Values for SELECTED Templates */}
                     {selectedTemplates.length > 0 && (
                         <div className="space-y-3 border p-4 rounded-md">
                             <Label className="text-lg font-semibold">2. Defina os Valores (para Características Existentes Selecionadas)</Label>
@@ -522,7 +468,7 @@ export default function CharacteristicScanPage() {
                                                     <Calendar
                                                         mode="single"
                                                         selected={characteristicValues[template.id] ? new Date(characteristicValues[template.id]) : undefined}
-                                                        onSelect={(date) => handleValueChange(template.id, date)} // Pass Date object directly
+                                                        onSelect={(date) => handleValueChange(template.id, date)} 
                                                         initialFocus
                                                         locale={ptBR}/>
                                                 </PopoverContent>
@@ -546,7 +492,6 @@ export default function CharacteristicScanPage() {
                         </div>
                     )}
 
-                    {/* 3. Start Scanning */}
                     <div className="space-y-3">
                          <Label className="text-lg font-semibold">3. Escanear Ativos</Label>
                          <p className="text-sm text-muted-foreground">Clique em "Iniciar" para ativar a câmera e começar a escanear os QR Codes dos ativos. As características configuradas serão aplicadas após confirmação.</p>
@@ -572,29 +517,26 @@ export default function CharacteristicScanPage() {
                          </div>
                     </div>
 
-                    {/* Video element is always rendered but visibility controlled by CSS */}
-                    <div className={cn(!isScanning && 'hidden')}> {/* Hide container when not scanning */}
+                    <div className={cn(!isScanning && 'hidden')}> 
                         <Card className="mt-4 border-primary border-2">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <ScanLine className="h-5 w-5 text-primary"/> Câmera Ativa
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                {/* Video element itself */}
+                            <CardContent className="flex justify-center">
                                 <video
                                     ref={videoRef}
                                     className={cn(
-                                        "w-full aspect-video rounded-md bg-muted",
-                                        hasCameraPermission === false && "hidden", // Hide video if permission denied
-                                        hasCameraPermission === null && "hidden" // Hide video while checking permission
+                                        "w-full max-w-md aspect-square rounded-md bg-muted object-cover", // aspect-square and object-cover for 1:1 crop
+                                        hasCameraPermission === false && "hidden", 
+                                        hasCameraPermission === null && "hidden" 
                                      )}
                                     autoPlay
                                     muted
-                                    playsInline
+                                    playsInline 
                                 />
 
-                                {/* Permission States */}
                                 {hasCameraPermission === null && (
                                     <div className="flex items-center justify-center h-40">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -615,8 +557,6 @@ export default function CharacteristicScanPage() {
                 </CardContent>
             </Card>
 
-
-             {/* Scanned Assets List */}
             {scannedAssets.length > 0 && (
                  <Card>
                     <CardHeader>
@@ -638,7 +578,6 @@ export default function CharacteristicScanPage() {
                                             {asset.status === 'error' && asset.message && <p className="text-xs text-destructive">{asset.message}</p>}
                                         </div>
                                     </div>
-                                    {/* Optional: Show applied values */}
                                      <div className="text-xs text-muted-foreground max-w-xs truncate">
                                         {asset.appliedCharacteristics?.map(c => `${c.key}: ${c.value}`).join(', ')}
                                     </div>
@@ -650,7 +589,6 @@ export default function CharacteristicScanPage() {
                  </Card>
             )}
 
-             {/* Confirmation Modal */}
              <Dialog open={showConfirmationModal} onOpenChange={(open) => !open && cancelApplyCharacteristics()}>
                 <DialogContent>
                     <DialogHeader>
@@ -678,7 +616,6 @@ export default function CharacteristicScanPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
         </div>
     );
 }

@@ -25,11 +25,13 @@ interface ScannedAssetInfo {
 async function fetchAssetNameByTag(tag: string): Promise<string | null> {
     await new Promise(resolve => setTimeout(resolve, 300));
     const mockAssets: { [tag: string]: string } = {
-        'TI-NB-001': 'Notebook Dell Latitude 7400',
-        'TI-MN-005': 'Monitor LG 27"',
-        'MOB-CAD-012': 'Cadeira de Escritório',
-        'TI-PROJ-002': 'Projetor Epson PowerLite',
-        'ALM-PAL-001': 'Paleteira Manual',
+        'AB12C': 'Notebook Dell Latitude 7400', // Existing tag format
+        'DE34F': 'Monitor LG 27"',             // Existing tag format
+        'GH56I': 'Cadeira de Escritório',      // Existing tag format
+        'JK78L': 'Projetor Epson PowerLite',   // Existing tag format
+        'MN90P': 'Teclado Mecânico Gamer',    // New asset with new tag format
+        'QR12S': 'Mouse Sem Fio Ergonômico',  // New asset with new tag format
+        'TU34V': 'Impressora Multifuncional', // New asset with new tag format
     };
     return mockAssets[tag] || null;
 }
@@ -59,10 +61,8 @@ export default function InventoryScanPage() {
     const [scannedAssets, setScannedAssets] = useState<ScannedAssetInfo[]>([]);
     const [isScanning, setIsScanning] = useState(false);
     const [isLoadingAsset, setIsLoadingAsset] = useState(false); // Loading state for individual asset processing
-    // const [showCameraFeed, setShowCameraFeed] = useState(false); // Control camera display // Replaced by isScanning
     const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); // null = checking, true = granted, false = denied
     const videoRef = useRef<HTMLVideoElement>(null);
-    // QR Scanner library state would go here
     const scannedTagsThisSession = useRef<Set<string>>(new Set()); // Track tags scanned in this session to avoid duplicates
     const lastScannedTag = useRef<string | null>(null);
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,68 +81,62 @@ export default function InventoryScanPage() {
                 setHasCameraPermission(true);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    videoRef.current.play().catch(playErr => console.error("Video play error:", playErr)); // Attempt to play
+                    videoRef.current.onloadedmetadata = () => {
+                        videoRef.current?.play().catch(playErr => console.error("Video play error:", playErr));
+                    }
                 } else {
                     console.warn("videoRef not available when stream was ready.");
                 }
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 setHasCameraPermission(false);
-                toast({
-                    variant: 'destructive',
-                    title: 'Acesso à Câmera Negado',
-                    description: 'Permita o acesso à câmera nas configurações do navegador para escanear.',
-                    duration: 5000,
-                });
-                setIsScanning(false); // Stop scanning if permission denied
+                if (isScanning) { // Only show toast if user initiated scanning
+                    toast({
+                        variant: 'destructive',
+                        title: 'Acesso à Câmera Negado',
+                        description: 'Permita o acesso à câmera nas configurações do seu navegador para escanear.',
+                        duration: 5000,
+                    });
+                }
+                setIsScanning(false); // Stop scanning if permission denied or not actively scanning
             }
         };
 
         if (isScanning) {
             getCameraPermission();
         } else {
-            // Stop camera stream if scanning stops or component unmounts
             if (videoRef.current?.srcObject) {
                 const currentStream = videoRef.current.srcObject as MediaStream;
                 currentStream.getTracks().forEach(track => track.stop());
                 videoRef.current.srcObject = null;
             }
-            setHasCameraPermission(null); // Reset permission status when not scanning
+            setHasCameraPermission(null); 
         }
 
-        // Cleanup function
         return () => {
-            console.log("Cleaning up camera effect");
+            console.log("Cleaning up camera effect for InventoryScanPage");
             if (videoRef.current?.srcObject) {
                 const currentStream = videoRef.current.srcObject as MediaStream;
                 currentStream.getTracks().forEach(track => track.stop());
-                 videoRef.current.srcObject = null;
+                videoRef.current.srcObject = null;
             }
         };
-    }, [isScanning, toast]); // Rerun when isScanning changes
+    }, [isScanning, toast]); 
 
 
     const startScanSession = () => {
-        setScannedAssets([]); // Clear previous session results
-        scannedTagsThisSession.current.clear(); // Clear tracked tags
-        lastScannedTag.current = null; // Reset last scanned tag
-        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); // Clear any pending timeout
+        setScannedAssets([]); 
+        scannedTagsThisSession.current.clear(); 
+        lastScannedTag.current = null; 
+        if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current); 
         setIsScanning(true);
-        // setShowCameraFeed(true); // Camera feed is now controlled by isScanning
-        // Initialize QR Scanner library here
         console.log("Starting inventory scan session for year:", currentInventoryYear);
-         // TODO: Add QR scanner initialization logic
-         // Request camera permission if not already granted (handled by useEffect)
     };
 
     const stopScanSession = () => {
         setIsScanning(false);
-        // setShowCameraFeed(false); // Camera feed is now controlled by isScanning
-        // Deinitialize QR Scanner library here
         console.log("Stopping inventory scan session");
-         // TODO: Add QR scanner deinitialization logic
 
-        // Generate report or summary (optional)
         const successCount = scannedAssets.filter(a => a.status === 'success').length;
         const duplicateCount = scannedAssets.filter(a => a.status === 'duplicate').length;
         const errorCount = scannedAssets.filter(a => a.status === 'error').length;
@@ -153,57 +147,41 @@ export default function InventoryScanPage() {
         });
     };
 
-    // --- MOCK QR CODE SCANNING ---
-    // Replace this with your actual QR code scanning library integration
-    // const simulateScan = (tag: string) => {
-    //     if (!isScanning) return;
-    //     console.log("Simulating inventory scan:", tag);
-    //     handleQrCodeResult(tag);
-    // };
-    // --- END MOCK QR CODE SCANNING ---
-
 
     const handleQrCodeResult = useCallback(async (tag: string) => {
         if (!isScanning || isLoadingAsset) return;
 
-         // Debounce: Prevent processing the same tag multiple times in quick succession
         if (tag === lastScannedTag.current) {
             console.log("Debounced repeated scan:", tag);
             return;
         }
         lastScannedTag.current = tag;
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); // Reset after 1.5 seconds
+        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); 
 
 
-        // Check if already scanned in this session
         if (scannedTagsThisSession.current.has(tag)) {
-             // Find the existing entry to show the name correctly
              const existingAsset = scannedAssets.find(a => a.tag === tag);
              const nameToShow = existingAsset ? existingAsset.name : tag;
              setScannedAssets(prev => [{ tag, name: nameToShow, status: 'duplicate', message: 'Já escaneado nesta sessão', timestamp: new Date() }, ...prev]);
              toast({ title: 'Ativo Duplicado', description: `O ativo ${tag} já foi escaneado nesta sessão.` });
-              // Play a distinct sound/vibration for duplicates
              return;
         }
 
-        setIsLoadingAsset(true); // Indicate loading for this specific asset
+        setIsLoadingAsset(true); 
 
         const assetName = await fetchAssetNameByTag(tag);
 
         if (!assetName) {
             setScannedAssets(prev => [{ tag, name: 'Desconhecido', status: 'error', message: 'Ativo não encontrado no sistema', timestamp: new Date() }, ...prev]);
-             // Play error sound
             setIsLoadingAsset(false);
             return;
         }
 
-        // Add to UI optimistically with pending status
         const newAssetInfo: ScannedAssetInfo = { tag, name: assetName, status: 'pending', timestamp: new Date() };
-        setScannedAssets(prev => [newAssetInfo, ...prev]); // Add to top
-        scannedTagsThisSession.current.add(tag); // Track as scanned
+        setScannedAssets(prev => [newAssetInfo, ...prev]); 
+        scannedTagsThisSession.current.add(tag); 
 
-        // Attempt to mark as inventoried
         try {
             const result = await markAssetAsInventoried(tag, currentInventoryYear);
             setScannedAssets(prev => prev.map(asset =>
@@ -211,11 +189,8 @@ export default function InventoryScanPage() {
                     ? { ...asset, status: result.success ? 'success' : 'error', message: result.message }
                     : asset
             ));
-            if (result.success) {
-                // Play success sound
-            } else {
-                scannedTagsThisSession.current.delete(tag); // Allow rescanning on error
-                 // Play error sound
+            if (!result.success) {
+                scannedTagsThisSession.current.delete(tag); 
             }
         } catch (error) {
             console.error("Error marking asset as inventoried:", error);
@@ -224,22 +199,21 @@ export default function InventoryScanPage() {
                     ? { ...asset, status: 'error', message: 'Erro inesperado ao salvar.' }
                     : asset
             ));
-             scannedTagsThisSession.current.delete(tag); // Allow rescanning on error
-             // Play error sound
+             scannedTagsThisSession.current.delete(tag); 
         } finally {
             setIsLoadingAsset(false);
         }
 
-    }, [isScanning, isLoadingAsset, currentInventoryYear, scannedAssets, toast]); // Added toast dependency
+    }, [isScanning, isLoadingAsset, currentInventoryYear, scannedAssets, toast]); 
 
 
     const successCount = scannedAssets.filter(a => a.status === 'success').length;
     const duplicateCount = scannedAssets.filter(a => a.status === 'duplicate').length;
     const errorCount = scannedAssets.filter(a => a.status === 'error').length;
-    const totalScanned = scannedAssets.length; // Includes pending
+    const totalScanned = scannedAssets.length; 
 
     return (
-        <div className="space-y-6"> {/* Use simple div instead of container */}
+        <div className="space-y-6"> 
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><ScanSearch className="h-6 w-6"/> Inventário Contínuo via Scan</CardTitle>
@@ -253,7 +227,7 @@ export default function InventoryScanPage() {
                         <Button
                             size="lg"
                             onClick={isScanning ? stopScanSession : startScanSession}
-                            className={isScanning ? 'bg-destructive hover:bg-destructive/90 w-full sm:w-auto' : 'w-full sm:w-auto'}
+                            className={cn("w-full sm:w-auto", isScanning && 'bg-destructive hover:bg-destructive/90')}
                         >
                             {isScanning ? (
                                 <>
@@ -273,29 +247,26 @@ export default function InventoryScanPage() {
                         </div>
                     </div>
 
-                    {/* Video element is always rendered but visibility controlled by CSS */}
-                    <div className={cn(!isScanning && 'hidden')}> {/* Hide container when not scanning */}
+                    <div className={cn(!isScanning && 'hidden')}> 
                         <Card className="mt-4 border-primary border-2">
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <ScanLine className="h-5 w-5 text-primary"/> Câmera Ativa - Escaneie os QR Codes
                                 </CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                {/* Video element itself */}
+                            <CardContent className="flex justify-center">
                                 <video
                                     ref={videoRef}
                                     className={cn(
-                                        "w-full aspect-video rounded-md bg-muted",
-                                        hasCameraPermission === false && "hidden", // Hide video if permission denied
-                                        hasCameraPermission === null && "hidden" // Hide video while checking permission
-                                    )}
+                                        "w-full max-w-md aspect-square rounded-md bg-muted object-cover", // aspect-square and object-cover for 1:1 crop
+                                        hasCameraPermission === false && "hidden", 
+                                        hasCameraPermission === null && "hidden" 
+                                     )}
                                     autoPlay
                                     muted
-                                    playsInline
+                                    playsInline // Important for iOS
                                 />
 
-                                {/* Permission States */}
                                 {hasCameraPermission === null && (
                                     <div className="flex items-center justify-center h-40">
                                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -316,7 +287,6 @@ export default function InventoryScanPage() {
                 </CardContent>
             </Card>
 
-             {/* Scanned Assets List */}
              {scannedAssets.length > 0 && (
                  <Card>
                     <CardHeader>
@@ -346,15 +316,11 @@ export default function InventoryScanPage() {
                             </div>
                         </ScrollArea>
                         <div className="mt-4 flex justify-end">
-                             {/* TODO: Add button to generate report */}
                              <Button variant="outline" disabled>Gerar Relatório (PDF)</Button>
                          </div>
                     </CardContent>
                  </Card>
              )}
-
         </div>
     );
 }
-
-    
