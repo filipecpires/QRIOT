@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
-import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Import PWA Install Prompt
+// import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Removed, moved to RootLayout
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -227,7 +227,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                 </header>
                 {/* The actual page content rendered here */}
                  <main className="flex-1 p-1 xs:p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto relative"> {/* Added relative for potential absolutely positioned children like PWA prompt */}
-                    <PwaInstallPrompt />
+                    {/* <PwaInstallPrompt /> Removed from here, moved to RootLayout */}
                     {children}
                 </main>
             </SidebarInset>

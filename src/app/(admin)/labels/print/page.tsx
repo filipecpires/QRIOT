@@ -142,7 +142,10 @@ export default function PrintLabelsPage() {
             setAreQrCodesReady(true); 
             return;
         }
-        const allReady = selectedAssetIds.every(id => qrCodeDataUrls[id] && qrCodeDataUrls[id]!.length > 'data:image/png;base64,'.length);
+        const allReady = selectedAssetIds.every(id => {
+            const dataUrl = qrCodeDataUrls[id];
+            return typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 'data:image/png;base64,'.length;
+        });
         setAreQrCodesReady(allReady);
     }, [selectedAssets, qrCodeDataUrls]);
 
@@ -252,7 +255,8 @@ export default function PrintLabelsPage() {
         const allSelectedQrsReady = selectedAssetIds.every(id => {
             const asset = assets.find(a => a.id === id);
             if (!asset) return false; 
-            return qrCodeDataUrls[id] && qrCodeDataUrls[id]!.length > 'data:image/png;base64,'.length;
+            const dataUrl = qrCodeDataUrls[id];
+            return typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 'data:image/png;base64,'.length;
         });
 
         if (!allSelectedQrsReady) {

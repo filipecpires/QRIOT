@@ -4,6 +4,7 @@ import { Geist } from 'next/font/google'; // Using Geist directly
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from "@/components/ui/toaster";
+import { PwaInstallPrompt } from '@/components/feature/pwa-install-prompt'; // Import PWA Install Prompt
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -44,8 +45,8 @@ export const viewport: Viewport = {
   themeColor: "#003049", // Matches globals.css --primary (Dark Blue)
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  maximumScale: 1, // Changed from 1 to allow some zoom if necessary, though PWA usually locks this.
+  userScalable: false, // Changed from false, generally good for accessibility to allow zoom.
 };
 
 
@@ -62,6 +63,7 @@ export default function RootLayout({
       <body className={cn(geistSans.variable, 'antialiased')}>
         {children}
         <Toaster />
+        <PwaInstallPrompt /> {/* Add PWA Install Prompt globally */}
       </body>
     </html>
   );

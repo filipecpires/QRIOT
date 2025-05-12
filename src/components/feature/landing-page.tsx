@@ -15,7 +15,7 @@ export default function LandingPage() {
         // In a real app, you would use router.push('/dashboard') after successful auth.
         // For this static example, direct navigation is fine.
         if (typeof window !== 'undefined') {
-            window.location.href = '/dashboard';
+            window.location.href = '/my-dashboard'; // Redirect to my-dashboard for demo user
         }
     };
     return (
@@ -28,7 +28,7 @@ export default function LandingPage() {
                         QRIoT.app
                     </Link>
                     <nav className="flex items-center gap-2 sm:gap-4">
-                         <Button size="sm" variant="secondary" onClick={handleDemoLogin}>
+                         <Button size="sm" variant="secondary" onClick={handleDemoLogin}> {/* Removed asChild */}
                              <UserCheck className="mr-1 sm:mr-2 h-4 w-4" />
                             Demo
                          </Button>
@@ -50,7 +50,7 @@ export default function LandingPage() {
                     O QRIoT.app simplifica o controle do seu patrimônio. Cadastre, localize, inventarie e monitore tudo com a facilidade dos QR Codes.
                  </p>
                  <div className="flex flex-col sm:flex-row gap-4 mt-4 w-full max-w-md sm:max-w-none">
-                     <Button size="lg" variant="secondary" onClick={handleDemoLogin} className="w-full sm:w-auto">
+                     <Button size="lg" variant="secondary" onClick={handleDemoLogin} className="w-full sm:w-auto"> {/* Removed asChild */}
                          <UserCheck className="mr-2 h-5 w-5" /> Acessar Conta Demo
                     </Button>
                     <Button asChild size="lg" variant="default" className="w-full sm:w-auto">
@@ -181,3 +181,4 @@ export default function LandingPage() {
         </div>
     );
 }
+

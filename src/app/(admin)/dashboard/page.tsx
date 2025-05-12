@@ -466,8 +466,8 @@ export default function DashboardPage() {
                         <CardTitle>Histórico de Ativos (Últimos 30 dias)</CardTitle>
                          <CardDescription>Contagem total de ativos ao longo do tempo.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                         <ChartContainer config={assetHistoryChartConfig} className="aspect-video h-[200px] sm:h-[250px] w-full">
+                    <CardContent className="h-[230px] sm:h-[250px]">
+                         <ChartContainer config={assetHistoryChartConfig} className="h-full w-full">
                              <LineChart data={assetHistoryChartData} margin={{ left: 0, right: 10, top: 10, bottom: 0 }}>
                                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                                 <XAxis
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                         <CardTitle>Distribuição por Status</CardTitle>
                          <CardDescription>Distribuição atual dos ativos por status.</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
+                    <CardContent className="flex items-center justify-center h-[230px] sm:h-[250px]">
                         <ChartContainer config={statusChartConfig} className="h-full w-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <RechartsBarChart
@@ -531,7 +531,7 @@ export default function DashboardPage() {
                         <CardTitle>Ativos por Categoria</CardTitle>
                         <CardDescription>Distribuição dos ativos por categoria principal.</CardDescription>
                     </CardHeader>
-                     <CardContent className="flex items-center justify-center aspect-video h-[200px] sm:h-[250px]">
+                     <CardContent className="flex items-center justify-center h-[230px] sm:h-[250px]">
                           <ChartContainer config={dynamicCategoryChartConfig} className="h-full w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
@@ -564,7 +564,7 @@ export default function DashboardPage() {
                         <CardTitle>Ativos por Localização (Top 5)</CardTitle>
                          <CardDescription>Concentração de ativos nos principais locais.</CardDescription>
                     </CardHeader>
-                    <CardContent className="aspect-video h-[200px] sm:h-[250px]">
+                    <CardContent className="h-[230px] sm:h-[250px]">
                           <ChartContainer config={{ count: { label: "Ativos", color: "hsl(var(--primary))" } }} className="w-full h-full">
                              <ResponsiveContainer width="100%" height="100%">
                                 <RechartsBarChart data={data.byLocation} margin={{ top: 5, right: 5, left: 0, bottom: 5 }}>
