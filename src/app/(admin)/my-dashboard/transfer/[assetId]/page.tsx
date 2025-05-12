@@ -11,7 +11,7 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -290,3 +290,4 @@ export default function TransferAssetPage() {
     </div>
   );
 }
+
