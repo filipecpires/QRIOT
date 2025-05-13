@@ -1,5 +1,5 @@
 // src/lib/mock-data.ts
-import type { AssetForMyDashboard, TransferRequest, UserForSelect, UserData } from '@/types'; // Assuming types are now in @/types
+import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest } from '@/types';
 
 // --- Mock Company ID ---
 export const MOCK_COMPANY_ID = 'COMPANY_XYZ';
@@ -65,7 +65,7 @@ export let mockTransferRequests: TransferRequest[] = [
     { id: 'transfer2', assetId: 'ASSET003', assetName: 'Cadeira de Escritório (do João)', assetTag: 'GH56I', fromUserId: MOCK_LOGGED_IN_USER_ID, fromUserName: MOCK_LOGGED_IN_USER_NAME, toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'pending' },
 
     // Already processed
-    { id: 'transfer3', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (de Maria)', assetTag: 'MN90P', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000) },
+    { id: 'transfer3', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (de Maria)', assetTag: 'MN90P', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000), processedByUserId: MOCK_LOGGED_IN_USER_ID },
 ];
 
 export const mockUsersForSelect: UserForSelect[] = [
@@ -95,6 +95,6 @@ export const mockAdminUsers: UserData[] = [
     { id: 'user5', companyId: MOCK_COMPANY_ID, name: 'Pedro Santos', email: 'pedro.santos@example.com', role: 'Funcionário', managerId: 'user1', isActive: true, createdAt: new Date(2023, 4, 1), updatedAt: new Date(2023, 4, 1) },
 ];
 
-export const MOCK_USERS_FOR_ADMIN_SELECT: SimpleUser[] = mockAdminUsers
+export const MOCK_USERS_FOR_ADMIN_SELECT: UserForSelect[] = mockAdminUsers
     .filter(u => u.role === 'Administrador' || u.role === 'Gerente') // Only Admins and Managers can be managers
     .map(u => ({ id: u.id, name: `${u.name} (${u.role})` }));

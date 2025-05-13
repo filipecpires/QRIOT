@@ -1,4 +1,3 @@
-
 // src/types/user.ts
 
 export type UserRole = "Administrador" | "Gerente" | "Técnico" | "Inventariante" | "Funcionário";
@@ -20,7 +19,7 @@ export interface UserData {
 }
 
 // For select dropdowns
-export interface SimpleUser {
+export interface UserForSelect {
     id: string;
     name: string;
 }

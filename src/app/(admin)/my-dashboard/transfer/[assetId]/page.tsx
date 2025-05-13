@@ -16,11 +16,11 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import type { AssetForMyDashboard as AssetDetails, UserForSelect, TransferRequest } from '@/types'; // Use centralized types
+import type { AssetForMyDashboard as AssetDetails, UserForSelect, TransferRequest } from '@/types'; 
 import { 
     allAssetsMockData, 
     mockTransferRequests, 
-    finalMockUsersForSelect as mockUsersForSelect, // Use the filtered list
+    finalMockUsersForSelect as mockUsersForSelect, 
     MOCK_LOGGED_IN_USER_ID,
     MOCK_LOGGED_IN_USER_NAME
 } from '@/lib/mock-data';
@@ -43,7 +43,7 @@ async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetai
         tag: asset.tag,
         category: asset.category,
         locationName: asset.locationName,
-        status: asset.status as AssetDetails['status'], // Ensure status type matches
+        status: asset.status as AssetDetails['status'], 
         responsibleUserId: asset.responsibleUserId,
         ownership: asset.ownership,
     };
@@ -118,7 +118,7 @@ export default function TransferAssetPage() {
       try {
         const [fetchedAsset, fetchedUsers] = await Promise.all([
           fetchAssetDetailsForTransfer(assetId),
-          fetchUsersForTransfer(MOCK_LOGGED_IN_USER_ID), // Assume current user is MOCK_LOGGED_IN_USER_ID
+          fetchUsersForTransfer(MOCK_LOGGED_IN_USER_ID), 
         ]);
 
         if (!fetchedAsset) {
@@ -156,7 +156,7 @@ export default function TransferAssetPage() {
         assetDetails.id, 
         assetDetails.name, 
         assetDetails.tag,
-        MOCK_LOGGED_IN_USER_ID, // Current user initiating the transfer
+        MOCK_LOGGED_IN_USER_ID, 
         MOCK_LOGGED_IN_USER_NAME,
         data.newResponsibleUserId, 
         selectedUser.name

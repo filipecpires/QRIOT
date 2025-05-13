@@ -52,10 +52,10 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { AssetForMyDashboard, TransferRequest, UserData } from '@/types'; // Use centralized types
+import type { AssetForMyDashboard, UserData, TransferRequest } from '@/types'; // Use centralized types
 import { 
-    allAssetsMockData, // Still using this for demonstration
-    mockTransferRequests, // Still using this
+    allAssetsMockData, 
+    mockTransferRequests, 
     MOCK_LOGGED_IN_USER_ID,
     MOCK_LOGGED_IN_USER_NAME,
     DEMO_USER_PROFILES
@@ -483,4 +483,3 @@ export default function MyDashboardPage() {
     </div>
   );
 }
-
