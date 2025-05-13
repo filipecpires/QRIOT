@@ -337,7 +337,7 @@ export default function LandingPage() {
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
-                         <Button asChild size="lg" variant="outline" className="text-background border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
+                         <Button asChild size="lg" variant="outline" className="text-primary border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
                              <a href="mailto:contato@qriot.app?subject=Demonstração%20QRIoT.app" className="flex items-center justify-center">
                                 <Phone className="mr-2 h-5 w-5" /> Solicitar Demonstração
                              </a>
