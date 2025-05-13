@@ -19,6 +19,12 @@ export default function LogoutPage() {
         // console.log("Sign out successful.");
         // --- END FIREBASE BLOCK ---
 
+         // Clear demo profile from session storage
+        if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('selectedDemoProfileName');
+            console.log('[LogoutPage] Demo profile cleared from session storage.');
+        }
+
          // Simulate logout delay
          await new Promise(resolve => setTimeout(resolve, 1000));
 
@@ -42,3 +48,4 @@ export default function LogoutPage() {
     </div>
   );
 }
+

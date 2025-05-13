@@ -5,7 +5,7 @@ import type { ReactNode} from 'react';
 import React, { useEffect, useState } from 'react'; // Added useEffect and useState
 import { usePathname, useSearchParams } from 'next/navigation'; // Added imports for routing info
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users } from 'lucide-react';
+import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users, PackageSearch } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
 import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME, DEMO_USER_PROFILES } from '@/lib/mock-data';
+import type { UserRole } from '@/types/user'; // Import UserRole type
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -31,8 +32,7 @@ function getInitials(name: string): string {
     return `${firstInitial}${lastInitial}`.toUpperCase();
 }
 
-type UserRole = "Administrador" | "Gerente" | "Técnico" | "Inventariante" | "Funcionário";
-
+// Define roles using the UserRole type for consistency
 const ROLES = {
     ADMIN: "Administrador" as UserRole,
     MANAGER: "Gerente" as UserRole,
@@ -49,32 +49,62 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); // Mock email
     const [displayUserAvatar, setDisplayUserAvatar] = useState(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
     const [displayUserRole, setDisplayUserRole] = useState<UserRole>(ROLES.ADMIN); // Default mock role
+    const [currentDemoUserId, setCurrentDemoUserId] = useState<string | null>(null); // Track the ID of the demo user
+
 
     useEffect(() => {
         const profileQueryParam = searchParams.get('profile');
-        if (pathname === '/my-dashboard' && profileQueryParam) {
-            const decodedProfileName = decodeURIComponent(profileQueryParam);
-            const demoUser = DEMO_USER_PROFILES[decodedProfileName as keyof typeof DEMO_USER_PROFILES];
-            if(demoUser) {
+        const sessionDemoProfileName = typeof window !== 'undefined' ? sessionStorage.getItem('selectedDemoProfileName') : null;
+
+        let activeProfileName: string | null = null;
+        let newDemoUserId: string | null = null;
+
+        if (profileQueryParam) {
+            activeProfileName = decodeURIComponent(profileQueryParam);
+            if (typeof window !== 'undefined') {
+                sessionStorage.setItem('selectedDemoProfileName', activeProfileName);
+            }
+            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
+            if (demoUser) {
+                newDemoUserId = demoUser.id;
+            }
+             console.log(`[AdminLayout] Demo profile selected via URL: ${activeProfileName}`);
+        } else if (sessionDemoProfileName) {
+            activeProfileName = sessionDemoProfileName;
+            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
+             if (demoUser) {
+                newDemoUserId = demoUser.id;
+            }
+            console.log(`[AdminLayout] Demo profile restored from session: ${activeProfileName}`);
+        }
+        
+        setCurrentDemoUserId(newDemoUserId);
+
+        if (activeProfileName) {
+            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
+            if (demoUser) {
                 setDisplayUserName(demoUser.name);
-                setDisplayUserEmail(`${decodedProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
+                setDisplayUserEmail(`${activeProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
                 setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoUser.name)}`);
-                setDisplayUserRole(demoUser.role); 
+                setDisplayUserRole(demoUser.role);
             } else {
-                // Fallback for unrecognized profile names, though ideally this shouldn't happen with defined profiles
-                setDisplayUserName(`Demo: ${decodedProfileName}`);
-                setDisplayUserEmail(`demo.${decodedProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
-                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(decodedProfileName)}`);
-                setDisplayUserRole(ROLES.EMPLOYEE); // Default to a base role
+                if (typeof window !== 'undefined') {
+                    sessionStorage.removeItem('selectedDemoProfileName');
+                }
+                setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
+                setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ', '_')}@qriot.app`);
+                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
+                setDisplayUserRole(ROLES.ADMIN);
+                 console.warn(`[AdminLayout] Invalid demo profile name "${activeProfileName}", falling back to default.`);
             }
         } else {
-            // For other pages or if no profile param, use default mock user
             setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
-            setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`);
+            setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ', '_')}@qriot.app`);
             setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-            setDisplayUserRole(ROLES.ADMIN); // Default to Admin if not a demo profile view
+            setDisplayUserRole(ROLES.ADMIN);
+            console.log('[AdminLayout] No demo profile active, using default mock user.');
         }
-    }, [pathname, searchParams]);
+    }, [searchParams]); // Only re-run if searchParams change (new profile selection)
 
 
     const { isMobile, setOpenMobile, open } = useSidebar();
@@ -194,7 +224,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                             </SidebarMenuItem>
                         )}
                         {/* Print Labels */}
-                        {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY]) && (
                             <SidebarMenuItem>
                                 <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                     <Link href="/labels/print">
@@ -302,7 +332,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> 
+                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto bg-muted/30 dark:bg-background/30"> 
                     {children}
                 </main>
             </SidebarInset>
