@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'; // Removed CardFooter as it's not used
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react'; 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation'; 
@@ -13,17 +13,11 @@ import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
     const router = useRouter();
-    const { toast } = useToast();
+    const { toast } = useToast(); // Toast can still be used for other actions if needed
 
-    const handleDemoLogin = async () => {
-        toast({
-            title: 'Acesso Demo',
-            description: 'Você será redirecionado para o painel de demonstração.',
-        });
-        // Simulate redirection after a short delay
-        setTimeout(() => {
-            router.push('/my-dashboard'); 
-        }, 1500);
+    const handleDemoAccess = () => {
+        // Navigate to the new demo profile selection page
+        router.push('/demo-profile-select'); 
     };
 
     const features = [
@@ -172,7 +166,7 @@ export default function LandingPage() {
                         QRIoT.app
                     </Link>
                     <nav className="flex items-center gap-2 sm:gap-4">
-                         <Button size="sm" variant="ghost" onClick={handleDemoLogin} className="text-primary hover:bg-primary/10">
+                         <Button size="sm" variant="ghost" onClick={handleDemoAccess} className="text-primary hover:bg-primary/10">
                              <BadgeCheck className="mr-1 sm:mr-2 h-4 w-4" />
                             Acesso Demo
                          </Button>
@@ -199,7 +193,7 @@ export default function LandingPage() {
                             <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
                     </Button>
-                     <Button size="lg" variant="outline" onClick={handleDemoLogin} className="border-primary text-primary hover:bg-primary/5 hover:text-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
+                     <Button size="lg" variant="outline" onClick={handleDemoAccess} className="border-primary text-primary hover:bg-primary/5 hover:text-primary/90 transition-all duration-300 ease-in-out transform hover:scale-105 w-full sm:w-auto">
                          <BadgeCheck className="mr-2 h-5 w-5" />
                          Ver Demonstração
                     </Button>
@@ -311,7 +305,7 @@ export default function LandingPage() {
                                     ))}
                                 </ul>
                             </CardContent>
-                            <div className="mt-auto p-6"> {/* Changed CardFooter to div to avoid import error if CardFooter is not exported from ui/card */}
+                            <div className="mt-auto p-6"> 
                                 <Button asChild size="lg" className={cn("w-full shadow-md transition-colors", plan.popular ? "bg-primary hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90")}>
                                     {plan.href.startsWith('mailto:') ? (
                                         <a href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</a>
@@ -369,3 +363,4 @@ export default function LandingPage() {
         </div>
     );
 }
+

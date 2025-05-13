@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation'; // Ensure useRouter is imported
+import { useRouter, useSearchParams } from 'next/navigation'; 
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
@@ -67,12 +67,12 @@ async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
   await new Promise(resolve => setTimeout(resolve, 1000));
   return allAssetsMockData
     .filter(asset => asset.responsibleUserId === userId)
-    .map(asset => ({ // Ensure mapping matches the AssetForMyDashboard structure
+    .map(asset => ({ 
       id: asset.id,
       name: asset.name,
       tag: asset.tag,
       status: asset.status as AssetForMyDashboard['status'],
-      locationName: asset.locationName, // Assuming locationName is directly available
+      locationName: asset.locationName, 
       category: asset.category,
       responsibleUserId: asset.responsibleUserId,
       ownership: asset.ownership,
@@ -128,6 +128,7 @@ async function processTransferRequest(transferId: string, assetId: string, newRe
 export default function MyDashboardPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [myAssets, setMyAssets] = useState<AssetForMyDashboard[]>([]);
   const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
   const [isLoadingMyAssets, setIsLoadingMyAssets] = useState(true);
@@ -137,6 +138,16 @@ export default function MyDashboardPage() {
   const [assetToAction, setAssetToAction] = useState<AssetForMyDashboard | null>(null);
   const [isLostConfirmOpen, setIsLostConfirmOpen] = useState(false);
   const [processingTransferId, setProcessingTransferId] = useState<string | null>(null);
+  const [dashboardUserName, setDashboardUserName] = useState(MOCK_LOGGED_IN_USER_NAME);
+
+  useEffect(() => {
+    const profileParam = searchParams.get('profile');
+    if (profileParam) {
+      setDashboardUserName(`Demo: ${decodeURIComponent(profileParam)}`);
+    } else {
+      setDashboardUserName(MOCK_LOGGED_IN_USER_NAME);
+    }
+  }, [searchParams]);
 
   const loadMyAssets = useCallback(async () => {
       setIsLoadingMyAssets(true);
@@ -186,7 +197,7 @@ export default function MyDashboardPage() {
     if (!assetToAction) return;
     const result = await reportAssetLost(assetToAction.id, assetToAction.name);
     if (result.success) {
-      loadMyAssets(); // Refetch assets to update status
+      loadMyAssets(); 
       toast({ title: "Ativo Reportado", description: `${assetToAction.name} foi marcado como perdido.` });
     } else {
       toast({ title: "Erro", description: "Falha ao reportar perda do ativo.", variant: "destructive" });
@@ -218,8 +229,8 @@ export default function MyDashboardPage() {
     if (result.success) {
         const actionText = action === 'accept' ? 'Aceita' : 'Rejeitada';
         toast({ title: `Transferência ${actionText}`, description: `A solicitação para ${transfer.assetName} foi ${actionText.toLowerCase()}.`});
-        loadMyAssets(); // If accepted, asset might appear in "My Assets"
-        loadTransferRequests(); // Refresh pending transfers
+        loadMyAssets(); 
+        loadTransferRequests(); 
     } else {
         toast({ title: "Erro", description: `Falha ao ${action === 'accept' ? 'aceitar' : 'rejeitar'} a transferência.`, variant: "destructive"});
     }
@@ -240,7 +251,7 @@ export default function MyDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UserSquare className="h-8 w-8" /> Meu Painel - {MOCK_LOGGED_IN_USER_NAME}</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-2"><UserSquare className="h-8 w-8" /> {dashboardUserName}</h1>
       </div>
 
         {/* Pending Transfer Requests Card */}
