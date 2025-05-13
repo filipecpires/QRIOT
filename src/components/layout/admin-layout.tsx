@@ -2,8 +2,8 @@
 'use client'; 
 
 import type { ReactNode} from 'react';
-import React, { useEffect, useState } from 'react'; // Added useEffect and useState
-import { usePathname, useSearchParams } from 'next/navigation'; // Added imports for routing info
+import React, { useEffect, useState } from 'react'; 
+import { usePathname, useSearchParams } from 'next/navigation'; 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users, PackageSearch } from 'lucide-react';
 import Link from 'next/link';
@@ -21,9 +21,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
 import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME, DEMO_USER_PROFILES } from '@/lib/mock-data';
-import type { UserRole } from '@/types/user'; // Import UserRole type
+import type { UserRole } from '@/types/user'; 
 
-// Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
     if (!name) return '?';
     const names = name.split(' ');
@@ -32,7 +31,6 @@ function getInitials(name: string): string {
     return `${firstInitial}${lastInitial}`.toUpperCase();
 }
 
-// Define roles using the UserRole type for consistency
 const ROLES = {
     ADMIN: "Administrador" as UserRole,
     MANAGER: "Gerente" as UserRole,
@@ -41,15 +39,14 @@ const ROLES = {
     EMPLOYEE: "Funcionário" as UserRole,
 };
 
-// Internal component to consume SidebarContext
 function AdminLayoutContent({ children }: { children: ReactNode }) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const [displayUserName, setDisplayUserName] = useState(MOCK_LOGGED_IN_USER_NAME);
-    const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); // Mock email
+    const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); 
     const [displayUserAvatar, setDisplayUserAvatar] = useState(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-    const [displayUserRole, setDisplayUserRole] = useState<UserRole>(ROLES.ADMIN); // Default mock role
-    const [currentDemoUserId, setCurrentDemoUserId] = useState<string | null>(null); // Track the ID of the demo user
+    const [displayUserRole, setDisplayUserRole] = useState<UserRole>(ROLES.ADMIN); 
+    const [currentDemoProfileName, setCurrentDemoProfileName] = useState<string | null>(null);
 
 
     useEffect(() => {
@@ -57,28 +54,19 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
         const sessionDemoProfileName = typeof window !== 'undefined' ? sessionStorage.getItem('selectedDemoProfileName') : null;
 
         let activeProfileName: string | null = null;
-        let newDemoUserId: string | null = null;
 
         if (profileQueryParam) {
             activeProfileName = decodeURIComponent(profileQueryParam);
             if (typeof window !== 'undefined') {
                 sessionStorage.setItem('selectedDemoProfileName', activeProfileName);
             }
-            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
-            if (demoUser) {
-                newDemoUserId = demoUser.id;
-            }
              console.log(`[AdminLayout] Demo profile selected via URL: ${activeProfileName}`);
         } else if (sessionDemoProfileName) {
             activeProfileName = sessionDemoProfileName;
-            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
-             if (demoUser) {
-                newDemoUserId = demoUser.id;
-            }
             console.log(`[AdminLayout] Demo profile restored from session: ${activeProfileName}`);
         }
         
-        setCurrentDemoUserId(newDemoUserId);
+        setCurrentDemoProfileName(activeProfileName); // Store the active profile name
 
         if (activeProfileName) {
             const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
@@ -88,6 +76,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                 setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoUser.name)}`);
                 setDisplayUserRole(demoUser.role);
             } else {
+                // Fallback to default if profile name is invalid
                 if (typeof window !== 'undefined') {
                     sessionStorage.removeItem('selectedDemoProfileName');
                 }
@@ -98,26 +87,27 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                  console.warn(`[AdminLayout] Invalid demo profile name "${activeProfileName}", falling back to default.`);
             }
         } else {
+            // No demo profile active, use default mock user
             setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
             setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ', '_')}@qriot.app`);
             setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
             setDisplayUserRole(ROLES.ADMIN);
             console.log('[AdminLayout] No demo profile active, using default mock user.');
         }
-    }, [searchParams]); // Only re-run if searchParams change (new profile selection)
+    }, [searchParams, pathname]); 
 
 
-    const { isMobile, setOpenMobile, open } = useSidebar();
+    const { open } = useSidebar(); // Only need `open` for desktop sidebar style
 
-    const handleMobileMenuClick = () => {
-        if (isMobile) {
-            setOpenMobile(false);
+    const getDynamicLink = (basePath: string) => {
+        if (currentDemoProfileName) {
+            return `${basePath}?profile=${encodeURIComponent(currentDemoProfileName)}`;
         }
+        return basePath;
     };
-
+    
     const sidebarCollapsibleStyle = open ? {} : { justifyContent: 'center' };
 
-    // Access control checks
     const canAccess = (allowedRoles: UserRole[]): boolean => {
         return allowedRoles.includes(displayUserRole);
     };
@@ -125,120 +115,109 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
     return (
         <>
-            {/* The actual sidebar component */}
             <Sidebar collapsible="icon">
                 <SidebarHeader>
-                    <Link href="/my-dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
+                    <Link href={getDynamicLink("/my-dashboard")} className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
                         <QrCode className="h-6 w-6 text-sidebar-primary" />
                         <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-0"> 
                     <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1">
-                        {/* Dashboard (General Admin/Manager Dashboard) */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Dashboard Geral" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/dashboard">
+                                <SidebarMenuButton asChild tooltip="Dashboard Geral" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/dashboard")}>
                                         <LayoutDashboard />
                                         <span className="group-data-[collapsible=icon]:hidden">Dashboard Geral</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                         {/* Meu Painel */}
                          {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/my-dashboard">
+                                <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/my-dashboard")}>
                                         <UserSquare />
                                         <span className="group-data-[collapsible=icon]:hidden">Meu Painel</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Assets */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/assets">
+                                <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/assets")}>
                                         <Briefcase /> 
                                         <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Asset Tree */}
                          {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/assets/tree">
+                                <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/assets/tree")}>
                                         <GitMerge />
                                         <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Inventory Scan */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/inventory/scan">
+                                <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/inventory/scan")}>
                                         <CheckSquare />
                                         <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Characteristic Scan */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/characteristics/scan">
+                                <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/characteristics/scan")}>
                                         <ScanLine />
                                         <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Locations */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/locations">
+                                <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/locations")}>
                                         <MapPin />
                                         <span className="group-data-[collapsible=icon]:hidden">Locais</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Maintenance */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/maintenance/work-orders">
+                                <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/maintenance/work-orders")}>
                                         <MaintenanceIcon />
                                         <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Print Labels */}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.INVENTORY]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/labels/print">
+                                <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/labels/print")}>
                                         <Printer />
                                         <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
                         )}
-                        {/* Audit Log */}
                         {canAccess([ROLES.ADMIN]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                    <Link href="/audit-log">
+                                <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/audit-log")}>
                                         <History />
                                         <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
                                     </Link>
@@ -250,9 +229,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                 <SidebarFooter />
             </Sidebar>
 
-            {/* Main content area that adjusts based on sidebar state */}
             <SidebarInset>
-                {/* Header within the main content area */}
                 <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30">
                     <SidebarTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -261,7 +238,6 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </Button>
                     </SidebarTrigger>
 
-                    {/* User Profile Dropdown */}
                     <div className="flex items-center gap-4">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -286,7 +262,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 <DropdownMenuSeparator />
                                 {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
                                 <DropdownMenuItem asChild>
-                                    <Link href="/profile">
+                                    <Link href={getDynamicLink("/profile")}>
                                         <UserCircle className="mr-2 h-4 w-4" />
                                         <span>Meu Perfil</span>
                                     </Link>
@@ -294,7 +270,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 )}
                                 {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
                                 <DropdownMenuItem asChild>
-                                    <Link href="/licensing">
+                                    <Link href={getDynamicLink("/licensing")}>
                                         <FileText className="mr-2 h-4 w-4" />
                                         <span>Licença</span>
                                     </Link>
@@ -302,7 +278,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 )}
                                  {canAccess([ROLES.ADMIN]) && (
                                 <DropdownMenuItem asChild>
-                                    <Link href="/settings">
+                                    <Link href={getDynamicLink("/settings")}>
                                         <Settings className="mr-2 h-4 w-4" />
                                         <span>Configurações</span>
                                     </Link>
@@ -310,7 +286,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 )}
                                 {canAccess([ROLES.ADMIN]) && (
                                     <DropdownMenuItem asChild>
-                                        <Link href="/settings/admin">
+                                        <Link href={getDynamicLink("/settings/admin")}>
                                             <ShieldCheck className="mr-2 h-4 w-4" />
                                             <span>Administração</span>
                                         </Link>
@@ -318,12 +294,11 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 )}
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    {/* PWA Install Button */}
                                     <PwaInstallPromptButton />
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem asChild>
-                                    <Link href="/logout">
+                                    <Link href="/logout"> 
                                         <LogOut className="mr-2 h-4 w-4" />
                                         <span>Sair</span>
                                     </Link>
@@ -348,5 +323,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
-
-    

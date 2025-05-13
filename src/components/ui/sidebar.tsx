@@ -224,11 +224,12 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
+            "group-data-[collapsible=icon]:w-[--sidebar-width-icon]", // Always apply icon width when collapsible=icon
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+              : "" // Remove icon width for non-floating/inset if not collapsible=icon
           )}
         />
         <div
@@ -264,36 +265,32 @@ const SidebarTrigger = React.forwardRef<
   const { toggleSidebar } = useSidebar();
   
   const finalOnClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    onClick?.(event); // Call original onClick if provided
+    onClick?.(event); 
     toggleSidebar();
   };
 
   if (asChild) {
-    // When asChild is true, we render Slot.
-    // Slot will clone its single child (passed as `children` to SidebarTrigger)
-    // and merge props.
-    const { children: _childrenFromProps, ...restProps } = props; // `children` is already in the `children` prop passed to this component
+    const { children: _childrenFromProps, ...restProps } = props; 
 
     return (
       <Slot
         ref={ref}
         onClick={finalOnClick}
-        className={cn(className)} // Apply className to the Slot itself, Slot merges with child
-        {...restProps} // Spread other props (variant, size, etc., were on SidebarTrigger's child: Button)
+        className={cn(className)} 
+        {...restProps} 
       >
         {children}
       </Slot>
     );
   }
 
-  // If not asChild, render a Button with default content or provided children.
   return (
     <Button
       ref={ref}
       data-sidebar="trigger"
       className={cn(className)} 
       onClick={finalOnClick}
-      {...props} // Spread other Button props (like variant, size)
+      {...props} 
     >
       {children ? children : (
         <>
@@ -570,13 +567,21 @@ const SidebarMenuButton = React.forwardRef<
       size = "default",
       tooltip,
       className,
-      children, // Explicitly get children
+      children, 
+      onClick, // Extract onClick from props
       ...props
     },
     ref
   ) => {
     const Comp = asChild ? Slot : "button"
-    const { isMobile, state } = useSidebar()
+    const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+
+    const finalOnClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+      onClick?.(event); // Call original onClick if provided
+      if (isMobile && openMobile) { // If mobile and mobile sidebar is open
+        setOpenMobile(false); // Close it
+      }
+    };
 
     const buttonContent = (
       <Comp
@@ -585,7 +590,8 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        {...props} // Pass other props, Slot will merge children if asChild
+        onClick={finalOnClick} // Use the wrapped onClick
+        {...props} 
       >
         {children}
       </Comp>
