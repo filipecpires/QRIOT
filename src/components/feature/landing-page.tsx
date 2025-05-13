@@ -13,10 +13,9 @@ import { cn } from '@/lib/utils';
 
 export default function LandingPage() {
     const router = useRouter();
-    const { toast } = useToast(); // Toast can still be used for other actions if needed
+    const { toast } = useToast(); 
 
     const handleDemoAccess = () => {
-        // Navigate to the new demo profile selection page
         router.push('/demo-profile-select'); 
     };
 
@@ -157,7 +156,7 @@ export default function LandingPage() {
 
 
     return (
-        <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/5 to-background">
+        <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/5 to-background overflow-x-hidden">
             {/* Header */}
             <header className="sticky top-0 z-50 w-full border-b bg-background/90 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
