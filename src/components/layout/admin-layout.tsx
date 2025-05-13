@@ -5,7 +5,7 @@ import type { ReactNode} from 'react';
 import React, { useEffect, useState } from 'react'; // Added useEffect and useState
 import { usePathname, useSearchParams } from 'next/navigation'; // Added imports for routing info
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare } from 'lucide-react';
+import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -31,6 +31,16 @@ function getInitials(name: string): string {
     return `${firstInitial}${lastInitial}`.toUpperCase();
 }
 
+type UserRole = "Administrador" | "Gerente" | "Técnico" | "Inventariante" | "Funcionário";
+
+const ROLES = {
+    ADMIN: "Administrador" as UserRole,
+    MANAGER: "Gerente" as UserRole,
+    TECHNICIAN: "Técnico" as UserRole,
+    INVENTORY: "Inventariante" as UserRole,
+    EMPLOYEE: "Funcionário" as UserRole,
+};
+
 // Internal component to consume SidebarContext
 function AdminLayoutContent({ children }: { children: ReactNode }) {
     const pathname = usePathname();
@@ -38,30 +48,22 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     const [displayUserName, setDisplayUserName] = useState(MOCK_LOGGED_IN_USER_NAME);
     const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); // Mock email
     const [displayUserAvatar, setDisplayUserAvatar] = useState(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-    const [displayUserRole, setDisplayUserRole] = useState("Administrador"); // Default mock role
+    const [displayUserRole, setDisplayUserRole] = useState<UserRole>(ROLES.ADMIN); // Default mock role
 
     useEffect(() => {
-        if (pathname === '/my-dashboard') {
-            const profileQueryParam = searchParams.get('profile');
-            if (profileQueryParam) {
-                const demoName = `Demo: ${decodeURIComponent(profileQueryParam)}`;
-                setDisplayUserName(demoName);
-                setDisplayUserEmail(`demo.${decodeURIComponent(profileQueryParam).toLowerCase()}@qriot.app`);
-                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoName)}`);
-                setDisplayUserRole(decodeURIComponent(profileQueryParam)); // Role matches profile for demo
-            } else {
-                // Reset to default mock user if no profile param on my-dashboard
-                setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
-                setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`);
-                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-                setDisplayUserRole("Administrador");
-            }
+        const profileQueryParam = searchParams.get('profile');
+        if (pathname === '/my-dashboard' && profileQueryParam) {
+            const demoName = `Demo: ${decodeURIComponent(profileQueryParam)}`;
+            setDisplayUserName(demoName);
+            setDisplayUserEmail(`demo.${decodeURIComponent(profileQueryParam).toLowerCase()}@qriot.app`);
+            setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoName)}`);
+            setDisplayUserRole(decodeURIComponent(profileQueryParam) as UserRole); 
         } else {
-            // For other pages, use default mock user
+            // For other pages or if no profile param, use default mock user
             setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
             setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`);
             setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-            setDisplayUserRole("Administrador");
+            setDisplayUserRole(ROLES.ADMIN); // Default to Admin if not a demo profile view
         }
     }, [pathname, searchParams]);
 
@@ -75,6 +77,11 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     };
 
     const sidebarCollapsibleStyle = open ? {} : { justifyContent: 'center' };
+
+    // Access control checks
+    const canAccess = (allowedRoles: UserRole[]): boolean => {
+        return allowedRoles.includes(displayUserRole);
+    };
 
 
     return (
@@ -90,95 +97,115 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                 <SidebarContent className="p-0"> 
                     <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1">
                         {/* Dashboard */}
-                        <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Dashboard" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/dashboard">
-                                    <LayoutDashboard />
-                                    <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Dashboard" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/dashboard">
+                                        <LayoutDashboard />
+                                        <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                          {/* Meu Painel */}
-                         <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/my-dashboard">
-                                    <UserSquare />
-                                    <span className="group-data-[collapsible=icon]:hidden">Meu Painel</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/my-dashboard">
+                                        <UserSquare />
+                                        <span className="group-data-[collapsible=icon]:hidden">Meu Painel</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Assets */}
-                        <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/assets">
-                                    <Briefcase /> 
-                                    <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/assets">
+                                        <Briefcase /> 
+                                        <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Asset Tree */}
-                        <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/assets/tree">
-                                    <GitMerge />
-                                    <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/assets/tree">
+                                        <GitMerge />
+                                        <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Inventory Scan */}
-                        <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/inventory/scan">
-                                    <CheckSquare />
-                                    <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/inventory/scan">
+                                        <CheckSquare />
+                                        <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Characteristic Scan */}
-                        <SidebarMenuItem>
-                             <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/characteristics/scan">
-                                    <ScanLine />
-                                    <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/characteristics/scan">
+                                        <ScanLine />
+                                        <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Locations */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/locations">
-                                    <MapPin />
-                                    <span className="group-data-[collapsible=icon]:hidden">Locais</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/locations">
+                                        <MapPin />
+                                        <span className="group-data-[collapsible=icon]:hidden">Locais</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Maintenance */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/maintenance/work-orders">
-                                    <MaintenanceIcon />
-                                    <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/maintenance/work-orders">
+                                        <MaintenanceIcon />
+                                        <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Print Labels */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/labels/print">
-                                    <Printer />
-                                    <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/labels/print">
+                                        <Printer />
+                                        <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                         {/* Audit Log */}
-                        <SidebarMenuItem>
-                            <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
-                                <Link href="/audit-log">
-                                    <History />
-                                    <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
-                                </Link>
-                            </SidebarMenuButton>
-                        </SidebarMenuItem>
+                        {canAccess([ROLES.ADMIN]) && (
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                    <Link href="/audit-log">
+                                        <History />
+                                        <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
                     </SidebarMenu>
                 </SidebarContent>
                 <SidebarFooter />
@@ -213,30 +240,36 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                     <div className="flex flex-col space-y-1">
                                         <p className="text-sm font-medium leading-none">{displayUserName}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            {displayUserEmail}
+                                            {displayUserEmail} ({displayUserRole})
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
+                                {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
                                 <DropdownMenuItem asChild>
                                     <Link href="/profile">
                                         <UserCircle className="mr-2 h-4 w-4" />
                                         <span>Meu Perfil</span>
                                     </Link>
                                 </DropdownMenuItem>
+                                )}
+                                {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
                                 <DropdownMenuItem asChild>
                                     <Link href="/licensing">
                                         <FileText className="mr-2 h-4 w-4" />
                                         <span>Licença</span>
                                     </Link>
                                 </DropdownMenuItem>
+                                )}
+                                 {canAccess([ROLES.ADMIN]) && (
                                 <DropdownMenuItem asChild>
                                     <Link href="/settings">
                                         <Settings className="mr-2 h-4 w-4" />
                                         <span>Configurações</span>
                                     </Link>
                                 </DropdownMenuItem>
-                                {displayUserRole === 'Administrador' && ( // Use dynamic role for admin link
+                                )}
+                                {canAccess([ROLES.ADMIN]) && (
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings/admin">
                                             <ShieldCheck className="mr-2 h-4 w-4" />
@@ -277,3 +310,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   );
 }
 
+    

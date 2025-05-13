@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, UserCog, UserCheck, Wrench, User, Loader2 } from 'lucide-react';
+import { ArrowLeft, UserCog, UserCheck, Wrench, User, Loader2, Briefcase } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -14,6 +14,7 @@ const profiles = [
   { name: 'Gerente', icon: UserCheck, description: "Visualiza e gerencia ativos de seus subordinados, cria usuários." },
   { name: 'Técnico', icon: Wrench, description: "Realiza manutenções, atualiza informações de ativos específicos." },
   { name: 'Inventariante', icon: User, description: "Focado em realizar inventários e verificar ativos em campo." },
+  { name: 'Funcionário', icon: Briefcase, description: "Acessa seu painel pessoal e gerencia ativos sob sua responsabilidade." },
 ];
 
 export default function DemoProfileSelectPage() {
@@ -53,32 +54,34 @@ export default function DemoProfileSelectPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-4xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 w-full max-w-5xl">
         {profiles.map((profile) => (
           <Card 
             key={profile.name} 
-            className="hover:shadow-xl transition-shadow cursor-pointer transform hover:scale-105"
+            className="hover:shadow-xl transition-shadow cursor-pointer transform hover:scale-105 flex flex-col"
             onClick={() => !isLoading && handleProfileSelect(profile.name)}
           >
             <CardHeader className="items-center text-center pb-3">
               <profile.icon className="h-10 w-10 text-primary mb-3" />
               <CardTitle className="text-xl">{profile.name}</CardTitle>
             </CardHeader>
-            <CardContent className="text-center">
-              <CardDescription className="text-xs h-16"> {/* Fixed height for description */}
+            <CardContent className="text-center flex-grow">
+              <CardDescription className="text-xs min-h-[4rem]"> 
                 {profile.description}
               </CardDescription>
-              <Button 
-                className="w-full mt-4" 
-                disabled={!!isLoading}
-              >
-                {isLoading === profile.name ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  `Acessar como ${profile.name}`
-                )}
-              </Button>
-            </CardContent>
+              </CardContent>
+              <div className="p-4 pt-0 mt-auto">
+                <Button 
+                    className="w-full" 
+                    disabled={!!isLoading}
+                >
+                    {isLoading === profile.name ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                    `Acessar como ${profile.name}`
+                    )}
+                </Button>
+              </div>
           </Card>
         ))}
       </div>
@@ -88,3 +91,5 @@ export default function DemoProfileSelectPage() {
     </div>
   );
 }
+
+    
