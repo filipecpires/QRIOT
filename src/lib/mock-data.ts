@@ -111,5 +111,3 @@ export const mockUsersForSelect: UserForSelect[] = [
 // Filter out duplicates just in case
 const uniqueMockUsers = Array.from(new Map(mockUsersForSelect.map(user => [user.id, user])).values());
 export const finalMockUsersForSelect = uniqueMockUsers;
-
-```
