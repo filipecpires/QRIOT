@@ -1,7 +1,9 @@
 
 'use client'; 
 
-import type { ReactNode } from 'react';
+import type { ReactNode} from 'react';
+import React, { useEffect, useState } from 'react'; // Added useEffect and useState
+import { usePathname, useSearchParams } from 'next/navigation'; // Added imports for routing info
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
 import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare } from 'lucide-react';
 import Link from 'next/link';
@@ -18,6 +20,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
+import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME } from '@/lib/mock-data';
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -30,11 +33,38 @@ function getInitials(name: string): string {
 
 // Internal component to consume SidebarContext
 function AdminLayoutContent({ children }: { children: ReactNode }) {
-    // Mock user data - replace with actual auth context later
-    const userName = "João Silva";
-    const userEmail = "joao.silva@example.com";
-    const userAvatar = `https://i.pravatar.cc/40?u=${userEmail}`; // Placeholder avatar
-    const userRole = "Administrador"; // Mock role
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const [displayUserName, setDisplayUserName] = useState(MOCK_LOGGED_IN_USER_NAME);
+    const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); // Mock email
+    const [displayUserAvatar, setDisplayUserAvatar] = useState(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
+    const [displayUserRole, setDisplayUserRole] = useState("Administrador"); // Default mock role
+
+    useEffect(() => {
+        if (pathname === '/my-dashboard') {
+            const profileQueryParam = searchParams.get('profile');
+            if (profileQueryParam) {
+                const demoName = `Demo: ${decodeURIComponent(profileQueryParam)}`;
+                setDisplayUserName(demoName);
+                setDisplayUserEmail(`demo.${decodeURIComponent(profileQueryParam).toLowerCase()}@qriot.app`);
+                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoName)}`);
+                setDisplayUserRole(decodeURIComponent(profileQueryParam)); // Role matches profile for demo
+            } else {
+                // Reset to default mock user if no profile param on my-dashboard
+                setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
+                setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`);
+                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
+                setDisplayUserRole("Administrador");
+            }
+        } else {
+            // For other pages, use default mock user
+            setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
+            setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`);
+            setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
+            setDisplayUserRole("Administrador");
+        }
+    }, [pathname, searchParams]);
+
 
     const { isMobile, setOpenMobile, open } = useSidebar();
 
@@ -171,19 +201,19 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-8 w-auto px-2 flex items-center gap-2">
                                     <Avatar className="h-6 w-6">
-                                        <AvatarImage src={userAvatar} alt={userName} />
-                                        <AvatarFallback>{getInitials(userName)}</AvatarFallback>
+                                        <AvatarImage src={displayUserAvatar} alt={displayUserName} />
+                                        <AvatarFallback>{getInitials(displayUserName)}</AvatarFallback>
                                     </Avatar>
-                                    <span className="hidden md:inline text-sm font-medium">{userName}</span>
+                                    <span className="hidden md:inline text-sm font-medium">{displayUserName}</span>
                                     <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:inline" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{userName}</p>
+                                        <p className="text-sm font-medium leading-none">{displayUserName}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
-                                            {userEmail}
+                                            {displayUserEmail}
                                         </p>
                                     </div>
                                 </DropdownMenuLabel>
@@ -206,7 +236,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                         <span>Configurações</span>
                                     </Link>
                                 </DropdownMenuItem>
-                                {userRole === 'Administrador' && (
+                                {displayUserRole === 'Administrador' && ( // Use dynamic role for admin link
                                     <DropdownMenuItem asChild>
                                         <Link href="/settings/admin">
                                             <ShieldCheck className="mr-2 h-4 w-4" />
@@ -246,3 +276,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </SidebarProvider>
   );
 }
+
