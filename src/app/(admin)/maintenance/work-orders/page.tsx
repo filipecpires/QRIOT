@@ -200,7 +200,7 @@ export default function WorkOrdersPage() {
     return (
         <div className="space-y-6 min-w-0">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                <h1 className="text-3xl font-bold flex items-center gap-2"><Wrench /> Ordens de Serviço</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2"><Wrench /> Ordens de Serviço</h1>
                 <Button asChild>
                     <Link href="/maintenance/work-orders/new">
                         <PlusCircle className="mr-2 h-4 w-4" /> Nova Ordem de Serviço
@@ -385,4 +385,5 @@ export default function WorkOrdersPage() {
         </div>
     );
 }
+
 

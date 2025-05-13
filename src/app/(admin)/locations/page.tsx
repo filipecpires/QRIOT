@@ -19,7 +19,7 @@ export default function LocationsPage() {
   return (
     <div className="space-y-6"> {/* Use simple div instead of container */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-        <h1 className="text-3xl font-bold">Gerenciar Locais</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Locais</h1>
         <Button asChild>
           <Link href="/locations/new">
             <PlusCircle className="mr-2 h-4 w-4" /> Novo Local
@@ -90,5 +90,6 @@ export default function LocationsPage() {
     </div>
   );
 }
+
 
 

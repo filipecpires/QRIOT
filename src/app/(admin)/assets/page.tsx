@@ -105,7 +105,7 @@ export default function AssetsPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold">Gerenciar Ativos</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Ativos</h1>
         <Button asChild>
           <Link href="/assets/new">
             <PlusCircle className="mr-2 h-4 w-4" /> Novo Ativo
@@ -274,3 +274,4 @@ export default function AssetsPage() {
     </div>
   );
 }
+

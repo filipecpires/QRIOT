@@ -7,7 +7,7 @@ import { Building, Users, Settings } from 'lucide-react';
 export default function AdminSettingsPage() {
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Administração</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold">Administração</h1>
       <p className="text-muted-foreground">
         Gerencie as configurações da sua empresa e os usuários do sistema.
       </p>
@@ -76,3 +76,4 @@ export default function AdminSettingsPage() {
     </div>
   );
 }
+

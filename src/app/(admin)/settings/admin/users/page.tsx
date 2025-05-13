@@ -162,7 +162,7 @@ export default function AdminUsersPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-2">
-        <h1 className="text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold">Gerenciar Usuários da Empresa</h1>
         <Button asChild>
           <Link href="/settings/admin/users/new">
             <PlusCircle className="mr-2 h-4 w-4" /> Novo Usuário
@@ -346,6 +346,7 @@ export default function AdminUsersPage() {
     </div>
   );
 }
+
 
 
 

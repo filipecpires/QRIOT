@@ -205,7 +205,14 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
     // For non-assets, handle expand/collapse and apply cursor-pointer if it has children
     const nodeContainerProps = node.type === 'asset'
         ? { asChild: true, className: "cursor-pointer w-full block" }
-        : { onClick: () => hasChildren && onToggleExpand(node.id), className: cn("w-full", hasChildren ? "cursor-pointer" : "") };
+        : { onClick: (e: React.MouseEvent) => {
+             // Only toggle expand if the click is not on the dropdown trigger area
+             // (though dropdown only exists for assets)
+             if (hasChildren && !(e.target instanceof HTMLElement && e.target.closest('[data-radix-dropdown-menu-trigger]'))) {
+                 onToggleExpand(node.id);
+             }
+           },
+           className: cn("w-full", hasChildren ? "cursor-pointer" : "") };
 
 
     return (
@@ -217,8 +224,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                          "flex items-center space-x-1 py-1 px-2 rounded hover:bg-muted/50 group",
                      )}
                      style={{ paddingLeft: `${level * 1.5 + 0.5}rem` }} // Indentation based on level
-                     // Click handler removed for assets, handled by DropdownMenuTrigger
-                     // For non-assets, it's handled by the NodeContainer's onClick
                  >
                       {/* Toggle Button */}
                      <div className="w-4 flex-shrink-0">
@@ -227,7 +232,6 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
                                  variant="ghost"
                                  size="icon"
                                  className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                                 // Prevent dropdown trigger, only expand/collapse
                                  onClick={(e) => { e.stopPropagation(); onToggleExpand(node.id); }}
                                  aria-label={isExpanded ? 'Recolher' : 'Expandir'}
                              >
@@ -314,7 +318,7 @@ const TreeViewNode: React.FC<TreeViewNodeProps> = ({ node, level, expandedNodes,
              {/* Children Nodes */}
             {isExpanded && hasChildren && node.rawChildren && (
                 <ul className="pl-0"> {/* No extra padding needed, handled by child padding */}
-                    {node.rawChildren.map((child, index) => (
+                    {node.rawChildren.map((child) => ( // Removed index as key, using child.id
                         <TreeViewNode
                             key={child.id}
                             node={child}
@@ -454,7 +458,7 @@ export default function AssetTreePage() {
   return (
     <TooltipProvider> {/* Wrap with TooltipProvider */}
         <div className="space-y-6 h-full flex flex-col">
-          <h1 className="text-3xl font-bold mb-6 flex-shrink-0">Árvore Hierárquica</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-6 flex-shrink-0">Árvore Hierárquica</h1>
 
           <Card className="flex-grow flex flex-col">
              <CardContent className="flex-grow p-2 border rounded-lg overflow-auto">
@@ -501,4 +505,5 @@ export default function AssetTreePage() {
      </TooltipProvider>
   );
 }
+
 

@@ -162,7 +162,7 @@ export default function AuditLogPage() {
 
     return (
         <div className="space-y-6"> {/* Use simple div instead of container */}
-            <h1 className="text-3xl font-bold mb-6">Log de Auditoria</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6">Log de Auditoria</h1>
 
             <Card>
                 <CardHeader>
@@ -363,3 +363,4 @@ export default function AuditLogPage() {
         </div>
     );
 }
+

@@ -52,7 +52,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { AssetForMyDashboard, TransferRequest } from '@/types'; // Use centralized types
+import type { AssetForMyDashboard, TransferRequest, UserData } from '@/types'; // Use centralized types
 import { 
     allAssetsMockData, // Still using this for demonstration
     mockTransferRequests, // Still using this
@@ -276,7 +276,7 @@ export default function MyDashboardPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 className="text-3xl font-bold flex items-center gap-2"><UserSquare className="h-8 w-8" /> {currentUserName}</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2"><UserSquare className="h-8 w-8" /> {currentUserName}</h1>
       </div>
 
         <Card>
@@ -483,3 +483,4 @@ export default function MyDashboardPage() {
     </div>
   );
 }
+

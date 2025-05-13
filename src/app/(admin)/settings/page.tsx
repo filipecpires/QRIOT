@@ -258,7 +258,7 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6"> {/* Use simple div instead of container */}
-      <h1 className="text-3xl font-bold mb-6">Configurações</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold mb-6">Configurações</h1>
 
       <div className="space-y-8">
         {/* Public Page Settings */}
@@ -368,3 +368,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

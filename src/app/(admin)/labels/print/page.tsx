@@ -431,7 +431,7 @@ export default function PrintLabelsPage() {
     return (
         <div className="space-y-6">
             {renderHiddenQrCodes()}
-            <h1 className="text-3xl font-bold">Imprimir Etiquetas</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold">Imprimir Etiquetas</h1>
             <Card>
                 <CardHeader>
                     <CardTitle>Selecionar Ativos</CardTitle>
@@ -603,4 +603,5 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
+
 

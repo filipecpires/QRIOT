@@ -20,7 +20,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
-import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME } from '@/lib/mock-data';
+import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME, DEMO_USER_PROFILES } from '@/lib/mock-data';
 
 // Mock function to get initials (replace with actual logic if needed)
 function getInitials(name: string): string {
@@ -53,11 +53,20 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
     useEffect(() => {
         const profileQueryParam = searchParams.get('profile');
         if (pathname === '/my-dashboard' && profileQueryParam) {
-            const demoName = `Demo: ${decodeURIComponent(profileQueryParam)}`;
-            setDisplayUserName(demoName);
-            setDisplayUserEmail(`demo.${decodeURIComponent(profileQueryParam).toLowerCase()}@qriot.app`);
-            setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoName)}`);
-            setDisplayUserRole(decodeURIComponent(profileQueryParam) as UserRole); 
+            const decodedProfileName = decodeURIComponent(profileQueryParam);
+            const demoUser = DEMO_USER_PROFILES[decodedProfileName as keyof typeof DEMO_USER_PROFILES];
+            if(demoUser) {
+                setDisplayUserName(demoUser.name);
+                setDisplayUserEmail(`${decodedProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
+                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoUser.name)}`);
+                setDisplayUserRole(demoUser.role); 
+            } else {
+                // Fallback for unrecognized profile names, though ideally this shouldn't happen with defined profiles
+                setDisplayUserName(`Demo: ${decodedProfileName}`);
+                setDisplayUserEmail(`demo.${decodedProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
+                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(decodedProfileName)}`);
+                setDisplayUserRole(ROLES.EMPLOYEE); // Default to a base role
+            }
         } else {
             // For other pages or if no profile param, use default mock user
             setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
@@ -89,20 +98,20 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
             {/* The actual sidebar component */}
             <Sidebar collapsible="icon">
                 <SidebarHeader>
-                    <Link href="/dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
+                    <Link href="/my-dashboard" className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
                         <QrCode className="h-6 w-6 text-sidebar-primary" />
                         <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-0"> 
                     <SidebarMenu className="p-2 space-y-1 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:space-y-1">
-                        {/* Dashboard */}
-                        {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN, ROLES.INVENTORY, ROLES.EMPLOYEE]) && (
+                        {/* Dashboard (General Admin/Manager Dashboard) */}
+                        {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Dashboard" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
+                                <SidebarMenuButton asChild tooltip="Dashboard Geral" style={sidebarCollapsibleStyle} onClick={handleMobileMenuClick}>
                                     <Link href="/dashboard">
                                         <LayoutDashboard />
-                                        <span className="group-data-[collapsible=icon]:hidden">Dashboard</span>
+                                        <span className="group-data-[collapsible=icon]:hidden">Dashboard Geral</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -293,7 +302,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                 <main className="flex-1 p-1 xs:p-2 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> 
+                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto"> 
                     {children}
                 </main>
             </SidebarInset>

@@ -153,7 +153,7 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Meu Perfil</h1>
+      <h1 className="text-2xl sm:text-3xl font-bold">Meu Perfil</h1>
 
       <Card className="max-w-2xl mx-auto">
         <CardHeader className="items-center text-center">
@@ -211,3 +211,4 @@ export default function ProfilePage() {
     </div>
   );
 }
+

@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge, badgeVariants } from '@/components/ui/badge'; // Import badgeVariants
 import type { VariantProps } from 'class-variance-authority'; // Correct import path
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, AlertCircle, CheckCircle, ShoppingCart, CalendarDays, Hash } from 'lucide-react';
+import { FileText, AlertCircle, CheckCircle, ShoppingCart, CalendarDays, Hash, Users as UserIcon } from 'lucide-react'; // Added UserIcon
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils'; // Import cn
@@ -22,6 +22,8 @@ interface LicenseInfo {
     expirationDate: Date | null; // Null if perpetual or no expiration
     status: 'active' | 'expired' | 'exceeded' | 'trial';
     isTrial: boolean;
+    userLimit: number; // Added user limit
+    currentUserCount: number; // Added current user count
 }
 
 // Mock function to fetch license info - Replace with actual API call
@@ -37,6 +39,8 @@ async function fetchLicenseInfo(): Promise<LicenseInfo | null> {
     //     expirationDate: new Date(2025, 11, 31), // Dec 31, 2025
     //     status: 'active',
     //     isTrial: false,
+    //     userLimit: 50,
+    //     currentUserCount: 25,
     // };
 
     // Scenario 2: Trial Plan approaching limit
@@ -47,6 +51,8 @@ async function fetchLicenseInfo(): Promise<LicenseInfo | null> {
          expirationDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // Expires in 10 days
          status: 'trial',
          isTrial: true,
+         userLimit: 5,
+         currentUserCount: 3,
      };
 
     // Scenario 3: Expired Plan
@@ -57,6 +63,8 @@ async function fetchLicenseInfo(): Promise<LicenseInfo | null> {
     //     expirationDate: new Date(2024, 2, 15), // Mar 15, 2024
     //     status: 'expired',
     //     isTrial: false,
+    //     userLimit: 10,
+    //     currentUserCount: 8,
     // };
 
      // Scenario 4: Exceeded Limit
@@ -67,6 +75,8 @@ async function fetchLicenseInfo(): Promise<LicenseInfo | null> {
     //     expirationDate: new Date(2026, 5, 30), // Jun 30, 2026
     //     status: 'exceeded',
     //     isTrial: false,
+    //     userLimit: 20,
+    //     currentUserCount: 21, // Example user limit exceeded
     // };
 
     // return null; // Simulate error fetching license
@@ -100,10 +110,10 @@ export default function LicensingPage() {
 
     const getStatusBadgeVariant = (status: LicenseInfo['status']): VariantProps<typeof badgeVariants>["variant"] => {
         switch (status) {
-            case 'active': return 'default'; // Use a success-like style if available, or default
-            case 'trial': return 'secondary'; // Maybe a different color for trial
+            case 'active': return 'default'; 
+            case 'trial': return 'secondary'; 
             case 'expired': return 'destructive';
-            case 'exceeded': return 'destructive'; // Use destructive for exceeded limit as well
+            case 'exceeded': return 'destructive'; 
             default: return 'outline';
         }
     };
@@ -118,11 +128,12 @@ export default function LicensingPage() {
         }
     }
 
-    const usagePercentage = licenseInfo ? (licenseInfo.currentAssetCount / licenseInfo.assetLimit) * 100 : 0;
+    const assetUsagePercentage = licenseInfo ? (licenseInfo.currentAssetCount / licenseInfo.assetLimit) * 100 : 0;
+    const userUsagePercentage = licenseInfo ? (licenseInfo.currentUserCount / licenseInfo.userLimit) * 100 : 0;
 
     return (
-        <div className="space-y-6"> {/* Use simple div instead of container */}
-            <h1 className="text-3xl font-bold mb-6">Licença de Uso</h1>
+        <div className="space-y-6"> 
+            <h1 className="text-2xl sm:text-3xl font-bold mb-6">Licença de Uso</h1>
 
             <Card className="max-w-2xl mx-auto">
                 <CardHeader>
@@ -158,16 +169,16 @@ export default function LicensingPage() {
                             </div>
 
                             <div className="space-y-4">
-                                <h3 className="font-semibold">Uso de Ativos</h3>
-                                <Progress value={usagePercentage} aria-label={`${usagePercentage.toFixed(0)}% de uso`} className="h-3" />
+                                <h3 className="font-semibold flex items-center gap-1"><Hash className="h-4 w-4 text-muted-foreground"/> Uso de Ativos</h3>
+                                <Progress value={assetUsagePercentage} aria-label={`${assetUsagePercentage.toFixed(0)}% de uso de ativos`} className="h-3" />
                                 <div className="flex justify-between text-sm text-muted-foreground">
                                     <span>{licenseInfo.currentAssetCount.toLocaleString()} ativos cadastrados</span>
                                     <span>Limite: {licenseInfo.assetLimit.toLocaleString()} ativos</span>
                                 </div>
-                                {(licenseInfo.status === 'exceeded' || (usagePercentage > 90 && licenseInfo.status !== 'expired')) && (
-                                     <Alert variant={licenseInfo.status === 'exceeded' ? 'destructive' : 'default'} className={cn(licenseInfo.status !== 'exceeded' && 'bg-yellow-100 border-yellow-300 text-yellow-800')}>
+                                {(licenseInfo.status === 'exceeded' || (assetUsagePercentage > 90 && licenseInfo.status !== 'expired')) && (
+                                     <Alert variant={licenseInfo.status === 'exceeded' ? 'destructive' : 'default'} className={cn(licenseInfo.status !== 'exceeded' && assetUsagePercentage > 90 && 'bg-yellow-100 border-yellow-300 text-yellow-800')}>
                                         <AlertCircle className="h-4 w-4" />
-                                        <AlertTitle>{licenseInfo.status === 'exceeded' ? 'Limite de Ativos Atingido!' : 'Limite Próximo!'}</AlertTitle>
+                                        <AlertTitle>{licenseInfo.status === 'exceeded' ? 'Limite de Ativos Atingido!' : 'Limite de Ativos Próximo!'}</AlertTitle>
                                         <AlertDescription>
                                             {licenseInfo.status === 'exceeded'
                                              ? 'Você atingiu o limite de ativos do seu plano. Não é possível cadastrar novos ativos. Considere fazer um upgrade.'
@@ -177,6 +188,25 @@ export default function LicensingPage() {
                                     </Alert>
                                 )}
                             </div>
+
+                            <div className="space-y-4">
+                                <h3 className="font-semibold flex items-center gap-1"><UserIcon className="h-4 w-4 text-muted-foreground"/> Uso de Usuários</h3>
+                                <Progress value={userUsagePercentage} aria-label={`${userUsagePercentage.toFixed(0)}% de uso de usuários`} className="h-3" />
+                                <div className="flex justify-between text-sm text-muted-foreground">
+                                    <span>{licenseInfo.currentUserCount.toLocaleString()} usuários cadastrados</span>
+                                    <span>Limite: {licenseInfo.userLimit.toLocaleString()} usuários</span>
+                                </div>
+                                {(licenseInfo.currentUserCount >= licenseInfo.userLimit && licenseInfo.status !== 'expired') && (
+                                     <Alert variant={'destructive'}>
+                                        <AlertCircle className="h-4 w-4" />
+                                        <AlertTitle>{'Limite de Usuários Atingido!'}</AlertTitle>
+                                        <AlertDescription>
+                                             {'Você atingiu o limite de usuários do seu plano. Não é possível cadastrar novos usuários. Considere fazer um upgrade.'}
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+                            </div>
+
 
                              <div className="space-y-2">
                                 <div className="flex items-center gap-2 text-sm">
@@ -188,11 +218,7 @@ export default function LicensingPage() {
                                             : 'Não expira'}
                                     </span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                    <Hash className="h-4 w-4 text-muted-foreground" />
-                                    <span className="text-muted-foreground">Usuários:</span>
-                                    <span className="font-medium">Ilimitados</span>
-                                </div>
+                               
                              </div>
 
                             {licenseInfo.status === 'expired' && (
@@ -224,3 +250,4 @@ export default function LicensingPage() {
         </div>
     );
 }
+
