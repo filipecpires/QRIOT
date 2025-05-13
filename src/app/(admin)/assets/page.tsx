@@ -1,13 +1,13 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Eye, Home, Building, MoreHorizontal } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, AlertTriangle, Eye, Home, Building, MoreHorizontal, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
@@ -29,39 +29,47 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-
-// Mock data - replace with actual data fetching later
-const initialAssets = [
-  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400', category: 'Eletrônicos', tag: 'AB12C', location: 'Escritório 1', responsible: 'João Silva', status: 'active', ownership: 'own' },
-  { id: 'ASSET002', name: 'Monitor LG 27"', category: 'Eletrônicos', tag: 'DE34F', location: 'Escritório 2', responsible: 'Maria Oliveira', status: 'active', ownership: 'own' },
-  { id: 'ASSET003', name: 'Cadeira de Escritório', category: 'Mobiliário', tag: 'GH56I', location: 'Sala de Reuniões', responsible: 'Carlos Pereira', status: 'lost', ownership: 'rented' },
-  { id: 'ASSET004', name: 'Projetor Epson PowerLite', category: 'Eletrônicos', tag: 'JK78L', location: 'Sala de Treinamento', responsible: 'Ana Costa', status: 'inactive', ownership: 'own' },
-];
-
-type Asset = typeof initialAssets[0];
-
-// Mock Delete Function (replace with actual API call)
-async function deleteAssetAction(assetId: string): Promise<{ success: boolean }> {
-    console.log(`Attempting to delete asset ${assetId}`);
-    await new Promise(resolve => setTimeout(resolve, 500));
-    // In a real app, perform the deletion and handle errors
-    return { success: true };
-}
+import type { Asset } from '@/types/asset'; // Import the Asset type
+import { getAssets, deleteAsset } from '@/services/assetService'; // Import service functions
+import { Skeleton } from '@/components/ui/skeleton';
+import { MOCK_COMPANY_ID } from '@/lib/mock-data';
 
 
 export default function AssetsPage() {
     const { toast } = useToast();
-    const [assets, setAssets] = useState<Asset[]>(initialAssets); // State to manage assets for deletion
+    const [assets, setAssets] = useState<Asset[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
-    // Construct the public URL based on the asset tag
+    // MOCK: Assume companyId is available (e.g., from user context)
+    const companyId = MOCK_COMPANY_ID;
+
+    const loadAssets = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const fetchedAssets = await getAssets(companyId);
+            setAssets(fetchedAssets);
+        } catch (error) {
+            console.error("Error fetching assets:", error);
+            toast({ title: "Erro", description: "Não foi possível carregar os ativos.", variant: "destructive" });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [companyId, toast]);
+
+    useEffect(() => {
+        loadAssets();
+    }, [loadAssets]);
+
+
     const getPublicUrl = (tag: string) => {
         if (typeof window !== 'undefined') {
-            // Use the tag directly in the URL path
             return `${window.location.origin}/public/asset/${tag}`;
         }
-        return '#'; // Fallback URL
+        return '#'; 
     };
 
     const handleDeleteRequest = (asset: Asset) => {
@@ -71,16 +79,27 @@ export default function AssetsPage() {
 
     const handleDeleteConfirm = async () => {
         if (!assetToDelete) return;
-        const result = await deleteAssetAction(assetToDelete.id);
-        if (result.success) {
-            setAssets(prev => prev.filter(a => a.id !== assetToDelete.id)); // Remove from state
+        setIsDeleting(true);
+        try {
+            await deleteAsset(assetToDelete.id, companyId);
+            setAssets(prev => prev.filter(a => a.id !== assetToDelete.id));
             toast({ title: "Sucesso", description: `Ativo ${assetToDelete.name} excluído.` });
-        } else {
-            toast({ title: "Erro", description: "Falha ao excluir o ativo.", variant: "destructive" });
+        } catch (error: any) {
+            console.error("Error deleting asset:", error);
+            toast({ title: "Erro", description: error.message || "Falha ao excluir o ativo.", variant: "destructive" });
+        } finally {
+            setAssetToDelete(null);
+            setIsDeleteDialogOpen(false);
+            setIsDeleting(false);
         }
-        setAssetToDelete(null);
-        setIsDeleteDialogOpen(false);
     };
+
+    const filteredAssets = assets.filter(asset =>
+        asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        asset.tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (asset.locationName && asset.locationName.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        asset.category.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
 
   return (
@@ -99,9 +118,13 @@ export default function AssetsPage() {
           <CardTitle>Lista de Ativos</CardTitle>
           <CardDescription>Visualize e gerencie todos os ativos cadastrados.</CardDescription>
            <div className="pt-4 flex flex-col md:flex-row gap-2">
-             <Input placeholder="Buscar por nome, tag ou responsável..." className="w-full sm:max-w-sm" />
-             {/* TODO: Add filters for status, ownership, category, etc. */}
-             <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button>
+             <Input 
+                placeholder="Buscar por nome, tag ou responsável..." 
+                className="w-full sm:max-w-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+             />
+             {/* <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button> */}
            </div>
         </CardHeader>
         <CardContent>
@@ -120,24 +143,36 @@ export default function AssetsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {assets.map((asset) => (
+                {isLoading && Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={`skel-${i}`}>
+                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                        <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-16" /></TableCell>
+                        <TableCell><Skeleton className="h-6 w-20 rounded-full" /></TableCell>
+                        <TableCell className="text-right"><Skeleton className="h-8 w-8" /></TableCell>
+                    </TableRow>
+                ))}
+                {!isLoading && filteredAssets.map((asset) => (
                   <TableRow key={asset.id}>
-                    <TableCell className="font-medium hidden sm:table-cell">{asset.tag}</TableCell>
+                    <TableCell className="font-mono text-xs hidden sm:table-cell">{asset.tag}</TableCell>
                     <TableCell>
                       <div className="font-medium">{asset.name}</div>
                       <div className="text-xs text-muted-foreground sm:hidden">Tag: {asset.tag}</div>
-                      <div className="text-xs text-muted-foreground sm:hidden">Local: {asset.location}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">Local: {asset.locationName || asset.locationId}</div>
                       <div className="text-xs text-muted-foreground md:hidden">Cat: {asset.category}</div>
-                      <div className="text-xs text-muted-foreground sm:hidden">Resp: {asset.responsible}</div>
+                      <div className="text-xs text-muted-foreground sm:hidden">Resp: {asset.responsibleUserName || asset.responsibleUserId}</div>
                       <div className="text-xs text-muted-foreground sm:hidden">
-                          Prop: {asset.ownership === 'rented' ? 'Alugado' : 'Próprio'}
+                          Prop: {asset.ownershipType === 'rented' ? 'Alugado' : 'Próprio'}
                       </div>
                     </TableCell>
                     <TableCell className="hidden md:table-cell">{asset.category}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{asset.location}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{asset.responsible}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{asset.locationName || asset.locationId}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{asset.responsibleUserName || asset.responsibleUserId}</TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      {asset.ownership === 'rented' ? (
+                      {asset.ownershipType === 'rented' ? (
                         <div className="flex items-center gap-1 text-orange-600" title="Alugado">
                           <Building className="h-4 w-4" />
                           <span>Alugado</span>
@@ -185,7 +220,7 @@ export default function AssetsPage() {
                           <DropdownMenuItem
                               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
                               onSelect={(e) => {
-                                  e.preventDefault(); // Prevent closing menu
+                                  e.preventDefault(); 
                                   handleDeleteRequest(asset);
                               }}
                           >
@@ -196,7 +231,7 @@ export default function AssetsPage() {
                     </TableCell>
                   </TableRow>
                 ))}
-                {assets.length === 0 && (
+                {!isLoading && filteredAssets.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
                           Nenhum ativo encontrado.
@@ -206,16 +241,14 @@ export default function AssetsPage() {
               </TableBody>
             </Table>
           </div>
-           {/* Add Pagination Controls Here Later */}
         </CardContent>
          <CardFooter>
             <div className="text-xs text-muted-foreground">
-                Mostrando <strong>{assets.length}</strong> de <strong>{initialAssets.length}</strong> ativos.
+                Mostrando <strong>{filteredAssets.length}</strong> de <strong>{assets.length}</strong> ativos.
             </div>
         </CardFooter>
       </Card>
 
-       {/* Delete Confirmation Dialog */}
        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
            <AlertDialogContent>
                <AlertDialogHeader>
@@ -225,11 +258,13 @@ export default function AssetsPage() {
                  </AlertDialogDescription>
                </AlertDialogHeader>
                <AlertDialogFooter>
-                 <AlertDialogCancel onClick={() => setAssetToDelete(null)}>Cancelar</AlertDialogCancel>
+                 <AlertDialogCancel onClick={() => setAssetToDelete(null)} disabled={isDeleting}>Cancelar</AlertDialogCancel>
                  <AlertDialogAction
                    onClick={handleDeleteConfirm}
                    className="bg-destructive hover:bg-destructive/90"
+                   disabled={isDeleting}
                  >
+                   {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                    Confirmar Exclusão
                  </AlertDialogAction>
                </AlertDialogFooter>

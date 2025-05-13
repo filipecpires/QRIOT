@@ -11,23 +11,20 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form'; // Added FormDescription
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, Loader2, User } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import type { AssetForMyDashboard as AssetDetails, UserForSelect, TransferRequest } from '@/types'; // Use centralized types
 import { 
     allAssetsMockData, 
     mockTransferRequests, 
-    mockUsersForSelect, 
+    finalMockUsersForSelect as mockUsersForSelect, // Use the filtered list
     MOCK_LOGGED_IN_USER_ID,
-    MOCK_LOGGED_IN_USER_NAME,
-    type AssetForMyDashboard as AssetDetails, // Re-alias for clarity in this context
-    type UserForSelect,
-    type TransferRequest
+    MOCK_LOGGED_IN_USER_NAME
 } from '@/lib/mock-data';
 
-// Schema for transfer request
 const transferSchema = z.object({
   newResponsibleUserId: z.string().min(1, { message: 'Selecione um novo responsável.' }),
 });
@@ -35,21 +32,18 @@ const transferSchema = z.object({
 type TransferFormData = z.infer<typeof transferSchema>;
 
 
-// Mock function to fetch asset details by ID
 async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetails | null> {
   console.log(`Fetching asset details for transfer: ${assetId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
-  // Find from the shared mock data
   const asset = allAssetsMockData.find(a => a.id === assetId);
   if (asset) {
-    // Map to the simplified AssetDetails structure if needed, or ensure AssetForMyDashboard is sufficient
     return {
         id: asset.id,
         name: asset.name,
         tag: asset.tag,
         category: asset.category,
         locationName: asset.locationName,
-        status: asset.status,
+        status: asset.status as AssetDetails['status'], // Ensure status type matches
         responsibleUserId: asset.responsibleUserId,
         ownership: asset.ownership,
     };
@@ -57,14 +51,12 @@ async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetai
   return null;
 }
 
-// Mock function to fetch users for transfer (excluding current user)
 async function fetchUsersForTransfer(currentUserId: string): Promise<UserForSelect[]> {
   console.log(`Fetching users for transfer, excluding ${currentUserId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
   return mockUsersForSelect.filter(user => user.id !== currentUserId);
 }
 
-// Mock function to initiate transfer
 async function initiateAssetTransfer(
     assetId: string, 
     assetName: string, 
@@ -90,7 +82,7 @@ async function initiateAssetTransfer(
     status: 'pending',
   };
 
-  mockTransferRequests.push(newTransferRequest); // Add to the shared mutable array
+  mockTransferRequests.push(newTransferRequest);
   console.log("Updated mockTransferRequests:", mockTransferRequests);
 
   return { success: true, message: `Solicitação de transferência para ${newResponsibleUserName} enviada.` };
@@ -126,7 +118,7 @@ export default function TransferAssetPage() {
       try {
         const [fetchedAsset, fetchedUsers] = await Promise.all([
           fetchAssetDetailsForTransfer(assetId),
-          fetchUsersForTransfer(MOCK_LOGGED_IN_USER_ID),
+          fetchUsersForTransfer(MOCK_LOGGED_IN_USER_ID), // Assume current user is MOCK_LOGGED_IN_USER_ID
         ]);
 
         if (!fetchedAsset) {
@@ -164,7 +156,7 @@ export default function TransferAssetPage() {
         assetDetails.id, 
         assetDetails.name, 
         assetDetails.tag,
-        MOCK_LOGGED_IN_USER_ID,
+        MOCK_LOGGED_IN_USER_ID, // Current user initiating the transfer
         MOCK_LOGGED_IN_USER_NAME,
         data.newResponsibleUserId, 
         selectedUser.name
@@ -290,4 +282,3 @@ export default function TransferAssetPage() {
     </div>
   );
 }
-

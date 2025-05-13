@@ -1,35 +1,9 @@
 // src/lib/mock-data.ts
+import type { AssetForMyDashboard, TransferRequest, UserForSelect, UserData } from '@/types'; // Assuming types are now in @/types
 
-// --- Mock Data Structures ---
-export interface AssetForMyDashboard {
-  id: string;
-  name: string;
-  tag: string;
-  status: 'active' | 'lost' | 'inactive' | 'maintenance';
-  locationName: string;
-  category: string;
-  responsibleUserId: string;
-  ownership: 'own' | 'rented';
-}
+// --- Mock Company ID ---
+export const MOCK_COMPANY_ID = 'COMPANY_XYZ';
 
-export interface TransferRequest {
-  id: string;
-  assetId: string;
-  assetName: string;
-  assetTag: string;
-  fromUserId: string;
-  fromUserName: string;
-  toUserId: string;
-  toUserName?: string;
-  requestDate: Date;
-  status: 'pending' | 'accepted' | 'rejected';
-  processedDate?: Date;
-}
-
-export interface UserForSelect {
-  id: string;
-  name: string;
-}
 
 // Default Mock Logged-in User (can be used as a base or for non-demo scenarios)
 export const MOCK_LOGGED_IN_USER_ID = 'user1';
@@ -37,11 +11,11 @@ export const MOCK_LOGGED_IN_USER_NAME = 'João Silva (Padrão)';
 
 
 export const DEMO_USER_PROFILES = {
-  "Administrador": { id: "admin-demo-id", name: "Demo Administrador", role: "Administrador" as const },
-  "Gerente": { id: "manager-demo-id", name: "Demo Gerente", role: "Gerente" as const },
-  "Técnico": { id: "tech-demo-id", name: "Demo Técnico", role: "Técnico" as const },
-  "Inventariante": { id: "inventory-demo-id", name: "Demo Inventariante", role: "Inventariante" as const },
-  "Funcionário": { id: "employee-demo-id", name: "Demo Funcionário", role: "Funcionário" as const },
+  "Administrador": { id: "admin-demo-id", name: "Demo Administrador", role: "Administrador" as UserData['role'] },
+  "Gerente": { id: "manager-demo-id", name: "Demo Gerente", role: "Gerente" as UserData['role'] },
+  "Técnico": { id: "tech-demo-id", name: "Demo Técnico", role: "Técnico" as UserData['role'] },
+  "Inventariante": { id: "inventory-demo-id", name: "Demo Inventariante", role: "Inventariante" as UserData['role'] },
+  "Funcionário": { id: "employee-demo-id", name: "Demo Funcionário", role: "Funcionário" as UserData['role'] },
 };
 
 
@@ -111,3 +85,16 @@ export const mockUsersForSelect: UserForSelect[] = [
 // Filter out duplicates just in case
 const uniqueMockUsers = Array.from(new Map(mockUsersForSelect.map(user => [user.id, user])).values());
 export const finalMockUsersForSelect = uniqueMockUsers;
+
+// Full UserData mocks for admin user management
+export const mockAdminUsers: UserData[] = [
+    { id: 'user1', companyId: MOCK_COMPANY_ID, name: 'João Silva', email: 'joao.silva@example.com', role: 'Administrador', isActive: true, createdAt: new Date(2023, 0, 1), updatedAt: new Date(2023, 0, 1) },
+    { id: 'user2', companyId: MOCK_COMPANY_ID, name: 'Maria Oliveira', email: 'maria.oliveira@example.com', role: 'Gerente', managerId: 'user1', isActive: true, createdAt: new Date(2023, 1, 1), updatedAt: new Date(2023, 1, 1) },
+    { id: 'user3', companyId: MOCK_COMPANY_ID, name: 'Carlos Pereira', email: 'carlos.pereira@example.com', role: 'Técnico', managerId: 'user2', isActive: true, createdAt: new Date(2023, 2, 1), updatedAt: new Date(2023, 2, 1) },
+    { id: 'user4', companyId: MOCK_COMPANY_ID, name: 'Ana Costa', email: 'ana.costa@example.com', role: 'Inventariante', managerId: 'user2', isActive: false, createdAt: new Date(2023, 3, 1), updatedAt: new Date(2023, 3, 1) },
+    { id: 'user5', companyId: MOCK_COMPANY_ID, name: 'Pedro Santos', email: 'pedro.santos@example.com', role: 'Funcionário', managerId: 'user1', isActive: true, createdAt: new Date(2023, 4, 1), updatedAt: new Date(2023, 4, 1) },
+];
+
+export const MOCK_USERS_FOR_ADMIN_SELECT: SimpleUser[] = mockAdminUsers
+    .filter(u => u.role === 'Administrador' || u.role === 'Gerente') // Only Admins and Managers can be managers
+    .map(u => ({ id: u.id, name: `${u.name} (${u.role})` }));

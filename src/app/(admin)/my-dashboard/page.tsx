@@ -52,14 +52,13 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import {
-  allAssetsMockData,
-  mockTransferRequests,
-  MOCK_LOGGED_IN_USER_ID,
-  MOCK_LOGGED_IN_USER_NAME,
-  DEMO_USER_PROFILES, // Import DEMO_USER_PROFILES
-  type AssetForMyDashboard,
-  type TransferRequest
+import type { AssetForMyDashboard, TransferRequest } from '@/types'; // Use centralized types
+import { 
+    allAssetsMockData, // Still using this for demonstration
+    mockTransferRequests, // Still using this
+    MOCK_LOGGED_IN_USER_ID,
+    MOCK_LOGGED_IN_USER_NAME,
+    DEMO_USER_PROFILES
 } from '@/lib/mock-data';
 
 
@@ -67,6 +66,8 @@ import {
 async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
   console.log(`[MyDashboard] Fetching assets for user ID: ${userId}`);
   await new Promise(resolve => setTimeout(resolve, 1000));
+  // In a real app, this would query Firestore assets collection where responsibleUserId === userId
+  // and companyId matches the current user's company.
   return allAssetsMockData
     .filter(asset => asset.responsibleUserId === userId)
     .map(asset => ({ 
@@ -84,6 +85,7 @@ async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
 async function fetchTransferRequestsForUser(userId: string): Promise<TransferRequest[]> {
     console.log(`[MyDashboard] Fetching transfers for user ID: ${userId}`);
     await new Promise(resolve => setTimeout(resolve, 800));
+    // In a real app, query Firestore 'transferRequests' collection
     return mockTransferRequests.filter(req => 
         (req.toUserId === userId && req.status === 'pending') || 
         (req.fromUserId === userId && req.status === 'pending')
@@ -95,6 +97,7 @@ async function fetchTransferRequestsForUser(userId: string): Promise<TransferReq
 async function reportAssetLost(assetId: string, assetName: string): Promise<{ success: boolean }> {
     console.log(`Reporting asset ${assetName} (ID: ${assetId}) as lost.`);
     await new Promise(resolve => setTimeout(resolve, 700));
+    // In a real app, update asset document in Firestore: status = 'lost'
     const assetIndex = allAssetsMockData.findIndex(a => a.id === assetId);
     if (assetIndex !== -1) {
         allAssetsMockData[assetIndex].status = 'lost';
@@ -112,7 +115,6 @@ async function processTransferRequest(transferId: string, assetId: string, actio
     const transfer = mockTransferRequests[transferIndex];
 
     if (action === 'accept') {
-        // Ensure the actionTakerUserId is the intended recipient
         if (transfer.toUserId !== actionTakerUserId) {
             console.error(`Mismatch: Transfer to ${transfer.toUserId}, action by ${actionTakerUserId}`);
             return { success: false };
@@ -122,11 +124,11 @@ async function processTransferRequest(transferId: string, assetId: string, actio
         
         const assetIndex = allAssetsMockData.findIndex(a => a.id === assetId);
         if (assetIndex !== -1) {
-            allAssetsMockData[assetIndex].responsibleUserId = actionTakerUserId; // New responsible is the one accepting
+            allAssetsMockData[assetIndex].responsibleUserId = actionTakerUserId; 
         } else {
             return {success: false}; 
         }
-    } else { // reject
+    } else { 
         mockTransferRequests[transferIndex].status = 'rejected';
         mockTransferRequests[transferIndex].processedDate = new Date();
     }
@@ -139,10 +141,8 @@ export default function MyDashboardPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // State for current user based on demo profile or default
   const [currentUserId, setCurrentUserId] = useState<string>(MOCK_LOGGED_IN_USER_ID);
   const [currentUserName, setCurrentUserName] = useState<string>(MOCK_LOGGED_IN_USER_NAME);
-  // const [currentUserRole, setCurrentUserRole] = useState<string | null>(null); // Role can be added if needed for UI logic on this page
 
   const [myAssets, setMyAssets] = useState<AssetForMyDashboard[]>([]);
   const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
@@ -162,14 +162,11 @@ export default function MyDashboardPage() {
       if (demoUser) {
         setCurrentUserName(demoUser.name);
         setCurrentUserId(demoUser.id);
-        // setCurrentUserRole(demoUser.role); 
       } else {
-        // Fallback if profile name from URL isn't in our defined map
         setCurrentUserName(`Demo: ${decodedProfileName}`);
-        setCurrentUserId(MOCK_LOGGED_IN_USER_ID); // Or some other default/error state
+        setCurrentUserId(MOCK_LOGGED_IN_USER_ID); 
       }
     } else {
-      // Default to standard mock user if no profile in URL
       setCurrentUserName(MOCK_LOGGED_IN_USER_NAME);
       setCurrentUserId(MOCK_LOGGED_IN_USER_ID);
     }
@@ -203,7 +200,6 @@ export default function MyDashboardPage() {
   }, [toast]);
 
   useEffect(() => {
-    // Fetch data whenever the currentUserId changes
     if (currentUserId) {
         loadMyAssets(currentUserId);
         loadTransferRequests(currentUserId);
@@ -254,7 +250,6 @@ export default function MyDashboardPage() {
 
   const handleTransferAction = async (transfer: TransferRequest, action: 'accept' | 'reject') => {
     setProcessingTransferId(transfer.id);
-    // The action taker is the current demo user
     const result = await processTransferRequest(transfer.id, transfer.assetId, currentUserId, action);
     if (result.success) {
         const actionText = action === 'accept' ? 'Aceita' : 'Rejeitada';
@@ -284,7 +279,6 @@ export default function MyDashboardPage() {
         <h1 className="text-3xl font-bold flex items-center gap-2"><UserSquare className="h-8 w-8" /> {currentUserName}</h1>
       </div>
 
-        {/* Pending Transfer Requests Card */}
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2"><Inbox className="h-5 w-5 text-primary"/> Solicitações de Transferência</CardTitle>
@@ -466,7 +460,6 @@ export default function MyDashboardPage() {
         </CardFooter>
       </Card>
 
-      {/* Confirmation Dialog for Reporting Lost */}
       <AlertDialog open={isLostConfirmOpen} onOpenChange={setIsLostConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
