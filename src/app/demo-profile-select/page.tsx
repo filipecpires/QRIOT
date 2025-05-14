@@ -23,6 +23,11 @@ export default function DemoProfileSelectPage() {
   const [isLoading, setIsLoading] = useState<string | null>(null);
 
   const handleProfileSelect = async (profileName: string) => {
+    if (isLoading) { // Guard against multiple calls if already loading
+        console.warn("Profile selection already in progress for:", isLoading);
+        return;
+    }
+
     setIsLoading(profileName);
     toast({
       title: `Entrando como ${profileName} (Demo)...`,
@@ -58,8 +63,8 @@ export default function DemoProfileSelectPage() {
         {profiles.map((profile) => (
           <Card 
             key={profile.name} 
-            className="hover:shadow-xl transition-shadow cursor-pointer transform hover:scale-105 flex flex-col"
-            onClick={() => !isLoading && handleProfileSelect(profile.name)}
+            className="hover:shadow-xl transition-shadow transform hover:scale-105 flex flex-col"
+            // onClick removed from Card
           >
             <CardHeader className="items-center text-center pb-3">
               <profile.icon className="h-10 w-10 text-primary mb-3" />
@@ -73,12 +78,13 @@ export default function DemoProfileSelectPage() {
               <div className="p-4 pt-0 mt-auto">
                 <Button 
                     className="w-full" 
-                    disabled={!!isLoading}
+                    onClick={() => handleProfileSelect(profile.name)} // onClick added to Button
+                    disabled={!!isLoading} // Button disabled if any profile is loading
                 >
                     {isLoading === profile.name ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
-                    `Acessar como ${profile.name}`
+                      "Acesse" // Updated button text
                     )}
                 </Button>
               </div>
@@ -91,5 +97,4 @@ export default function DemoProfileSelectPage() {
     </div>
   );
 }
-
     
