@@ -45,6 +45,7 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-autoplay": "^8.0.0",
+    "embla-carousel-react": "^8.2.0",
     "firebase": "^11.3.0",
     "genkit": "^1.0.4",
     "jspdf": "^2.5.1",
