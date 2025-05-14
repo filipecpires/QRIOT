@@ -1,22 +1,31 @@
 
-'use client'; 
+'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react'; 
+import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation'; 
-import { useToast } from '@/hooks/use-toast'; 
-import { Badge } from '@/components/ui/badge'; 
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from "@/components/ui/carousel"
+import Autoplay from "embla-carousel-autoplay"
+
 
 export default function LandingPage() {
     const router = useRouter();
-    const { toast } = useToast(); 
+    const { toast } = useToast();
 
     const handleDemoAccess = () => {
-        router.push('/demo-profile-select'); 
+        router.push('/demo-profile-select');
     };
 
     const features = [
@@ -154,6 +163,12 @@ export default function LandingPage() {
         }
     ];
 
+    const carouselImages = [
+        { src: "https://placehold.co/1200x675.png", alt: "Gestão de ativos com QR Code em tablet", dataAiHint: "asset tracking" },
+        { src: "https://placehold.co/1200x675.png", alt: "Pessoa escaneando QR Code de ativo com celular", dataAiHint: "qr scanning" },
+        { src: "https://placehold.co/1200x675.png", alt: "Dashboard de inventário de ativos em um laptop", dataAiHint: "inventory management" }
+    ];
+
 
     return (
         <div className="flex flex-col min-h-screen bg-gradient-to-br from-background via-secondary/5 to-background overflow-x-hidden">
@@ -197,16 +212,30 @@ export default function LandingPage() {
                          Ver Demonstração
                     </Button>
                  </div>
-                  <div className="mt-12 w-full max-w-4xl aspect-video bg-muted rounded-xl shadow-2xl p-2 sm:p-4 border border-primary/20 animate-fade-in-up animation-delay-800">
-                    <Image 
-                        src="https://picsum.photos/seed/qriot-dashboard/1200/675" 
-                        alt="Dashboard do QRIoT.app em um notebook e celular" 
-                        width={1200} 
-                        height={675} 
-                        className="rounded-lg object-cover w-full h-full" 
-                        data-ai-hint="app dashboard"
-                        priority
-                    />
+                  <div className="mt-12 w-full max-w-4xl aspect-video rounded-xl shadow-2xl border border-primary/20 animate-fade-in-up animation-delay-800 overflow-hidden">
+                    <Carousel
+                        plugins={[Autoplay({ delay: 5000, stopOnInteraction: true })]}
+                        className="w-full h-full"
+                        opts={{ loop: true }}
+                    >
+                        <CarouselContent className="h-full">
+                            {carouselImages.map((img, index) => (
+                                <CarouselItem key={index} className="h-full">
+                                    <Image
+                                        src={img.src}
+                                        alt={img.alt}
+                                        width={1200}
+                                        height={675}
+                                        className="rounded-lg object-cover w-full h-full"
+                                        data-ai-hint={img.dataAiHint}
+                                        priority={index === 0} // Prioritize the first image
+                                    />
+                                </CarouselItem>
+                            ))}
+                        </CarouselContent>
+                        <CarouselPrevious className="absolute left-2 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 border-none" />
+                        <CarouselNext className="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50 border-none" />
+                    </Carousel>
                   </div>
             </section>
 
@@ -272,8 +301,8 @@ export default function LandingPage() {
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
                     {plans.map((plan, index) => (
-                        <Card 
-                            key={plan.name} 
+                        <Card
+                            key={plan.name}
                             className={cn(
                                 "flex flex-col shadow-lg hover:shadow-xl transition-all duration-300 ease-in-out transform hover:-translate-y-1 animate-fade-in-up",
                                 plan.popular ? "border-2 border-primary ring-2 ring-primary/30" : "border-border",
@@ -304,7 +333,7 @@ export default function LandingPage() {
                                     ))}
                                 </ul>
                             </CardContent>
-                            <div className="mt-auto p-6"> 
+                            <div className="mt-auto p-6">
                                 <Button asChild size="lg" className={cn("w-full shadow-md transition-colors", plan.popular ? "bg-primary hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90")}>
                                     {plan.href.startsWith('mailto:') ? (
                                         <a href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</a>
@@ -337,7 +366,7 @@ export default function LandingPage() {
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
-                         <Button asChild size="lg" variant="outline" className="text-primary border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
+                         <Button asChild size="lg" variant="outline" className="text-primary-foreground border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
                              <a href="mailto:contato@qriot.app?subject=Demonstração%20QRIoT.app" className="flex items-center justify-center">
                                 <Phone className="mr-2 h-5 w-5" /> Solicitar Demonstração
                              </a>
@@ -362,4 +391,3 @@ export default function LandingPage() {
         </div>
     );
 }
-
