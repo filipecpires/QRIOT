@@ -234,7 +234,7 @@ const Sidebar = React.forwardRef<
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-10 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
+            "duration-200 fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex", // Changed z-10 to z-40
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -333,15 +333,26 @@ const SidebarRail = React.forwardRef<
 SidebarRail.displayName = "SidebarRail"
 
 const SidebarInset = React.forwardRef<
-  HTMLDivElement,
-  React.ComponentProps<"main">
+  HTMLDivElement, // Changed from main to div
+  React.ComponentProps<"div"> // Changed from main to div
 >(({ className, ...props }, ref) => {
   return (
-    <main
+    <div // Changed from main to div
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background",
-        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))] md:peer-data-[variant=inset]:m-2 md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
+        "relative flex min-h-svh flex-1 flex-col bg-background", // Added flex-1
+        // Apply margin based on peer (Sidebar) state for md and up
+        "md:peer-data-[state=expanded]:peer-data-[side=left]:ml-[var(--sidebar-width)]",
+        "md:peer-data-[state=collapsed]:peer-data-[side=left]:ml-[var(--sidebar-width-icon)]",
+        "md:peer-data-[state=expanded]:peer-data-[side=right]:mr-[var(--sidebar-width)]",
+        "md:peer-data-[state=collapsed]:peer-data-[side=right]:mr-[var(--sidebar-width-icon)]",
+        // Handle inset variant margins (these were potentially for a different layout style)
+        "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))]",
+        "md:peer-data-[variant=inset]:m-2",
+        "md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2", // Example for left side, adjust for right
+        "md:peer-data-[variant=inset]:ml-0", 
+        "md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
+        "transition-all duration-200 ease-linear", // Added transition
         className
       )}
       {...props}
