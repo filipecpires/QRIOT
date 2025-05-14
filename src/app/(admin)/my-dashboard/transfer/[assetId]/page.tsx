@@ -20,10 +20,10 @@ import type { AssetForMyDashboard as AssetDetails, UserForSelect, TransferReques
 import { 
     allAssetsMockData, 
     mockTransferRequests, 
-    finalMockUsersForSelect as mockUsersForSelect, 
-    MOCK_LOGGED_IN_USER_ID,
-    MOCK_LOGGED_IN_USER_NAME
+    finalMockUsersForSelect, 
 } from '@/lib/mock-data';
+import { useAdminLayoutContext } from '@/components/layout/admin-layout-context';
+
 
 const transferSchema = z.object({
   newResponsibleUserId: z.string().min(1, { message: 'Selecione um novo responsável.' }),
@@ -32,10 +32,10 @@ const transferSchema = z.object({
 type TransferFormData = z.infer<typeof transferSchema>;
 
 
-async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetails | null> {
-  console.log(`Fetching asset details for transfer: ${assetId}`);
+async function fetchAssetDetailsForTransfer(assetId: string, companyId: string): Promise<AssetDetails | null> {
+  console.log(`Fetching asset details for transfer: ${assetId} in company ${companyId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
-  const asset = allAssetsMockData.find(a => a.id === assetId);
+  const asset = allAssetsMockData.find(a => a.id === assetId && a.companyId === companyId);
   if (asset) {
     return {
         id: asset.id,
@@ -46,15 +46,16 @@ async function fetchAssetDetailsForTransfer(assetId: string): Promise<AssetDetai
         status: asset.status as AssetDetails['status'], 
         responsibleUserId: asset.responsibleUserId,
         ownership: asset.ownership,
+        companyId: asset.companyId,
     };
   }
   return null;
 }
 
-async function fetchUsersForTransfer(currentUserId: string): Promise<UserForSelect[]> {
-  console.log(`Fetching users for transfer, excluding ${currentUserId}`);
+async function fetchUsersForTransfer(currentUserId: string, companyId: string): Promise<UserForSelect[]> {
+  console.log(`Fetching users for transfer in company ${companyId}, excluding ${currentUserId}`);
   await new Promise(resolve => setTimeout(resolve, 500));
-  return mockUsersForSelect.filter(user => user.id !== currentUserId);
+  return finalMockUsersForSelect.filter(user => user.id !== currentUserId && user.companyId === companyId);
 }
 
 async function initiateAssetTransfer(
@@ -64,9 +65,10 @@ async function initiateAssetTransfer(
     fromUserId: string,
     fromUserName: string,
     newResponsibleUserId: string, 
-    newResponsibleUserName: string
+    newResponsibleUserName: string,
+    companyId: string // Ensure company context for the transfer
 ): Promise<{ success: boolean; message?: string }> {
-  console.log(`Initiating transfer of asset ${assetName} (ID: ${assetId}) from ${fromUserName} to user ${newResponsibleUserName} (ID: ${newResponsibleUserId})`);
+  console.log(`Initiating transfer of asset ${assetName} (ID: ${assetId}) from ${fromUserName} to user ${newResponsibleUserName} (ID: ${newResponsibleUserId}) within company ${companyId}`);
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   const newTransferRequest: TransferRequest = {
@@ -80,6 +82,7 @@ async function initiateAssetTransfer(
     toUserName: newResponsibleUserName,
     requestDate: new Date(),
     status: 'pending',
+    companyId: companyId, // Store companyId with the request
   };
 
   mockTransferRequests.push(newTransferRequest);
@@ -94,6 +97,8 @@ export default function TransferAssetPage() {
   const params = useParams();
   const assetId = params.assetId as string;
   const { toast } = useToast();
+  const { currentUserId, currentUserName, currentCompanyId, currentDemoProfileName } = useAdminLayoutContext();
+
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
   const [assetDetails, setAssetDetails] = useState<AssetDetails | null>(null);
@@ -107,9 +112,9 @@ export default function TransferAssetPage() {
   });
 
   useEffect(() => {
-    if (!assetId) {
-      toast({ title: "Erro", description: "ID do ativo não fornecido.", variant: "destructive" });
-      router.replace('/my-dashboard');
+    if (!assetId || !currentUserId || !currentCompanyId) {
+      toast({ title: "Erro", description: "Informações de ativo ou usuário/empresa ausentes.", variant: "destructive" });
+      router.replace(currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard');
       return;
     }
 
@@ -117,31 +122,39 @@ export default function TransferAssetPage() {
       setIsDataLoading(true);
       try {
         const [fetchedAsset, fetchedUsers] = await Promise.all([
-          fetchAssetDetailsForTransfer(assetId),
-          fetchUsersForTransfer(MOCK_LOGGED_IN_USER_ID), 
+          fetchAssetDetailsForTransfer(assetId, currentCompanyId),
+          fetchUsersForTransfer(currentUserId, currentCompanyId), 
         ]);
 
         if (!fetchedAsset) {
-          toast({ title: "Erro", description: "Ativo não encontrado.", variant: "destructive" });
-          router.replace('/my-dashboard');
+          toast({ title: "Erro", description: "Ativo não encontrado ou não pertence à sua empresa.", variant: "destructive" });
+          router.replace(currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard');
           return;
+        }
+         if (fetchedAsset.responsibleUserId !== currentUserId) {
+            toast({ title: "Acesso Negado", description: "Você não é o responsável atual por este ativo.", variant: "destructive" });
+            router.replace(currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard');
+            return;
         }
         setAssetDetails(fetchedAsset);
         setUsersForTransfer(fetchedUsers);
       } catch (error) {
         console.error("Error loading data for transfer:", error);
         toast({ title: "Erro", description: "Não foi possível carregar os dados para transferência.", variant: "destructive" });
-        router.replace('/my-dashboard');
+        router.replace(currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard');
       } finally {
         setIsDataLoading(false);
       }
     };
 
     loadData();
-  }, [assetId, router, toast]);
+  }, [assetId, router, toast, currentUserId, currentCompanyId, currentDemoProfileName]);
 
   async function onSubmit(data: TransferFormData) {
-    if (!assetDetails) return;
+    if (!assetDetails || !currentUserId || !currentUserName || !currentCompanyId) {
+        toast({title: "Erro", description: "Dados insuficientes para iniciar a transferência.", variant: "destructive"});
+        return;
+    }
 
     setIsLoading(true);
     const selectedUser = usersForTransfer.find(u => u.id === data.newResponsibleUserId);
@@ -156,17 +169,18 @@ export default function TransferAssetPage() {
         assetDetails.id, 
         assetDetails.name, 
         assetDetails.tag,
-        MOCK_LOGGED_IN_USER_ID, 
-        MOCK_LOGGED_IN_USER_NAME,
+        currentUserId, 
+        currentUserName,
         data.newResponsibleUserId, 
-        selectedUser.name
+        selectedUser.name,
+        currentCompanyId // Pass companyId
       );
       if (result.success) {
         toast({
           title: 'Sucesso!',
           description: result.message || `Solicitação de transferência para ${assetDetails.name} enviada.`,
         });
-        router.push('/my-dashboard');
+        router.push(currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard');
       } else {
         toast({
           title: 'Falha na Solicitação',
@@ -211,7 +225,7 @@ export default function TransferAssetPage() {
   return (
     <div className="space-y-6">
       <Button variant="outline" size="sm" asChild>
-        <Link href="/my-dashboard">
+        <Link href={currentDemoProfileName ? `/my-dashboard?profile=${encodeURIComponent(currentDemoProfileName)}` : '/my-dashboard'}>
           <ArrowLeft className="mr-2 h-4 w-4" /> Voltar para Meu Painel
         </Link>
       </Button>

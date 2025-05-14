@@ -20,8 +20,10 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { PwaInstallPromptButton } from '@/components/feature/pwa-install-prompt-button'; 
-import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME, DEMO_USER_PROFILES } from '@/lib/mock-data';
+import { MOCK_LOGGED_IN_USER_ID, MOCK_LOGGED_IN_USER_NAME, DEMO_USER_PROFILES, MOCK_COMPANY_ID } from '@/lib/mock-data';
 import type { UserRole } from '@/types/user'; 
+import { AdminLayoutProvider, useAdminLayoutContext } from './admin-layout-context';
+
 
 function getInitials(name: string): string {
     if (!name) return '?';
@@ -39,65 +41,15 @@ const ROLES = {
     EMPLOYEE: "Funcionário" as UserRole,
 };
 
-function AdminLayoutContent({ children }: { children: ReactNode }) {
+function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
     const pathname = usePathname();
-    const searchParams = useSearchParams();
-    const [displayUserName, setDisplayUserName] = useState(MOCK_LOGGED_IN_USER_NAME);
-    const [displayUserEmail, setDisplayUserEmail] = useState(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ','_')}@qriot.app`); 
-    const [displayUserAvatar, setDisplayUserAvatar] = useState(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-    const [displayUserRole, setDisplayUserRole] = useState<UserRole>(ROLES.ADMIN); 
-    const [currentDemoProfileName, setCurrentDemoProfileName] = useState<string | null>(null);
-
-
-    useEffect(() => {
-        const profileQueryParam = searchParams.get('profile');
-        const sessionDemoProfileName = typeof window !== 'undefined' ? sessionStorage.getItem('selectedDemoProfileName') : null;
-
-        let activeProfileName: string | null = null;
-
-        if (profileQueryParam) {
-            activeProfileName = decodeURIComponent(profileQueryParam);
-            if (typeof window !== 'undefined') {
-                sessionStorage.setItem('selectedDemoProfileName', activeProfileName);
-            }
-             console.log(`[AdminLayout] Demo profile selected via URL: ${activeProfileName}`);
-        } else if (sessionDemoProfileName) {
-            activeProfileName = sessionDemoProfileName;
-            console.log(`[AdminLayout] Demo profile restored from session: ${activeProfileName}`);
-        }
-        
-        setCurrentDemoProfileName(activeProfileName); // Store the active profile name
-
-        if (activeProfileName) {
-            const demoUser = DEMO_USER_PROFILES[activeProfileName as keyof typeof DEMO_USER_PROFILES];
-            if (demoUser) {
-                setDisplayUserName(demoUser.name);
-                setDisplayUserEmail(`${activeProfileName.toLowerCase().replace(/\s+/g, '.')}@qriot.app`);
-                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${encodeURIComponent(demoUser.name)}`);
-                setDisplayUserRole(demoUser.role);
-            } else {
-                // Fallback to default if profile name is invalid
-                if (typeof window !== 'undefined') {
-                    sessionStorage.removeItem('selectedDemoProfileName');
-                }
-                setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
-                setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ', '_')}@qriot.app`);
-                setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-                setDisplayUserRole(ROLES.ADMIN);
-                 console.warn(`[AdminLayout] Invalid demo profile name "${activeProfileName}", falling back to default.`);
-            }
-        } else {
-            // No demo profile active, use default mock user
-            setDisplayUserName(MOCK_LOGGED_IN_USER_NAME);
-            setDisplayUserEmail(`${MOCK_LOGGED_IN_USER_NAME.toLowerCase().replace(' ', '_')}@qriot.app`);
-            setDisplayUserAvatar(`https://i.pravatar.cc/40?u=${MOCK_LOGGED_IN_USER_NAME}`);
-            setDisplayUserRole(ROLES.ADMIN);
-            console.log('[AdminLayout] No demo profile active, using default mock user.');
-        }
-    }, [searchParams, pathname]); 
-
-
-    const { open } = useSidebar(); // Only need `open` for desktop sidebar style
+    const { 
+      currentUserId, currentUserName, currentCompanyId, 
+      displayUserRole, displayUserEmail, displayUserAvatar, 
+      currentDemoProfileName 
+    } = useAdminLayoutContext();
+    
+    const { open, isMobile, openMobile, setOpenMobile } = useSidebar(); 
 
     const getDynamicLink = (basePath: string) => {
         if (currentDemoProfileName) {
@@ -243,20 +195,21 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" className="relative h-8 w-auto px-2 flex items-center gap-2">
                                     <Avatar className="h-6 w-6">
-                                        <AvatarImage src={displayUserAvatar} alt={displayUserName} />
-                                        <AvatarFallback>{getInitials(displayUserName)}</AvatarFallback>
+                                        <AvatarImage src={displayUserAvatar} alt={currentUserName} />
+                                        <AvatarFallback>{getInitials(currentUserName)}</AvatarFallback>
                                     </Avatar>
-                                    <span className="hidden md:inline text-sm font-medium">{displayUserName}</span>
+                                    <span className="hidden md:inline text-sm font-medium">{currentUserName}</span>
                                     <ChevronDown className="h-4 w-4 text-muted-foreground hidden md:inline" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="w-56" align="end" forceMount>
                                 <DropdownMenuLabel className="font-normal">
                                     <div className="flex flex-col space-y-1">
-                                        <p className="text-sm font-medium leading-none">{displayUserName}</p>
+                                        <p className="text-sm font-medium leading-none">{currentUserName}</p>
                                         <p className="text-xs leading-none text-muted-foreground">
                                             {displayUserEmail} ({displayUserRole})
                                         </p>
+                                         {currentCompanyId && <p className="text-xs leading-none text-muted-foreground">Empresa: {currentCompanyId}</p>}
                                     </div>
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
@@ -280,7 +233,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                 <DropdownMenuItem asChild>
                                     <Link href={getDynamicLink("/settings")}>
                                         <Settings className="mr-2 h-4 w-4" />
-                                        <span>Configurações</span>
+                                        <span>Configurações Gerais</span>
                                     </Link>
                                 </DropdownMenuItem>
                                 )}
@@ -288,7 +241,7 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
                                     <DropdownMenuItem asChild>
                                         <Link href={getDynamicLink("/settings/admin")}>
                                             <ShieldCheck className="mr-2 h-4 w-4" />
-                                            <span>Administração</span>
+                                            <span>Administração Empresa</span>
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
@@ -318,8 +271,10 @@ function AdminLayoutContent({ children }: { children: ReactNode }) {
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
-    <SidebarProvider defaultOpen={true}>
-      <AdminLayoutContent>{children}</AdminLayoutContent>
-    </SidebarProvider>
+    <AdminLayoutProvider>
+        <SidebarProvider defaultOpen={true}>
+            <AdminLayoutContentInternal>{children}</AdminLayoutContentInternal>
+        </SidebarProvider>
+    </AdminLayoutProvider>
   );
 }

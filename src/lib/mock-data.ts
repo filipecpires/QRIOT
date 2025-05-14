@@ -1,100 +1,90 @@
 // src/lib/mock-data.ts
 import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest } from '@/types';
+import type { UserRole } from '@/types/user'; // Import UserRole
 
 // --- Mock Company ID ---
 export const MOCK_COMPANY_ID = 'COMPANY_XYZ';
-
+export const ANOTHER_MOCK_COMPANY_ID = 'COMPANY_ABC'; // For demonstrating segregation
 
 // Default Mock Logged-in User (can be used as a base or for non-demo scenarios)
-export const MOCK_LOGGED_IN_USER_ID = 'user1';
-export const MOCK_LOGGED_IN_USER_NAME = 'João Silva (Padrão)';
+export const MOCK_LOGGED_IN_USER_ID = 'user1'; // Belongs to COMPANY_XYZ
+export const MOCK_LOGGED_IN_USER_NAME = 'João Silva (Empresa XYZ)';
 
 
-export const DEMO_USER_PROFILES = {
-  "Administrador": { id: "admin-demo-id", name: "Demo Administrador", role: "Administrador" as UserData['role'] },
-  "Gerente": { id: "manager-demo-id", name: "Demo Gerente", role: "Gerente" as UserData['role'] },
-  "Técnico": { id: "tech-demo-id", name: "Demo Técnico", role: "Técnico" as UserData['role'] },
-  "Inventariante": { id: "inventory-demo-id", name: "Demo Inventariante", role: "Inventariante" as UserData['role'] },
-  "Funcionário": { id: "employee-demo-id", name: "Demo Funcionário", role: "Funcionário" as UserData['role'] },
+export const DEMO_USER_PROFILES: Record<string, { id: string; name: string; role: UserRole; companyId: string }> = {
+  "Administrador": { id: "admin-demo-id", name: "Demo Administrador (Empresa XYZ)", role: "Administrador", companyId: MOCK_COMPANY_ID },
+  "Gerente": { id: "manager-demo-id", name: "Demo Gerente (Empresa XYZ)", role: "Gerente", companyId: MOCK_COMPANY_ID },
+  "Técnico": { id: "tech-demo-id", name: "Demo Técnico (Empresa XYZ)", role: "Técnico", companyId: MOCK_COMPANY_ID },
+  "Inventariante": { id: "inventory-demo-id", name: "Demo Inventariante (Empresa XYZ)", role: "Inventariante", companyId: MOCK_COMPANY_ID },
+  "Funcionário": { id: "employee-demo-id", name: "Demo Funcionário (Empresa XYZ)", role: "Funcionário", companyId: MOCK_COMPANY_ID },
+  "Admin Empresa ABC": { id: "admin-abc-id", name: "Admin (Empresa ABC)", role: "Administrador", companyId: ANOTHER_MOCK_COMPANY_ID },
 };
 
 
-export let allAssetsMockData: AssetForMyDashboard[] = [
-  // Assets for João Silva (Padrão / Funcionário Demo if 'employee-demo-id' is 'user1')
-  { id: 'ASSET001', name: 'Notebook Dell Latitude 7400 (do João)', category: 'Eletrônicos', tag: 'AB12C', locationName: 'Escritório 1', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'active', ownership: 'own' },
-  { id: 'ASSET003', name: 'Cadeira de Escritório (do João)', category: 'Mobiliário', tag: 'GH56I', locationName: 'Sala de Reuniões', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'lost', ownership: 'rented' },
-  { id: 'ASSET004', name: 'Projetor Epson PowerLite (do João)', category: 'Eletrônicos', tag: 'JK78L', locationName: 'Sala de Treinamento', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'maintenance', ownership: 'own' },
+export let allAssetsMockData: (AssetForMyDashboard & { companyId: string })[] = [
+  // Assets for COMPANY_XYZ
+  { id: 'ASSET001', companyId: MOCK_COMPANY_ID, name: 'Notebook Dell Latitude 7400 (XYZ)', category: 'Eletrônicos', tag: 'AB12C', locationName: 'Escritório 1 (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'active', ownership: 'own' },
+  { id: 'ASSET003', companyId: MOCK_COMPANY_ID, name: 'Cadeira de Escritório (XYZ)', category: 'Mobiliário', tag: 'GH56I', locationName: 'Sala de Reuniões (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'lost', ownership: 'rented' },
+  { id: 'ASSET004', companyId: MOCK_COMPANY_ID, name: 'Projetor Epson PowerLite (XYZ)', category: 'Eletrônicos', tag: 'JK78L', locationName: 'Sala de Treinamento (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'maintenance', ownership: 'own' },
+  { id: 'ASSET101', companyId: MOCK_COMPANY_ID, name: 'Tablet Samsung Galaxy Tab S9 (Gerente XYZ)', category: 'Eletrônicos', tag: 'MG10A', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
+  { id: 'ASSET102', companyId: MOCK_COMPANY_ID, name: 'Dockstation USB-C (Gerente XYZ)', category: 'Acessórios', tag: 'MG10B', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
+  { id: 'ASSET201', companyId: MOCK_COMPANY_ID, name: 'Servidor PowerEdge R750 (Admin XYZ)', category: 'Infraestrutura', tag: 'AD20X', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'active', ownership: 'own' },
+  { id: 'ASSET202', companyId: MOCK_COMPANY_ID, name: 'Switch Cisco Catalyst (Admin XYZ)', category: 'Redes', tag: 'AD20Y', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'maintenance', ownership: 'own' },
+  { id: 'ASSET301', companyId: MOCK_COMPANY_ID, name: 'Kit Ferramentas Manutenção (Técnico XYZ)', category: 'Ferramentas', tag: 'TC30K', locationName: 'Bancada Técnica (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Técnico.id, status: 'active', ownership: 'own'},
+  { id: 'ASSET401', companyId: MOCK_COMPANY_ID, name: 'Coletor de Dados Zebra (Invent. XYZ)', category: 'Equipamentos', tag: 'IN40C', locationName: 'Em Trânsito (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Inventariante.id, status: 'active', ownership: 'rented'},
+  { id: 'ASSET002', companyId: MOCK_COMPANY_ID, name: 'Monitor LG 27" (Maria XYZ)', category: 'Eletrônicos', tag: 'DE34F', locationName: 'Escritório 2 (XYZ)', responsibleUserId: 'user2-xyz', status: 'active', ownership: 'own' }, // Assuming user2-xyz is a user in MOCK_COMPANY_ID
+  { id: 'ASSET005', companyId: MOCK_COMPANY_ID, name: 'Teclado Gamer RGB (Maria XYZ)', category: 'Eletrônicos', tag: 'MN90P', locationName: 'Escritório 1 (XYZ)', responsibleUserId: 'user2-xyz', status: 'inactive', ownership: 'own' },
+  { id: 'ASSET006', companyId: MOCK_COMPANY_ID, name: 'Impressora HP (Carlos XYZ)', category: 'Eletrônicos', tag: 'QR12S', locationName: 'Recepção (XYZ)', responsibleUserId: 'user3-xyz', status: 'active', ownership: 'own' },
 
-  // Assets for Demo Gerente (manager-demo-id)
-  { id: 'ASSET101', name: 'Tablet Samsung Galaxy Tab S9 (do Demo Gerente)', category: 'Eletrônicos', tag: 'MG10A', locationName: 'Escritório Gerência', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
-  { id: 'ASSET102', name: 'Dockstation USB-C (do Demo Gerente)', category: 'Acessórios', tag: 'MG10B', locationName: 'Escritório Gerência', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
-  
-  // Assets for Demo Administrador (admin-demo-id)
-  { id: 'ASSET201', name: 'Servidor PowerEdge R750 (do Demo Admin)', category: 'Infraestrutura', tag: 'AD20X', locationName: 'Data Center Principal', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'active', ownership: 'own' },
-  { id: 'ASSET202', name: 'Switch Cisco Catalyst (do Demo Admin)', category: 'Redes', tag: 'AD20Y', locationName: 'Data Center Principal', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'maintenance', ownership: 'own' },
-
-  // Assets for Demo Técnico (tech-demo-id)
-  { id: 'ASSET301', name: 'Kit Ferramentas Manutenção (do Demo Técnico)', category: 'Ferramentas', tag: 'TC30K', locationName: 'Bancada Técnica', responsibleUserId: DEMO_USER_PROFILES.Técnico.id, status: 'active', ownership: 'own'},
-
-  // Assets for Demo Inventariante (inventory-demo-id)
-  { id: 'ASSET401', name: 'Coletor de Dados Zebra (do Demo Inventariante)', category: 'Equipamentos', tag: 'IN40C', locationName: 'Em Trânsito', responsibleUserId: DEMO_USER_PROFILES.Inventariante.id, status: 'active', ownership: 'rented'},
-
-  // Unassigned or for other users not part of specific demos here
-  { id: 'ASSET002', name: 'Monitor LG 27" (de Maria)', category: 'Eletrônicos', tag: 'DE34F', locationName: 'Escritório 2', responsibleUserId: 'user2', status: 'active', ownership: 'own' },
-  { id: 'ASSET005', name: 'Teclado Gamer RGB (de Maria)', category: 'Eletrônicos', tag: 'MN90P', locationName: 'Escritório 1', responsibleUserId: 'user2', status: 'inactive', ownership: 'own' },
-  { id: 'ASSET006', name: 'Impressora Multifuncional HP (de Carlos)', category: 'Eletrônicos', tag: 'QR12S', locationName: 'Recepção', responsibleUserId: 'user3', status: 'active', ownership: 'own' },
+  // Assets for ANOTHER_MOCK_COMPANY_ID
+  { id: 'ASSET501', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'MacBook Pro 16" (Empresa ABC)', category: 'Eletrônicos', tag: 'ABC01', locationName: 'Escritório ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownership: 'own' },
+  { id: 'ASSET502', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Câmera DSLR Canon (Empresa ABC)', category: 'Equipamentos', tag: 'ABC02', locationName: 'Estúdio ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownership: 'own' },
 ];
-
-// Ensure employee-demo-id maps to user1 if that's the intent
-if (DEMO_USER_PROFILES.Funcionário.id !== MOCK_LOGGED_IN_USER_ID) {
-    // This is a sanity check. If employee-demo-id is different, ensure assets are assigned to it.
-    // For this example, we assume employee-demo-id is user1 (MOCK_LOGGED_IN_USER_ID).
-    // If you change DEMO_USER_PROFILES.Funcionário.id, add assets for that ID above.
-    console.warn("DEMO_USER_PROFILES.Funcionário.id might not align with MOCK_LOGGED_IN_USER_ID's assets. Please verify mock data.");
-}
 
 
 export let mockTransferRequests: TransferRequest[] = [
-    // Incoming for João Silva (Padrão / Funcionário Demo)
-    { id: 'transfer1', assetId: 'ASSET002', assetName: 'Monitor LG 27" (de Maria)', assetTag: 'DE34F', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: 'pending' },
-    
-    // Incoming for Demo Gerente
-    { id: 'transfer4', assetId: 'ASSET006', assetName: 'Impressora Multifuncional HP (de Carlos)', assetTag: 'QR12S', fromUserId: 'user3', fromUserName: 'Carlos Pereira', toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: 'pending' },
-    
-    // Outgoing from João Silva (Padrão / Funcionário Demo) to Demo Gerente
-    { id: 'transfer2', assetId: 'ASSET003', assetName: 'Cadeira de Escritório (do João)', assetTag: 'GH56I', fromUserId: MOCK_LOGGED_IN_USER_ID, fromUserName: MOCK_LOGGED_IN_USER_NAME, toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'pending' },
-
-    // Already processed
-    { id: 'transfer3', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (de Maria)', assetTag: 'MN90P', fromUserId: 'user2', fromUserName: 'Maria Oliveira', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000), processedByUserId: MOCK_LOGGED_IN_USER_ID },
+    // Transfers within MOCK_COMPANY_ID
+    { id: 'transfer1', assetId: 'ASSET002', assetName: 'Monitor LG 27" (Maria XYZ)', assetTag: 'DE34F', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: 'pending' },
+    { id: 'transfer2', assetId: 'ASSET003', assetName: 'Cadeira de Escritório (XYZ)', assetTag: 'GH56I', fromUserId: MOCK_LOGGED_IN_USER_ID, fromUserName: MOCK_LOGGED_IN_USER_NAME, toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'pending' },
+    { id: 'transfer3', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (Maria XYZ)', assetTag: 'MN90P', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000), processedByUserId: MOCK_LOGGED_IN_USER_ID },
+    { id: 'transfer4', assetId: 'ASSET006', assetName: 'Impressora HP (Carlos XYZ)', assetTag: 'QR12S', fromUserId: 'user3-xyz', fromUserName: 'Carlos Pereira (XYZ)', toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: 'pending' },
 ];
 
+// Updated to reflect companyId and potentially filter for transfer lists
 export const mockUsersForSelect: UserForSelect[] = [
-    { id: MOCK_LOGGED_IN_USER_ID, name: MOCK_LOGGED_IN_USER_NAME }, // João Silva (Padrão)
-    { id: 'user2', name: 'Maria Oliveira' },
-    { id: 'user3', name: 'Carlos Pereira' },
-    { id: 'user4', name: 'Ana Costa' },
-    // Add demo profile users here if they should be selectable for transfer
-    { id: DEMO_USER_PROFILES.Administrador.id, name: DEMO_USER_PROFILES.Administrador.name },
-    { id: DEMO_USER_PROFILES.Gerente.id, name: DEMO_USER_PROFILES.Gerente.name },
-    { id: DEMO_USER_PROFILES.Técnico.id, name: DEMO_USER_PROFILES.Técnico.name },
-    { id: DEMO_USER_PROFILES.Inventariante.id, name: DEMO_USER_PROFILES.Inventariante.name },
-    // employee-demo-id might be the same as MOCK_LOGGED_IN_USER_ID, so no need to duplicate if so.
-    // Ensure employee-demo-id is distinct if they are different mock users.
-    // For this example, we'll assume DEMO_USER_PROFILES.Funcionário.id is MOCK_LOGGED_IN_USER_ID.
+    // Users from MOCK_COMPANY_ID
+    { id: MOCK_LOGGED_IN_USER_ID, name: MOCK_LOGGED_IN_USER_NAME, companyId: MOCK_COMPANY_ID },
+    { id: 'user2-xyz', name: 'Maria Oliveira (XYZ)', companyId: MOCK_COMPANY_ID },
+    { id: 'user3-xyz', name: 'Carlos Pereira (XYZ)', companyId: MOCK_COMPANY_ID },
+    { id: DEMO_USER_PROFILES.Administrador.id, name: DEMO_USER_PROFILES.Administrador.name, companyId: MOCK_COMPANY_ID },
+    { id: DEMO_USER_PROFILES.Gerente.id, name: DEMO_USER_PROFILES.Gerente.name, companyId: MOCK_COMPANY_ID },
+    { id: DEMO_USER_PROFILES.Técnico.id, name: DEMO_USER_PROFILES.Técnico.name, companyId: MOCK_COMPANY_ID },
+    { id: DEMO_USER_PROFILES.Inventariante.id, name: DEMO_USER_PROFILES.Inventariante.name, companyId: MOCK_COMPANY_ID },
+    
+    // User from ANOTHER_MOCK_COMPANY_ID
+    { id: DEMO_USER_PROFILES["Admin Empresa ABC"].id, name: DEMO_USER_PROFILES["Admin Empresa ABC"].name, companyId: ANOTHER_MOCK_COMPANY_ID },
 ];
-// Filter out duplicates just in case
+
 const uniqueMockUsers = Array.from(new Map(mockUsersForSelect.map(user => [user.id, user])).values());
 export const finalMockUsersForSelect = uniqueMockUsers;
 
-// Full UserData mocks for admin user management
+// Full UserData mocks for admin user management, now company-scoped
 export const mockAdminUsers: UserData[] = [
-    { id: 'user1', companyId: MOCK_COMPANY_ID, name: 'João Silva', email: 'joao.silva@example.com', role: 'Administrador', isActive: true, createdAt: new Date(2023, 0, 1), updatedAt: new Date(2023, 0, 1) },
-    { id: 'user2', companyId: MOCK_COMPANY_ID, name: 'Maria Oliveira', email: 'maria.oliveira@example.com', role: 'Gerente', managerId: 'user1', isActive: true, createdAt: new Date(2023, 1, 1), updatedAt: new Date(2023, 1, 1) },
-    { id: 'user3', companyId: MOCK_COMPANY_ID, name: 'Carlos Pereira', email: 'carlos.pereira@example.com', role: 'Técnico', managerId: 'user2', isActive: true, createdAt: new Date(2023, 2, 1), updatedAt: new Date(2023, 2, 1) },
-    { id: 'user4', companyId: MOCK_COMPANY_ID, name: 'Ana Costa', email: 'ana.costa@example.com', role: 'Inventariante', managerId: 'user2', isActive: false, createdAt: new Date(2023, 3, 1), updatedAt: new Date(2023, 3, 1) },
-    { id: 'user5', companyId: MOCK_COMPANY_ID, name: 'Pedro Santos', email: 'pedro.santos@example.com', role: 'Funcionário', managerId: 'user1', isActive: true, createdAt: new Date(2023, 4, 1), updatedAt: new Date(2023, 4, 1) },
+    // Company XYZ
+    { id: 'user1', companyId: MOCK_COMPANY_ID, name: 'João Silva (Admin XYZ)', email: 'joao.silva@xyz.com', role: 'Administrador', isActive: true, createdAt: new Date(2023, 0, 1), updatedAt: new Date(2023, 0, 1) },
+    { id: 'user2-xyz', companyId: MOCK_COMPANY_ID, name: 'Maria Oliveira (Gerente XYZ)', email: 'maria.oliveira@xyz.com', role: 'Gerente', managerId: 'user1', isActive: true, createdAt: new Date(2023, 1, 1), updatedAt: new Date(2023, 1, 1) },
+    { id: 'user3-xyz', companyId: MOCK_COMPANY_ID, name: 'Carlos Pereira (Técnico XYZ)', email: 'carlos.pereira@xyz.com', role: 'Técnico', managerId: 'user2-xyz', isActive: true, createdAt: new Date(2023, 2, 1), updatedAt: new Date(2023, 2, 1) },
+    { id: 'user4-xyz', companyId: MOCK_COMPANY_ID, name: 'Ana Costa (Invent. XYZ)', email: 'ana.costa@xyz.com', role: 'Inventariante', managerId: 'user2-xyz', isActive: false, createdAt: new Date(2023, 3, 1), updatedAt: new Date(2023, 3, 1) },
+    { id: 'user5-xyz', companyId: MOCK_COMPANY_ID, name: 'Pedro Santos (Funcionário XYZ)', email: 'pedro.santos@xyz.com', role: 'Funcionário', managerId: 'user1', isActive: true, createdAt: new Date(2023, 4, 1), updatedAt: new Date(2023, 4, 1) },
+    
+    // Company ABC
+    { id: 'admin-abc-id', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Alice Braga (Admin ABC)', email: 'alice.braga@abc.com', role: 'Administrador', isActive: true, createdAt: new Date(2023, 5, 1), updatedAt: new Date(2023, 5, 1) },
+    { id: 'user6-abc', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Bruno Lima (Gerente ABC)', email: 'bruno.lima@abc.com', role: 'Gerente', managerId: 'admin-abc-id', isActive: true, createdAt: new Date(2023, 6, 1), updatedAt: new Date(2023, 6, 1) },
 ];
 
-export const MOCK_USERS_FOR_ADMIN_SELECT: UserForSelect[] = mockAdminUsers
-    .filter(u => u.role === 'Administrador' || u.role === 'Gerente') // Only Admins and Managers can be managers
-    .map(u => ({ id: u.id, name: `${u.name} (${u.role})` }));
+// For manager selection dropdown in user admin, needs to be filtered by current admin's company
+export const getManagersForCompany = (companyId: string): UserForSelect[] => {
+  return mockAdminUsers
+    .filter(u => u.companyId === companyId && (u.role === 'Administrador' || u.role === 'Gerente'))
+    .map(u => ({ id: u.id, name: `${u.name} (${u.role})`, companyId: u.companyId }));
+};

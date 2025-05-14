@@ -29,14 +29,17 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import type { Asset } from '@/types/asset'; // Import the Asset type
-import { getAssets, deleteAsset } from '@/services/assetService'; // Import service functions
+import type { Asset } from '@/types/asset'; 
+import { getAssets, deleteAsset } from '@/services/assetService'; 
 import { Skeleton } from '@/components/ui/skeleton';
-import { MOCK_COMPANY_ID } from '@/lib/mock-data';
+import { MOCK_COMPANY_ID } from '@/lib/mock-data'; // Using MOCK_COMPANY_ID for now
+import { useSidebar } from '@/components/ui/sidebar'; // Import useSidebar
+import { useAdminLayoutContext } from '@/components/layout/admin-layout-context'; // Import context
 
 
 export default function AssetsPage() {
     const { toast } = useToast();
+    const { currentCompanyId } = useAdminLayoutContext(); // Get companyId from context
     const [assets, setAssets] = useState<Asset[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -44,13 +47,15 @@ export default function AssetsPage() {
     const [assetToDelete, setAssetToDelete] = useState<Asset | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // MOCK: Assume companyId is available (e.g., from user context)
-    const companyId = MOCK_COMPANY_ID;
-
     const loadAssets = useCallback(async () => {
+        if (!currentCompanyId) {
+            setIsLoading(false);
+            toast({ title: "Erro", description: "ID da empresa não encontrado. Não é possível carregar ativos.", variant: "destructive" });
+            return;
+        }
         setIsLoading(true);
         try {
-            const fetchedAssets = await getAssets(companyId);
+            const fetchedAssets = await getAssets(currentCompanyId);
             setAssets(fetchedAssets);
         } catch (error) {
             console.error("Error fetching assets:", error);
@@ -58,7 +63,7 @@ export default function AssetsPage() {
         } finally {
             setIsLoading(false);
         }
-    }, [companyId, toast]);
+    }, [currentCompanyId, toast]);
 
     useEffect(() => {
         loadAssets();
@@ -78,10 +83,10 @@ export default function AssetsPage() {
     };
 
     const handleDeleteConfirm = async () => {
-        if (!assetToDelete) return;
+        if (!assetToDelete || !currentCompanyId) return;
         setIsDeleting(true);
         try {
-            await deleteAsset(assetToDelete.id, companyId);
+            await deleteAsset(assetToDelete.id, currentCompanyId);
             setAssets(prev => prev.filter(a => a.id !== assetToDelete.id));
             toast({ title: "Sucesso", description: `Ativo ${assetToDelete.name} excluído.` });
         } catch (error: any) {
@@ -116,7 +121,7 @@ export default function AssetsPage() {
        <Card>
         <CardHeader>
           <CardTitle>Lista de Ativos</CardTitle>
-          <CardDescription>Visualize e gerencie todos os ativos cadastrados.</CardDescription>
+          <CardDescription>Visualize e gerencie todos os ativos cadastrados para a empresa atual.</CardDescription>
            <div className="pt-4 flex flex-col md:flex-row gap-2">
              <Input 
                 placeholder="Buscar por nome, tag ou responsável..." 
@@ -124,7 +129,6 @@ export default function AssetsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
              />
-             {/* <Button variant="outline"><Search className="h-4 w-4 mr-2"/> Buscar</Button> */}
            </div>
         </CardHeader>
         <CardContent>
@@ -234,7 +238,7 @@ export default function AssetsPage() {
                 {!isLoading && filteredAssets.length === 0 && (
                   <TableRow>
                       <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                          Nenhum ativo encontrado.
+                         { currentCompanyId ? 'Nenhum ativo encontrado para esta empresa.' : 'Selecione uma empresa para ver os ativos.'}
                       </TableCell>
                   </TableRow>
                 )}

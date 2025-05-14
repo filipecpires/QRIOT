@@ -4,16 +4,17 @@ export type TransferRequestStatus = 'pending' | 'accepted' | 'rejected' | 'cance
 
 export interface TransferRequest {
   id: string; // Unique ID for the transfer request
+  companyId: string; // ID of the company this transfer belongs to
   assetId: string;
   assetName: string;
   assetTag: string;
   fromUserId: string;
   fromUserName: string;
   toUserId: string;
-  toUserName?: string; // Optional, might not be known immediately or if transferring to an email not yet a user
+  toUserName?: string; 
   requestDate: Date;
   status: TransferRequestStatus;
-  processedDate?: Date; // Date when the request was accepted/rejected
-  processedByUserId?: string; // User who processed the request
-  notes?: string; // Optional notes for the transfer
+  processedDate?: Date; 
+  processedByUserId?: string; 
+  notes?: string; 
 }

@@ -4,7 +4,7 @@ export type UserRole = "Administrador" | "Gerente" | "Técnico" | "Inventariante
 
 export interface UserData {
   id: string; // UID from Firebase Auth, also document ID in Firestore 'users' collection
-  companyId: string; // ID of the company this user belongs to
+  companyId: string; // ID of the company this user belongs to - MADE NON-OPTIONAL
   name: string;
   email: string;
   role: UserRole;
@@ -22,4 +22,5 @@ export interface UserData {
 export interface UserForSelect {
     id: string;
     name: string;
+    companyId?: string; // Optional, but useful for admin contexts
 }

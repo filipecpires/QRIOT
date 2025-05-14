@@ -52,24 +52,21 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { AssetForMyDashboard, UserData, TransferRequest } from '@/types'; // Use centralized types
+import type { AssetForMyDashboard, UserData, TransferRequest } from '@/types'; 
 import { 
     allAssetsMockData, 
     mockTransferRequests, 
-    MOCK_LOGGED_IN_USER_ID,
-    MOCK_LOGGED_IN_USER_NAME,
-    DEMO_USER_PROFILES
+    DEMO_USER_PROFILES,
+    MOCK_COMPANY_ID // Using MOCK_COMPANY_ID for demo user asset fetching
 } from '@/lib/mock-data';
+import { useAdminLayoutContext } from '@/components/layout/admin-layout-context';
 
 
-// --- Mock Fetch Functions (adapted to take userId) ---
-async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
-  console.log(`[MyDashboard] Fetching assets for user ID: ${userId}`);
+async function fetchMyAssets(userId: string, companyId: string): Promise<AssetForMyDashboard[]> {
+  console.log(`[MyDashboard] Fetching assets for user ID: ${userId} in company: ${companyId}`);
   await new Promise(resolve => setTimeout(resolve, 1000));
-  // In a real app, this would query Firestore assets collection where responsibleUserId === userId
-  // and companyId matches the current user's company.
   return allAssetsMockData
-    .filter(asset => asset.responsibleUserId === userId)
+    .filter(asset => asset.responsibleUserId === userId && asset.companyId === companyId)
     .map(asset => ({ 
       id: asset.id,
       name: asset.name,
@@ -79,40 +76,47 @@ async function fetchMyAssets(userId: string): Promise<AssetForMyDashboard[]> {
       category: asset.category,
       responsibleUserId: asset.responsibleUserId,
       ownership: asset.ownership,
+      companyId: asset.companyId, // Ensure companyId is part of the returned type
     }));
 }
 
-async function fetchTransferRequestsForUser(userId: string): Promise<TransferRequest[]> {
-    console.log(`[MyDashboard] Fetching transfers for user ID: ${userId}`);
+async function fetchTransferRequestsForUser(userId: string, companyId: string): Promise<TransferRequest[]> {
+    console.log(`[MyDashboard] Fetching transfers for user ID: ${userId} in company: ${companyId}`);
     await new Promise(resolve => setTimeout(resolve, 800));
-    // In a real app, query Firestore 'transferRequests' collection
+    // In a real app, also filter by companyId if transfers are company-scoped
     return mockTransferRequests.filter(req => 
-        (req.toUserId === userId && req.status === 'pending') || 
-        (req.fromUserId === userId && req.status === 'pending')
+        (req.toUserId === userId && req.status === 'pending' && allAssetsMockData.find(a => a.id === req.assetId)?.companyId === companyId) || 
+        (req.fromUserId === userId && req.status === 'pending' && allAssetsMockData.find(a => a.id === req.assetId)?.companyId === companyId)
     );
 }
 
 
-// Mock Action Functions (remain largely the same, but actions should eventually use the current dynamic user context)
-async function reportAssetLost(assetId: string, assetName: string): Promise<{ success: boolean }> {
-    console.log(`Reporting asset ${assetName} (ID: ${assetId}) as lost.`);
+async function reportAssetLost(assetId: string, assetName: string, companyId: string): Promise<{ success: boolean }> {
+    console.log(`Reporting asset ${assetName} (ID: ${assetId}) as lost in company ${companyId}.`);
     await new Promise(resolve => setTimeout(resolve, 700));
-    // In a real app, update asset document in Firestore: status = 'lost'
-    const assetIndex = allAssetsMockData.findIndex(a => a.id === assetId);
+    const assetIndex = allAssetsMockData.findIndex(a => a.id === assetId && a.companyId === companyId);
     if (assetIndex !== -1) {
         allAssetsMockData[assetIndex].status = 'lost';
+    } else {
+        return { success: false };
     }
     return { success: true };
 }
 
-async function processTransferRequest(transferId: string, assetId: string, actionTakerUserId: string, action: 'accept' | 'reject'): Promise<{ success: boolean }> {
-    console.log(`${action === 'accept' ? 'Accepting' : 'Rejecting'} transfer ${transferId} for asset ${assetId}. Action taken by ${actionTakerUserId}`);
+async function processTransferRequest(transferId: string, assetId: string, actionTakerUserId: string, companyId: string, action: 'accept' | 'reject'): Promise<{ success: boolean }> {
+    console.log(`${action === 'accept' ? 'Accepting' : 'Rejecting'} transfer ${transferId} for asset ${assetId} in company ${companyId}. Action by ${actionTakerUserId}`);
     await new Promise(resolve => setTimeout(resolve, 600));
     
     const transferIndex = mockTransferRequests.findIndex(t => t.id === transferId);
     if (transferIndex === -1) return { success: false };
 
     const transfer = mockTransferRequests[transferIndex];
+    const asset = allAssetsMockData.find(a => a.id === assetId);
+
+    if (!asset || asset.companyId !== companyId) { // Ensure asset belongs to the same company context
+        console.error(`Asset ${assetId} not found or does not belong to company ${companyId}.`);
+        return { success: false };
+    }
 
     if (action === 'accept') {
         if (transfer.toUserId !== actionTakerUserId) {
@@ -122,9 +126,9 @@ async function processTransferRequest(transferId: string, assetId: string, actio
         mockTransferRequests[transferIndex].status = 'accepted';
         mockTransferRequests[transferIndex].processedDate = new Date();
         
-        const assetIndex = allAssetsMockData.findIndex(a => a.id === assetId);
-        if (assetIndex !== -1) {
-            allAssetsMockData[assetIndex].responsibleUserId = actionTakerUserId; 
+        const assetIndexInDB = allAssetsMockData.findIndex(a => a.id === assetId && a.companyId === companyId);
+        if (assetIndexInDB !== -1) {
+            allAssetsMockData[assetIndexInDB].responsibleUserId = actionTakerUserId; 
         } else {
             return {success: false}; 
         }
@@ -139,10 +143,8 @@ async function processTransferRequest(transferId: string, assetId: string, actio
 export default function MyDashboardPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { currentUserId, currentUserName, currentCompanyId, currentDemoProfileName } = useAdminLayoutContext();
 
-  const [currentUserId, setCurrentUserId] = useState<string>(MOCK_LOGGED_IN_USER_ID);
-  const [currentUserName, setCurrentUserName] = useState<string>(MOCK_LOGGED_IN_USER_NAME);
 
   const [myAssets, setMyAssets] = useState<AssetForMyDashboard[]>([]);
   const [transferRequests, setTransferRequests] = useState<TransferRequest[]>([]);
@@ -154,29 +156,17 @@ export default function MyDashboardPage() {
   const [isLostConfirmOpen, setIsLostConfirmOpen] = useState(false);
   const [processingTransferId, setProcessingTransferId] = useState<string | null>(null);
 
-  useEffect(() => {
-    const profileQueryParam = searchParams.get('profile');
-    if (profileQueryParam) {
-      const decodedProfileName = decodeURIComponent(profileQueryParam);
-      const demoUser = DEMO_USER_PROFILES[decodedProfileName as keyof typeof DEMO_USER_PROFILES];
-      if (demoUser) {
-        setCurrentUserName(demoUser.name);
-        setCurrentUserId(demoUser.id);
-      } else {
-        setCurrentUserName(`Demo: ${decodedProfileName}`);
-        setCurrentUserId(MOCK_LOGGED_IN_USER_ID); 
-      }
-    } else {
-      setCurrentUserName(MOCK_LOGGED_IN_USER_NAME);
-      setCurrentUserId(MOCK_LOGGED_IN_USER_ID);
-    }
-  }, [searchParams]);
 
-  const loadMyAssets = useCallback(async (userIdToFetch: string) => {
+  const loadMyAssets = useCallback(async () => {
+      if (!currentUserId || !currentCompanyId) {
+          setIsLoadingMyAssets(false);
+          setError("Informações do usuário ou empresa não disponíveis.");
+          return;
+      }
       setIsLoadingMyAssets(true);
       setError(null);
       try {
-        const fetchedAssets = await fetchMyAssets(userIdToFetch);
+        const fetchedAssets = await fetchMyAssets(currentUserId, currentCompanyId);
         setMyAssets(fetchedAssets);
       } catch (err) {
         console.error("Error fetching my assets:", err);
@@ -184,12 +174,16 @@ export default function MyDashboardPage() {
       } finally {
         setIsLoadingMyAssets(false);
       }
-  }, []);
+  }, [currentUserId, currentCompanyId]);
 
-  const loadTransferRequests = useCallback(async (userIdToFetch: string) => {
+  const loadTransferRequests = useCallback(async () => {
+    if (!currentUserId || !currentCompanyId) {
+        setIsLoadingTransfers(false);
+        return;
+    }
     setIsLoadingTransfers(true);
     try {
-        const transfers = await fetchTransferRequestsForUser(userIdToFetch);
+        const transfers = await fetchTransferRequestsForUser(currentUserId, currentCompanyId);
         setTransferRequests(transfers);
     } catch (err) {
         console.error("Error fetching transfer requests:", err);
@@ -197,14 +191,12 @@ export default function MyDashboardPage() {
     } finally {
         setIsLoadingTransfers(false);
     }
-  }, [toast]);
+  }, [currentUserId, currentCompanyId, toast]);
 
   useEffect(() => {
-    if (currentUserId) {
-        loadMyAssets(currentUserId);
-        loadTransferRequests(currentUserId);
-    }
-  }, [currentUserId, loadMyAssets, loadTransferRequests]);
+    loadMyAssets();
+    loadTransferRequests();
+  }, [loadMyAssets, loadTransferRequests]);
 
   const filteredAssets = myAssets.filter(asset =>
     asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -219,10 +211,10 @@ export default function MyDashboardPage() {
   };
 
   const confirmReportLost = async () => {
-    if (!assetToAction) return;
-    const result = await reportAssetLost(assetToAction.id, assetToAction.name);
+    if (!assetToAction || !currentCompanyId) return;
+    const result = await reportAssetLost(assetToAction.id, assetToAction.name, currentCompanyId);
     if (result.success) {
-      loadMyAssets(currentUserId); 
+      loadMyAssets(); 
       toast({ title: "Ativo Reportado", description: `${assetToAction.name} foi marcado como perdido.` });
     } else {
       toast({ title: "Erro", description: "Falha ao reportar perda do ativo.", variant: "destructive" });
@@ -232,30 +224,35 @@ export default function MyDashboardPage() {
   };
 
   const handleRequestMaintenance = (asset: AssetForMyDashboard) => {
-    router.push(`/maintenance/work-orders/new?assetId=${asset.id}&assetName=${encodeURIComponent(asset.name)}`);
+    const targetPath = `/maintenance/work-orders/new?assetId=${asset.id}&assetName=${encodeURIComponent(asset.name)}`;
+    router.push(currentDemoProfileName ? `${targetPath}&profile=${encodeURIComponent(currentDemoProfileName)}` : targetPath);
   };
   
   const handlePerformInventory = (asset: AssetForMyDashboard) => {
-    router.push('/inventory/scan'); 
+    const targetPath = '/inventory/scan';
+    router.push(currentDemoProfileName ? `${targetPath}?profile=${encodeURIComponent(currentDemoProfileName)}` : targetPath);
     toast({ title: "Inventariar Ativo", description: `Redirecionando para inventário. Escaneie ${asset.name}...` });
   };
 
   const handleChangeLocation = (asset: AssetForMyDashboard) => {
-    router.push(`/assets/${asset.id}/edit`); 
+    const targetPath = `/assets/${asset.id}/edit`;
+    router.push(currentDemoProfileName ? `${targetPath}?profile=${encodeURIComponent(currentDemoProfileName)}` : targetPath);
   };
   
   const handleTransferResponsibility = (asset: AssetForMyDashboard) => {
-    router.push(`/my-dashboard/transfer/${asset.id}`);
+    const targetPath = `/my-dashboard/transfer/${asset.id}`;
+    router.push(currentDemoProfileName ? `${targetPath}?profile=${encodeURIComponent(currentDemoProfileName)}` : targetPath);
   };
 
   const handleTransferAction = async (transfer: TransferRequest, action: 'accept' | 'reject') => {
+    if (!currentUserId || !currentCompanyId) return;
     setProcessingTransferId(transfer.id);
-    const result = await processTransferRequest(transfer.id, transfer.assetId, currentUserId, action);
+    const result = await processTransferRequest(transfer.id, transfer.assetId, currentUserId, currentCompanyId, action);
     if (result.success) {
         const actionText = action === 'accept' ? 'Aceita' : 'Rejeitada';
         toast({ title: `Transferência ${actionText}`, description: `A solicitação para ${transfer.assetName} foi ${actionText.toLowerCase()}.`});
-        loadMyAssets(currentUserId); 
-        loadTransferRequests(currentUserId); 
+        loadMyAssets(); 
+        loadTransferRequests(); 
     } else {
         toast({ title: "Erro", description: `Falha ao ${action === 'accept' ? 'aceitar' : 'rejeitar'} a transferência.`, variant: "destructive"});
     }
