@@ -11,44 +11,35 @@ import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils'; // Import cn
+import { cn } from '@/lib/utils'; 
+import jsQR from 'jsqr';
 
 interface ScannedAssetInfo {
     tag: string;
-    name: string; // Fetched after scan
+    name: string; 
     status: 'pending' | 'success' | 'error' | 'duplicate';
     message?: string;
     timestamp: Date;
 }
 
-// Mock fetch functions
 async function fetchAssetNameByTag(tag: string): Promise<string | null> {
     await new Promise(resolve => setTimeout(resolve, 300));
     const mockAssets: { [tag: string]: string } = {
-        'AB12C': 'Notebook Dell Latitude 7400', // Existing tag format
-        'DE34F': 'Monitor LG 27"',             // Existing tag format
-        'GH56I': 'Cadeira de Escritório',      // Existing tag format
-        'JK78L': 'Projetor Epson PowerLite',   // Existing tag format
-        'MN90P': 'Teclado Mecânico Gamer',    // New asset with new tag format
-        'QR12S': 'Mouse Sem Fio Ergonômico',  // New asset with new tag format
-        'TU34V': 'Impressora Multifuncional', // New asset with new tag format
+        'AB12C': 'Notebook Dell Latitude 7400', 
+        'DE34F': 'Monitor LG 27"',            
+        'GH56I': 'Cadeira de Escritório',     
+        'JK78L': 'Projetor Epson PowerLite',  
+        'MN90P': 'Teclado Mecânico Gamer',   
+        'QR12S': 'Mouse Sem Fio Ergonômico', 
+        'TU34V': 'Impressora Multifuncional',
     };
     return mockAssets[tag] || null;
 }
 
-// Mock function to mark asset as inventoried
 async function markAssetAsInventoried(tag: string, inventoryYear: number): Promise<{ success: boolean; message?: string }> {
     console.log(`Marking asset ${tag} as inventoried for year ${inventoryYear}`);
-    await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-
-    // Replace with actual API call:
-    // 1. Find asset by tag in Firestore.
-    // 2. Check if characteristic "Inventário [Year]" already exists. If so, maybe update timestamp? Or just confirm.
-    // 3. If not, add/update characteristic "Inventário [Year]" with the current date as the value.
-    // 4. Set isPublic to false (or based on settings).
-    // 5. Set isActive to true.
-
-    const shouldFail = Math.random() < 0.05; // Simulate occasional failure
+    await new Promise(resolve => setTimeout(resolve, 500)); 
+    const shouldFail = Math.random() < 0.05; 
     if (shouldFail) {
         return { success: false, message: 'Falha simulada ao salvar.' };
     }
@@ -60,23 +51,22 @@ export default function InventoryScanPage() {
     const { toast } = useToast();
     const [scannedAssets, setScannedAssets] = useState<ScannedAssetInfo[]>([]);
     const [isScanning, setIsScanning] = useState(false);
-    const [isLoadingAsset, setIsLoadingAsset] = useState(false); // Loading state for individual asset processing
-    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); // null = checking, true = granted, false = denied
+    const [isLoadingAsset, setIsLoadingAsset] = useState(false); 
+    const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null); 
     const videoRef = useRef<HTMLVideoElement>(null);
-    const scannedTagsThisSession = useRef<Set<string>>(new Set()); // Track tags scanned in this session to avoid duplicates
+    const scannedTagsThisSession = useRef<Set<string>>(new Set()); 
     const lastScannedTag = useRef<string | null>(null);
     const scanTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const currentInventoryYear = new Date().getFullYear();
 
-    // Camera Permission Effect - Triggered by isScanning state
      useEffect(() => {
         let stream: MediaStream | null = null;
 
         const getCameraPermission = async () => {
             console.log("Attempting to get camera permission...");
-            setHasCameraPermission(null); // Start in checking state
+            setHasCameraPermission(null); 
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); // Prefer back camera
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }); 
                 console.log("Camera permission granted.");
                 setHasCameraPermission(true);
                 if (videoRef.current) {
@@ -90,7 +80,7 @@ export default function InventoryScanPage() {
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 setHasCameraPermission(false);
-                if (isScanning) { // Only show toast if user initiated scanning
+                if (isScanning) { 
                     toast({
                         variant: 'destructive',
                         title: 'Acesso à Câmera Negado',
@@ -98,7 +88,7 @@ export default function InventoryScanPage() {
                         duration: 5000,
                     });
                 }
-                setIsScanning(false); // Stop scanning if permission denied or not actively scanning
+                setIsScanning(false); 
             }
         };
 
@@ -157,7 +147,7 @@ export default function InventoryScanPage() {
         }
         lastScannedTag.current = tag;
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); 
+        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 2500); // Increased debounce time
 
 
         if (scannedTagsThisSession.current.has(tag)) {
@@ -206,11 +196,68 @@ export default function InventoryScanPage() {
 
     }, [isScanning, isLoadingAsset, currentInventoryYear, scannedAssets, toast]); 
 
+     // QR Scanning useEffect
+    useEffect(() => {
+        let animationFrameId: number;
+        const videoElement = videoRef.current;
+        const canvasElement = document.createElement('canvas');
+
+        if (isScanning && hasCameraPermission && videoElement && videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
+            const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
+            console.log("[InventoryScan] Starting QR scan loop...");
+
+            const scanLoop = () => {
+                if (!isScanning || !ctx || !videoElement || videoElement.paused || videoElement.ended) {
+                    console.log("[InventoryScan] Stopping QR scan loop condition met.");
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    return;
+                }
+
+                if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                    animationFrameId = requestAnimationFrame(scanLoop); // Wait for video dimensions
+                    return;
+                }
+
+                if (canvasElement.width !== videoElement.videoWidth) canvasElement.width = videoElement.videoWidth;
+                if (canvasElement.height !== videoElement.videoHeight) canvasElement.height = videoElement.videoHeight;
+                
+                ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code && code.data) {
+                        if (!isLoadingAsset) {
+                            handleQrCodeResult(code.data);
+                        }
+                    }
+                } catch (error) {
+                    console.error("[InventoryScan] Error during QR decoding:", error);
+                }
+                animationFrameId = requestAnimationFrame(scanLoop);
+            };
+            animationFrameId = requestAnimationFrame(scanLoop);
+        } else if (isScanning && hasCameraPermission && videoElement && videoElement.readyState < videoElement.HAVE_ENOUGH_DATA) {
+             console.log("[InventoryScan] Video not ready, waiting...");
+        }
+
+        return () => {
+            console.log("[InventoryScan] Cleaning up QR scan loop.");
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        };
+    }, [isScanning, hasCameraPermission, handleQrCodeResult, isLoadingAsset]);
+
 
     const successCount = scannedAssets.filter(a => a.status === 'success').length;
     const duplicateCount = scannedAssets.filter(a => a.status === 'duplicate').length;
     const errorCount = scannedAssets.filter(a => a.status === 'error').length;
-    const totalScanned = scannedAssets.length; 
+    const totalScannedThisSession = scannedTagsThisSession.current.size;
+    const progressPercentage = totalScannedThisSession > 0 ? (successCount / totalScannedThisSession) * 100 : 0;
+
 
     return (
         <div className="space-y-6"> 
@@ -222,7 +269,6 @@ export default function InventoryScanPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* Controls */}
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                         <Button
                             size="lg"
@@ -239,7 +285,8 @@ export default function InventoryScanPage() {
                                 </>
                             )}
                         </Button>
-                        {isScanning && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+                        {isScanning && hasCameraPermission === true && !isLoadingAsset && <Loader2 className="h-6 w-6 animate-spin text-primary" title="Escaneando..." />}
+                        {isLoadingAsset && <span className="text-sm text-muted-foreground">Processando ativo...</span>}
                          <div className="flex-grow text-center sm:text-right space-x-4">
                             <Badge variant="default" className="bg-green-100 text-green-800">{successCount} Sucesso</Badge>
                             <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">{duplicateCount} Duplicados</Badge>
@@ -258,23 +305,23 @@ export default function InventoryScanPage() {
                                 <video
                                     ref={videoRef}
                                     className={cn(
-                                        "w-full max-w-md aspect-square rounded-md bg-muted object-cover", // aspect-square and object-cover for 1:1 crop
+                                        "w-full max-w-md aspect-[1/1] rounded-md bg-muted object-cover", 
                                         hasCameraPermission === false && "hidden", 
                                         hasCameraPermission === null && "hidden" 
                                      )}
                                     autoPlay
                                     muted
-                                    playsInline // Important for iOS
+                                    playsInline 
                                 />
 
-                                {hasCameraPermission === null && (
-                                    <div className="flex items-center justify-center h-40">
-                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                        <p className="ml-2 text-muted-foreground">Aguardando permissão da câmera...</p>
+                                {hasCameraPermission === null && isScanning && (
+                                     <div className="flex flex-col items-center justify-center h-40 p-4 text-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                                        <p className="text-muted-foreground">Aguardando permissão da câmera...</p>
                                     </div>
                                 )}
-                                {hasCameraPermission === false && (
-                                    <Alert variant="destructive">
+                                {hasCameraPermission === false && isScanning && (
+                                     <Alert variant="destructive" className="w-full max-w-md">
                                         <AlertTitle>Acesso à Câmera Negado</AlertTitle>
                                         <AlertDescription>
                                             Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner. A página pode precisar ser recarregada.
@@ -294,7 +341,7 @@ export default function InventoryScanPage() {
                         <CardDescription>Ativos escaneados nesta sessão.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <Progress value={(successCount / (totalScanned - duplicateCount - errorCount) * 100) || 0} className="mb-4 h-2" />
+                         <Progress value={progressPercentage} className="mb-4 h-2" />
                          <ScrollArea className="h-72">
                             <div className="space-y-2 pr-3">
                                 {scannedAssets.map((asset, index) => (

@@ -20,6 +20,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'; 
 import { cn } from '@/lib/utils'; 
+import jsQR from 'jsqr';
 
 interface AppliedCharacteristic {
     key: string;
@@ -129,7 +130,7 @@ export default function CharacteristicScanPage() {
                 setHasCameraPermission(true);
                 if (videoRef.current) {
                     videoRef.current.srcObject = stream;
-                    videoRef.current.onloadedmetadata = () => { // Ensure metadata is loaded before playing
+                    videoRef.current.onloadedmetadata = () => {
                         videoRef.current?.play().catch(playErr => console.error("Video play error:", playErr));
                     }
                 } else {
@@ -138,7 +139,7 @@ export default function CharacteristicScanPage() {
             } catch (error) {
                 console.error('Error accessing camera:', error);
                 setHasCameraPermission(false);
-                 if (isScanning) { // Only show toast if user actually tried to scan
+                 if (isScanning) { 
                     toast({
                         variant: 'destructive',
                         title: 'Acesso à Câmera Negado',
@@ -235,7 +236,7 @@ export default function CharacteristicScanPage() {
         }
         lastScannedTag.current = tag;
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
-        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 1500); 
+        scanTimeoutRef.current = setTimeout(() => { lastScannedTag.current = null; }, 2500); // Increased debounce time
 
 
         setIsLoadingAsset(true); 
@@ -318,6 +319,65 @@ export default function CharacteristicScanPage() {
          lastScannedTag.current = null; 
         if (scanTimeoutRef.current) clearTimeout(scanTimeoutRef.current);
     };
+
+     // QR Scanning useEffect
+    useEffect(() => {
+        let animationFrameId: number;
+        const videoElement = videoRef.current;
+        const canvasElement = document.createElement('canvas');
+
+        if (isScanning && hasCameraPermission && videoElement && videoElement.readyState >= videoElement.HAVE_ENOUGH_DATA) {
+            const ctx = canvasElement.getContext('2d', { willReadFrequently: true });
+            console.log("[CharacteristicScan] Starting QR scan loop...");
+
+            const scanLoop = () => {
+                if (!isScanning || !ctx || !videoElement || videoElement.paused || videoElement.ended) {
+                    console.log("[CharacteristicScan] Stopping QR scan loop condition met.");
+                    if (animationFrameId) cancelAnimationFrame(animationFrameId);
+                    return;
+                }
+                 if (videoElement.videoWidth === 0 || videoElement.videoHeight === 0) {
+                    animationFrameId = requestAnimationFrame(scanLoop); // Wait for video dimensions
+                    return;
+                }
+
+                if (canvasElement.width !== videoElement.videoWidth) canvasElement.width = videoElement.videoWidth;
+                if (canvasElement.height !== videoElement.videoHeight) canvasElement.height = videoElement.videoHeight;
+
+                ctx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+                
+                try {
+                    const imageData = ctx.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "dontInvert",
+                    });
+
+                    if (code && code.data) {
+                        if (!isLoadingAsset) {
+                            // handleQrCodeResult is debounced internally
+                            handleQrCodeResult(code.data);
+                        }
+                    }
+                } catch (error) {
+                     console.error("[CharacteristicScan] Error during QR decoding:", error);
+                }
+                animationFrameId = requestAnimationFrame(scanLoop);
+            };
+            animationFrameId = requestAnimationFrame(scanLoop);
+        } else if (isScanning && hasCameraPermission && videoElement && videoElement.readyState < videoElement.HAVE_ENOUGH_DATA) {
+            console.log("[CharacteristicScan] Video not ready, waiting...");
+             // Optionally, retry starting the loop after a short delay or listen to 'canplay' event
+        }
+
+
+        return () => {
+            console.log("[CharacteristicScan] Cleaning up QR scan loop.");
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+        };
+    }, [isScanning, hasCameraPermission, handleQrCodeResult, isLoadingAsset]); // Dependencies for the scanning loop
+
 
     return (
         <div className="space-y-6"> 
@@ -512,8 +572,8 @@ export default function CharacteristicScanPage() {
                                     </>
                                 )}
                              </Button>
-                             {isScanning && !isLoadingAsset && hasCameraPermission && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
-                             {isLoadingAsset && <span className="text-sm text-muted-foreground">Processando...</span>}
+                             {isScanning && hasCameraPermission === true && !isLoadingAsset && <Loader2 className="h-6 w-6 animate-spin text-primary" title="Escaneando..." />}
+                             {isLoadingAsset && <span className="text-sm text-muted-foreground">Processando ativo...</span>}
                          </div>
                     </div>
 
@@ -528,7 +588,7 @@ export default function CharacteristicScanPage() {
                                 <video
                                     ref={videoRef}
                                     className={cn(
-                                        "w-full max-w-md aspect-square rounded-md bg-muted object-cover", // aspect-square and object-cover for 1:1 crop
+                                        "w-full max-w-md aspect-[1/1] rounded-md bg-muted object-cover", 
                                         hasCameraPermission === false && "hidden", 
                                         hasCameraPermission === null && "hidden" 
                                      )}
@@ -537,14 +597,14 @@ export default function CharacteristicScanPage() {
                                     playsInline 
                                 />
 
-                                {hasCameraPermission === null && (
-                                    <div className="flex items-center justify-center h-40">
-                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                                        <p className="ml-2 text-muted-foreground">Aguardando permissão da câmera...</p>
+                                {hasCameraPermission === null && isScanning && (
+                                    <div className="flex flex-col items-center justify-center h-40 p-4 text-center">
+                                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground mb-2" />
+                                        <p className="text-muted-foreground">Aguardando permissão da câmera...</p>
                                     </div>
                                 )}
-                                {hasCameraPermission === false && (
-                                    <Alert variant="destructive">
+                                {hasCameraPermission === false && isScanning && (
+                                    <Alert variant="destructive" className="w-full max-w-md">
                                         <AlertTitle>Acesso à Câmera Negado</AlertTitle>
                                         <AlertDescription>
                                             Por favor, habilite a permissão da câmera nas configurações do seu navegador para usar o scanner. A página pode precisar ser recarregada.
@@ -579,7 +639,7 @@ export default function CharacteristicScanPage() {
                                         </div>
                                     </div>
                                      <div className="text-xs text-muted-foreground max-w-xs truncate">
-                                        {asset.appliedCharacteristics?.map(c => `${c.key}: ${c.value}`).join(', ')}
+                                        {asset.appliedCharacteristics?.map(c => `${c.key}: ${String(c.value)}`).join(', ')}
                                     </div>
                                 </div>
                             ))}
@@ -619,5 +679,3 @@ export default function CharacteristicScanPage() {
         </div>
     );
 }
-
-    
