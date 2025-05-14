@@ -6,7 +6,7 @@ const withPWA = withPWAInit({
   dest: "public",
   register: true,
   skipWaiting: true,
-  disable: false, // Enable PWA in development
+  disable: process.env.NODE_ENV === 'development', // Disable PWA in development by default
   sw: "sw.js",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'placehold.co', // Added placehold.co
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
   async headers() {
@@ -47,7 +53,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self'; connect-src 'self'; service-worker-src 'self';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos https://placehold.co data:; font-src 'self'; connect-src 'self'; service-worker-src 'self';", // Added placehold.co to img-src
           },
           {
             key: 'X-Content-Type-Options',
@@ -68,7 +74,7 @@ const nextConfig: NextConfig = {
          headers: [
            {
              key: 'Content-Security-Policy',
-             value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos data:; font-src 'self';", 
+             value: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://picsum.photos https://placehold.co data:; font-src 'self';", // Added placehold.co to img-src
            },
          ],
       }
@@ -77,4 +83,3 @@ const nextConfig: NextConfig = {
 };
 
 export default withPWA(nextConfig);
-
