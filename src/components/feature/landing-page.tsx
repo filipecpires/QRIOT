@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -164,9 +164,9 @@ export default function LandingPage() {
     ];
 
     const carouselImages = [
-        { src: "https://placehold.co/1200x675.png", alt: "Gestão de ativos com QR Code em tablet", dataAiHint: "asset tracking" },
-        { src: "https://placehold.co/1200x675.png", alt: "Pessoa escaneando QR Code de ativo com celular", dataAiHint: "qr scanning" },
-        { src: "https://placehold.co/1200x675.png", alt: "Dashboard de inventário de ativos em um laptop", dataAiHint: "inventory management" }
+        { src: "https://placehold.co/1200x675/1E90FF/FFFFFF.png?text=Asset+Tracking+Visual", alt: "Gestão de ativos com QR Code em tablet" },
+        { src: "https://placehold.co/1200x675/32CD32/FFFFFF.png?text=QR+Scanning+Visual", alt: "Pessoa escaneando QR Code de ativo com celular" },
+        { src: "https://placehold.co/1200x675/FFD700/000000.png?text=Inventory+Management+Visual", alt: "Dashboard de inventário de ativos em um laptop" }
     ];
 
 
@@ -227,7 +227,6 @@ export default function LandingPage() {
                                         width={1200}
                                         height={675}
                                         className="rounded-lg object-cover w-full h-full"
-                                        data-ai-hint={img.dataAiHint}
                                         priority={index === 0} // Prioritize the first image
                                     />
                                 </CarouselItem>
@@ -333,7 +332,7 @@ export default function LandingPage() {
                                     ))}
                                 </ul>
                             </CardContent>
-                            <div className="mt-auto p-6">
+                            <CardFooter className="mt-auto p-6">
                                 <Button asChild size="lg" className={cn("w-full shadow-md transition-colors", plan.popular ? "bg-primary hover:bg-primary/90" : "bg-accent text-accent-foreground hover:bg-accent/90")}>
                                     {plan.href.startsWith('mailto:') ? (
                                         <a href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</a>
@@ -341,7 +340,7 @@ export default function LandingPage() {
                                         <Link href={plan.href} className="flex items-center justify-center w-full h-full">{plan.cta}</Link>
                                     )}
                                 </Button>
-                            </div>
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>
@@ -391,3 +390,4 @@ export default function LandingPage() {
         </div>
     );
 }
+
