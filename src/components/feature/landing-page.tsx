@@ -3,7 +3,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'; // Added CardFooter
 import { QrCode, CheckCircle, BarChart, Users, Phone, Zap, ShieldCheck, Printer, ArrowRight, Package, MapPin, History, Edit, FileText, BadgeCheck, Star, Building } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -164,9 +164,9 @@ export default function LandingPage() {
     ];
 
     const carouselImages = [
-        { src: "https://placehold.co/1200x675/1E90FF/FFFFFF.png?text=Asset+Tracking+Visual", alt: "Gestão de ativos com QR Code em tablet" },
-        { src: "https://placehold.co/1200x675/32CD32/FFFFFF.png?text=QR+Scanning+Visual", alt: "Pessoa escaneando QR Code de ativo com celular" },
-        { src: "https://placehold.co/1200x675/FFD700/000000.png?text=Inventory+Management+Visual", alt: "Dashboard de inventário de ativos em um laptop" }
+        { src: "https://placehold.co/1200x675/003049/FFFFFF.png?text=Dashboard+Moderno", alt: "Dashboard moderno de gestão de ativos em um laptop", dataAiHint:"dashboard interface" },
+        { src: "https://placehold.co/1200x675/40E0D0/000000.png?text=Scan+QR+em+Campo", alt: "Técnico escaneando QR Code de um equipamento industrial com celular", dataAiHint:"technician mobile" },
+        { src: "https://placehold.co/1200x675/D6D6D6/003049.png?text=Inventário+Eficiente", alt: "Visão geral de um almoxarifado organizado com ativos etiquetados", dataAiHint:"warehouse inventory" }
     ];
 
 
@@ -228,6 +228,7 @@ export default function LandingPage() {
                                         height={675}
                                         className="rounded-lg object-cover w-full h-full"
                                         priority={index === 0} // Prioritize the first image
+                                        data-ai-hint={img.dataAiHint}
                                     />
                                 </CarouselItem>
                             ))}
@@ -365,7 +366,7 @@ export default function LandingPage() {
                                 <ArrowRight className="ml-2 h-5 w-5" />
                             </Link>
                         </Button>
-                         <Button asChild size="lg" variant="outline" className="text-primary-foreground border-background/50 hover:bg-background/10 hover:text-background transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
+                         <Button asChild size="lg" variant="outline" className="text-primary-foreground border-primary-foreground/50 hover:bg-primary-foreground/10 hover:text-primary-foreground transition-all duration-300 transform hover:scale-105 w-full sm:w-auto">
                              <a href="mailto:contato@qriot.app?subject=Demonstração%20QRIoT.app" className="flex items-center justify-center">
                                 <Phone className="mr-2 h-5 w-5" /> Solicitar Demonstração
                              </a>
