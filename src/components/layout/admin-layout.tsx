@@ -71,7 +71,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                 <SidebarHeader>
                     <Link href={getDynamicLink("/my-dashboard")} className="flex items-center gap-2 p-2 group-data-[collapsible=icon]:justify-center">
                         <QrCode className="h-6 w-6 text-sidebar-primary" />
-                        <span className="font-semibold text-lg text-sidebar-foreground group-data-[collapsible=icon]:hidden">QRIoT.app</span>
+                        <span className="font-semibold text-lg text-sidebar-foreground group-data-[state=collapsed]:hidden">QRIoT.app</span>
                     </Link>
                 </SidebarHeader>
                 <SidebarContent className="p-0"> 
@@ -81,7 +81,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Dashboard Geral" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/dashboard")}>
                                         <LayoutDashboard />
-                                        <span className="group-data-[collapsible=icon]:hidden">Dashboard Geral</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Dashboard Geral</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -91,7 +91,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Meu Painel" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/my-dashboard")}>
                                         <UserSquare />
-                                        <span className="group-data-[collapsible=icon]:hidden">Meu Painel</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Meu Painel</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -101,7 +101,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Ativos" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/assets")}>
                                         <Briefcase /> 
-                                        <span className="group-data-[collapsible=icon]:hidden">Ativos</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Ativos</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -111,7 +111,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Árvore de Ativos" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/assets/tree")}>
                                         <GitMerge />
-                                        <span className="group-data-[collapsible=icon]:hidden">Árvore de Ativos</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Árvore de Ativos</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -121,7 +121,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Inventário (Scan)" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/inventory/scan")}>
                                         <CheckSquare />
-                                        <span className="group-data-[collapsible=icon]:hidden">Inventário (Scan)</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Inventário (Scan)</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -131,7 +131,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Reg. Caract. (Scan)" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/characteristics/scan")}>
                                         <ScanLine />
-                                        <span className="group-data-[collapsible=icon]:hidden">Reg. Caract. (Scan)</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Reg. Caract. (Scan)</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -141,7 +141,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Locais" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/locations")}>
                                         <MapPin />
-                                        <span className="group-data-[collapsible=icon]:hidden">Locais</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Locais</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -151,7 +151,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/maintenance/work-orders")}>
                                         <MaintenanceIcon />
-                                        <span className="group-data-[collapsible=icon]:hidden">Manutenção</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Manutenção</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -161,7 +161,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Imprimir Etiquetas" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/labels/print")}>
                                         <Printer />
-                                        <span className="group-data-[collapsible=icon]:hidden">Imprimir Etiquetas</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Imprimir Etiquetas</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -171,7 +171,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                 <SidebarMenuButton asChild tooltip="Log de Auditoria" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/audit-log")}>
                                         <History />
-                                        <span className="group-data-[collapsible=icon]:hidden">Log de Auditoria</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Log de Auditoria</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -182,7 +182,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
             </Sidebar>
 
             <SidebarInset>
-                <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-30">
+                <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-40"> {/* Changed z-index to 40 */}
                     <SidebarTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                             <PanelLeft />
@@ -221,14 +221,6 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                     </Link>
                                 </DropdownMenuItem>
                                 )}
-                                {canAccess([ROLES.ADMIN, ROLES.MANAGER]) && (
-                                <DropdownMenuItem asChild>
-                                    <Link href={getDynamicLink("/licensing")}>
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        <span>Licença</span>
-                                    </Link>
-                                </DropdownMenuItem>
-                                )}
                                  {canAccess([ROLES.ADMIN]) && (
                                 <DropdownMenuItem asChild>
                                     <Link href={getDynamicLink("/settings")}>
@@ -241,7 +233,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                                     <DropdownMenuItem asChild>
                                         <Link href={getDynamicLink("/settings/admin")}>
                                             <ShieldCheck className="mr-2 h-4 w-4" />
-                                            <span>Administração Empresa</span>
+                                            <span>Administração</span>
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
@@ -260,7 +252,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:p-6 lg:p-8 xl:p-10 overflow-auto bg-muted/30 dark:bg-background/30"> 
+                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:px-6 md:py-4 lg:px-8 lg:py-6 xl:px-10 xl:py-8 overflow-auto bg-muted/30 dark:bg-background/30"> 
                     {children}
                 </main>
             </SidebarInset>
@@ -278,3 +270,4 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AdminLayoutProvider>
   );
 }
+
