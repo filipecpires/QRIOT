@@ -20,44 +20,57 @@ export const HiddenQrCanvasWithDataUrl: React.FC<HiddenQrCanvasWithDataUrlProps>
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    // This effect runs when the component mounts and when `value`, `size`, or `assetId` changes.
-    // `qrcode.react` updates the canvas when its props (like `value` or `size`) change.
-    // We use a short timeout to ensure the canvas has been redrawn by `qrcode.react`
-    // before we attempt to get its data URL.
     const timer = setTimeout(() => {
       if (canvasRef.current) {
         try {
+          // Ensure the canvas has non-zero dimensions before attempting to get data URL
+          if (canvasRef.current.width === 0 || canvasRef.current.height === 0) {
+            console.warn(`[HiddenQrCanvas] Canvas for ${assetId} has zero dimensions. QR not generated.`);
+            onDataUrlReady(assetId, null);
+            return;
+          }
           const dataUrl = canvasRef.current.toDataURL('image/png');
-          console.log(`QR Data URL for ${assetId} (first 50 chars): ${dataUrl.substring(0, 50)}`);
-          if (dataUrl.length > 'data:image/png;base64,'.length) { // Basic check for valid data URL
+          // console.log(`[HiddenQrCanvas] QR Data URL for ${assetId} (first 60 chars): ${dataUrl.substring(0, 60)}`);
+          if (dataUrl && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 'data:image/png;base64,'.length) {
             onDataUrlReady(assetId, dataUrl);
           } else {
-            console.warn(`Generated empty or invalid data URL for QR code ${assetId}`);
+            console.warn(`[HiddenQrCanvas] Generated empty or invalid data URL for QR code ${assetId}`);
             onDataUrlReady(assetId, null);
           }
         } catch (e) {
-          console.error(`Error generating QR data URL for asset ${assetId}:`, e);
+          console.error(`[HiddenQrCanvas] Error generating QR data URL for asset ${assetId}:`, e);
           onDataUrlReady(assetId, null);
         }
       } else {
-        console.warn(`Canvas ref not available for QR code ${assetId} during data URL generation.`);
+        // This might happen if the component unmounts before the timeout,
+        // or if QRCodeCanvas failed to render for some reason.
+        console.warn(`[HiddenQrCanvas] Canvas ref not available for QR code ${assetId} during data URL generation attempt.`);
         onDataUrlReady(assetId, null); 
       }
-    }, 150); // Increased timeout from 50ms to 150ms for potentially slower renders
+    }, 200); // Increased timeout slightly for more complex renders or slower devices
 
-    return () => clearTimeout(timer); // Cleanup timer on unmount or before re-run
+    return () => clearTimeout(timer);
   }, [assetId, value, size, onDataUrlReady]);
+
+  if (!value) {
+    // If value is empty, don't attempt to render QRCodeCanvas as it might error or produce invalid output
+    useEffect(() => {
+      console.warn(`[HiddenQrCanvas] No value provided for QR code for asset ${assetId}. Not rendering canvas.`);
+      onDataUrlReady(assetId, null); // Report as not ready
+    }, [assetId, onDataUrlReady]);
+    return null; // Render nothing
+  }
 
   return (
     <QRCodeCanvas
       value={value}
       size={size}
-      level="H" // High error correction level
-      includeMargin={false} // No margin for cleaner image capture
+      level="H"
+      includeMargin={false}
       ref={canvasRef}
-      // The 'style' prop here is for the wrapper div if qrcode.react adds one,
-      // but for QRCodeCanvas it directly renders a <canvas>.
-      // The actual canvas element is what canvasRef will point to.
+      // It's important this component is actually rendered, even if hidden,
+      // for canvasRef.current to be populated.
+      // The parent component will hide this using CSS.
     />
   );
 };
