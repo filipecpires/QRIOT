@@ -109,6 +109,7 @@ export default function PrintLabelsPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
+    const [tileOnA4, setTileOnA4] = useState(false);
     
     const [qrCodeDataUrls, setQrCodeDataUrls] = useState<Record<string, string | null>>({});
     const [areQrCodesReady, setAreQrCodesReady] = useState(false);
@@ -259,15 +260,12 @@ export default function PrintLabelsPage() {
         if (!areQrCodesReady) {
             toast({ title: "QR Codes Não Prontos", description: "Aguardando a geração de todos os QR codes selecionados. Tente novamente em alguns segundos.", variant: "destructive" });
             console.warn("[PDF Gen] Attempted to generate PDF before all selected QR codes were ready.");
-            console.log("[PDF Gen] Current selectedAssets:", selectedAssetIds);
-            console.log("[PDF Gen] Current qrCodeDataUrls:", qrCodeDataUrls);
             return;
         }
 
         setIsGenerating(true);
         toast({ title: "Gerando PDF...", description: "Preparando etiquetas, aguarde." });
         
-
         const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
         if (!selectedLabelConfig) {
             toast({ title: "Erro", description: "Configuração de etiqueta inválida.", variant: "destructive" });
@@ -276,24 +274,42 @@ export default function PrintLabelsPage() {
         }
 
         const assetsToPrint = assets.filter(a => selectedAssets.has(a.id));
+        
+        const effectivePageFormat = tileOnA4 && selectedLabelConfig.pageFormat === 'custom' ? 'a4' : selectedLabelConfig.pageFormat;
+        const isA4Layout = effectivePageFormat === 'a4';
+
         const doc = new jsPDF({
-            orientation: selectedLabelConfig.pageFormat === 'a4' ? 'p' : 'l',
+            orientation: isA4Layout ? 'p' : 'l',
             unit: 'mm',
-            format: selectedLabelConfig.pageFormat === 'a4' ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX * 2) , selectedLabelConfig.height + (selectedLabelConfig.gapY * 2)]
+            format: isA4Layout ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX * 2) , selectedLabelConfig.height + (selectedLabelConfig.gapY * 2)]
         });
 
-        const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
-        const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : gapY); 
-        const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : gapX); 
-        const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm + (gapY * 2);
+        const { width: labelW_mm, height: labelH_mm } = selectedLabelConfig;
+        let { cols, rows, gapX, gapY, marginTop: marginTop_mm_cfg, marginLeft: marginLeft_mm_cfg } = selectedLabelConfig;
+
+        if (isA4Layout && tileOnA4 && selectedLabelConfig.pageFormat === 'custom') {
+            // Calculate cols/rows for custom labels on A4
+            // Using default A4 margins if not specified in a theoretical 'A4 tiling config'
+            const pageMargin = 10; // Default A4 margin in mm
+            marginLeft_mm_cfg = pageMargin;
+            marginTop_mm_cfg = pageMargin;
+            const effectivePrintableWidth = A4_WIDTH_MM - (2 * pageMargin);
+            const effectivePrintableHeight = A4_HEIGHT_MM - (2 * pageMargin);
+            gapX = gapX || 2; // default gap if not defined for tiling
+            gapY = gapY || 2;
+
+            cols = Math.floor((effectivePrintableWidth + gapX) / (labelW_mm + gapX));
+            rows = Math.floor((effectivePrintableHeight + gapY) / (labelH_mm + gapY));
+        }
+        
+        const marginTop_mm = marginTop_mm_cfg ?? (isA4Layout ? 10 : gapY); 
+        const marginLeft_mm = marginLeft_mm_cfg ?? (isA4Layout ? 10 : gapX); 
+        const pageH_mm = isA4Layout ? A4_HEIGHT_MM : labelH_mm + (gapY * 2);
 
         let assetIndex = 0;
 
-        doc.setFont("helvetica", "normal");
-
 
         const addLabelContent = async (asset: AssetForLabel, x_offset_mm: number, y_offset_mm: number) => {
-            // console.log(`[PDF Gen] Asset: ${asset.tag} at X:${x_offset_mm.toFixed(1)}, Y:${y_offset_mm.toFixed(1)}`);
             for (const element of layoutToUse.filter(el => el.visible)) {
                 const el_x_mm = Math.max(0, x_offset_mm + (element.x * PX_TO_MM_SCALE));
                 const el_y_mm = Math.max(0, y_offset_mm + (element.y * PX_TO_MM_SCALE));
@@ -311,29 +327,39 @@ export default function PrintLabelsPage() {
 
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
+                        let pdfFont = "helvetica"; // Default
+                        if (element.fontFamily) {
+                            const lowerFontFamily = element.fontFamily.toLowerCase();
+                            if (lowerFontFamily.includes("arial")) pdfFont = "helvetica";
+                            else if (lowerFontFamily.includes("verdana")) pdfFont = "helvetica"; // Fallback for Verdana
+                            else if (lowerFontFamily.includes("times")) pdfFont = "times";
+                            else if (lowerFontFamily.includes("courier")) pdfFont = "courier";
+                        }
+                        doc.setFont(pdfFont, 'normal');
                         doc.setFontSize(el_font_size_pt);
-                        doc.setFont(element.fontFamily || 'helvetica', 'normal'); 
-                        const maxTextWidthMm = el_w_mm > 1 ? el_w_mm : (labelW_mm - (el_x_mm - x_offset_mm)) * 0.95;
+                        
+                        const maxTextWidthMm = el_w_mm; 
                         const textLines = doc.splitTextToSize(contentToRender, maxTextWidthMm);
                         let textXPosMm = el_x_mm;
                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
                         
-                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_MM_SCALE) * 0.8; 
+                        // Approximate y for top alignment of text block
+                        const textYPosMm = el_y_mm + (el_font_size_pt * 0.352778); // Convert pt to mm for baseline offset
                         doc.text(textLines, textXPosMm, textYPosMm, { 
                             align: textAlignJsPdf,
-                            baseline: 'alphabetic' 
+                            baseline: 'top' // Changed baseline to top for more predictable multi-line positioning
                         });
                     }
                 } else if (element.type === 'qr') {
                     const qrDataUrl = qrCodeDataUrls[asset.id];
-                    // console.log(`[PDF QR Processing] Asset ID: ${asset.id}, Tag: ${asset.tag}`);
-                    // console.log(`[PDF QR DataURL Snippet] For ${asset.id}: ${qrDataUrl ? qrDataUrl.substring(0, 70) : 'NULL or UNDEFINED'}`);
+                     console.log(`[PDF QR Processing] Asset ID: ${asset.id}, Tag: ${asset.tag}`);
+                     console.log(`[PDF QR DataURL Snippet] For ${asset.id}: ${qrDataUrl ? qrDataUrl.substring(0, 70) : 'NULL or UNDEFINED'}`);
 
                     if (qrDataUrl && qrDataUrl.startsWith('data:image/png;base64,') && qrDataUrl.length > 'data:image/png;base64,'.length) {
                         try {
                             const qrSizeMm = Math.max(5, Math.min(el_w_mm, el_h_mm)); 
-                            // console.log(`[PDF QR] Adding QR for ${asset.id}. Coords: (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}). Size: ${qrSizeMm.toFixed(1)}mm.`);
+                            console.log(`[PDF QR] Adding QR for ${asset.id}. Coords: (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}). Size: ${qrSizeMm.toFixed(1)}mm.`);
                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) {
                             console.error(`[PDF QR] Error adding QR image for asset ${asset.id}:`, e);
@@ -359,24 +385,22 @@ export default function PrintLabelsPage() {
             }
         };
 
-         if (pageFormat === 'a4') {
+         if (isA4Layout) {
              for (assetIndex = 0; assetIndex < assetsToPrint.length; ) {
                  if (assetIndex > 0 && assetIndex % (cols * rows) === 0) {
                      doc.addPage();
                  }
                  let currentY_mm = marginTop_mm;
-                 for (let r = 0; r < rows; r++) {
+                 for (let r = 0; r < rows && assetIndex < assetsToPrint.length; r++) {
                      let currentX_mm = marginLeft_mm;
-                     for (let c = 0; c < cols; c++) {
-                         if (assetIndex >= assetsToPrint.length) break;
+                     for (let c = 0; c < cols && assetIndex < assetsToPrint.length; c++) {
                          await addLabelContent(assetsToPrint[assetIndex], currentX_mm, currentY_mm);
                          currentX_mm += labelW_mm + gapX;
                          assetIndex++;
                      }
                      currentY_mm += labelH_mm + gapY;
-                     if (assetIndex >= assetsToPrint.length) break;
                      if (currentY_mm + labelH_mm > pageH_mm - (selectedLabelConfig.marginBottom ?? marginTop_mm)) {
-                           break;
+                           break; 
                      }
                  }
              }
@@ -419,6 +443,7 @@ export default function PrintLabelsPage() {
 
 
     const selectedAssetsData = assets.filter(a => selectedAssets.has(a.id));
+    const currentSelectedLabelConfig = labelSizes.find(s => s.id === labelSizeId) || labelSizes[0];
 
 
     return (
@@ -569,6 +594,18 @@ export default function PrintLabelsPage() {
                         </Select>
                         <p className="text-xs text-muted-foreground">Define o layout e dimensões das etiquetas no PDF.</p>
                     </div>
+                     {currentSelectedLabelConfig.pageFormat === 'custom' && (
+                        <div className="flex items-center space-x-2 pt-2 md:pt-6">
+                             <Checkbox
+                                id="tile-on-a4"
+                                checked={tileOnA4}
+                                onCheckedChange={(checked) => setTileOnA4(!!checked)}
+                            />
+                            <Label htmlFor="tile-on-a4" className="text-sm font-normal">
+                                Organizar em grade em folha A4?
+                            </Label>
+                        </div>
+                    )}
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
                     <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0} className="w-full sm:w-auto">
@@ -607,4 +644,5 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
+
 

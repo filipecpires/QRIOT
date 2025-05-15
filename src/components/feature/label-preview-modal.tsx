@@ -389,7 +389,7 @@ export function LabelPreviewModal({
                 backgroundColor: 'white',
                 border: '1px dashed #ccc',
                 position: 'relative',
-                overflow: 'visible', // Changed to visible to allow elements to appear slightly outside for selection
+                overflow: 'visible', 
                 transform: `scale(${zoomLevel})`,
                 transformOrigin: 'center center',
                  transition: 'transform 0.1s ease-out',
@@ -403,7 +403,7 @@ export function LabelPreviewModal({
                   className={cn(
                     "absolute cursor-grab select-none p-0.5 border border-transparent",
                     "hover:border-blue-400 hover:border-dashed",
-                    selectedElementId === el.id && "border-primary border-solid border-2 outline-none ring-2 ring-primary ring-offset-1" // Enhanced selection visibility
+                    selectedElementId === el.id && "border-primary border-solid border-2 outline-none ring-2 ring-primary ring-offset-1"
                   )}
                    style={{
                     left: `${el.x}px`,
@@ -416,9 +416,9 @@ export function LabelPreviewModal({
                     minWidth: el.type === 'text' || el.type === 'custom' || el.type === 'characteristic' ? '10px' : undefined,
                     height: el.type === 'qr' ? `${el.widthPx}px` : el.type === 'logo' ? `${el.heightPx}px` : el.heightPx > 0 ? `${el.heightPx}px`: 'auto',
                     lineHeight: '1.1',
-                    zIndex: selectedElementId === el.id ? elements.length + 1 : elIndex + 1, // Ensure selected is always on top
+                    zIndex: selectedElementId === el.id ? elements.length + 1 : elIndex + 1, 
                     overflow: 'hidden', 
-                    whiteSpace: (el.type === 'text' || el.type === 'custom' || el.type === 'characteristic') && el.widthPx > 0 ? 'normal' : 'nowrap', 
+                    wordBreak: 'break-word',
                   }}
                 >
                   {el.type === 'text' && <span className="block">{el.content}</span>}
@@ -515,7 +515,7 @@ export function LabelPreviewModal({
                             selectedElement.type === 'qr' ? 'QR Code' : 'Logo'
                             }
                         </Label>
-                        {['custom', 'logo', 'qr', 'characteristic'].includes(selectedElement.type) && ( // Allow deleting most types
+                        {['custom', 'logo', 'qr', 'characteristic'].includes(selectedElement.type) && ( 
                             <Button variant="ghost" size="icon" onClick={() => removeElement(selectedElement.id)} className="h-6 w-6">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -699,4 +699,5 @@ const CommandEmpty = React.forwardRef<
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
+
 
