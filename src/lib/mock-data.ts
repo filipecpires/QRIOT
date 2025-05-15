@@ -1,5 +1,5 @@
 // src/lib/mock-data.ts
-import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest } from '@/types';
+import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest, CompanyDetails, LicenseInfo, BillingInfo, PaymentHistoryEntry } from '@/types';
 import type { UserRole } from '@/types/user'; // Import UserRole
 
 // --- Mock Company ID ---
@@ -44,13 +44,12 @@ export let allAssetsMockData: (AssetForMyDashboard & { companyId: string })[] = 
 
 export let mockTransferRequests: TransferRequest[] = [
     // Transfers within MOCK_COMPANY_ID
-    { id: 'transfer1', assetId: 'ASSET002', assetName: 'Monitor LG 27" (Maria XYZ)', assetTag: 'DE34F', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: 'pending' },
-    { id: 'transfer2', assetId: 'ASSET003', assetName: 'Cadeira de Escritório (XYZ)', assetTag: 'GH56I', fromUserId: MOCK_LOGGED_IN_USER_ID, fromUserName: MOCK_LOGGED_IN_USER_NAME, toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'pending' },
-    { id: 'transfer3', assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (Maria XYZ)', assetTag: 'MN90P', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000), processedByUserId: MOCK_LOGGED_IN_USER_ID },
-    { id: 'transfer4', assetId: 'ASSET006', assetName: 'Impressora HP (Carlos XYZ)', assetTag: 'QR12S', fromUserId: 'user3-xyz', fromUserName: 'Carlos Pereira (XYZ)', toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: 'pending' },
+    { id: 'transfer1', companyId: MOCK_COMPANY_ID, assetId: 'ASSET002', assetName: 'Monitor LG 27" (Maria XYZ)', assetTag: 'DE34F', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), status: 'pending' },
+    { id: 'transfer2', companyId: MOCK_COMPANY_ID, assetId: 'ASSET003', assetName: 'Cadeira de Escritório (XYZ)', assetTag: 'GH56I', fromUserId: MOCK_LOGGED_IN_USER_ID, fromUserName: MOCK_LOGGED_IN_USER_NAME, toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000), status: 'pending' },
+    { id: 'transfer3', companyId: MOCK_COMPANY_ID, assetId: 'ASSET005', assetName: 'Teclado Gamer RGB (Maria XYZ)', assetTag: 'MN90P', fromUserId: 'user2-xyz', fromUserName: 'Maria Oliveira (XYZ)', toUserId: MOCK_LOGGED_IN_USER_ID, toUserName: MOCK_LOGGED_IN_USER_NAME, requestDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), status: 'accepted', processedDate: new Date(Date.now() - 4* 24 * 60 * 60 * 1000), processedByUserId: MOCK_LOGGED_IN_USER_ID },
+    { id: 'transfer4', companyId: MOCK_COMPANY_ID, assetId: 'ASSET006', assetName: 'Impressora HP (Carlos XYZ)', assetTag: 'QR12S', fromUserId: 'user3-xyz', fromUserName: 'Carlos Pereira (XYZ)', toUserId: DEMO_USER_PROFILES.Gerente.id, toUserName: DEMO_USER_PROFILES.Gerente.name, requestDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000), status: 'pending' },
 ];
 
-// Updated to reflect companyId and potentially filter for transfer lists
 export const mockUsersForSelect: UserForSelect[] = [
     // Users from MOCK_COMPANY_ID
     { id: MOCK_LOGGED_IN_USER_ID, name: MOCK_LOGGED_IN_USER_NAME, companyId: MOCK_COMPANY_ID },
@@ -68,7 +67,6 @@ export const mockUsersForSelect: UserForSelect[] = [
 const uniqueMockUsers = Array.from(new Map(mockUsersForSelect.map(user => [user.id, user])).values());
 export const finalMockUsersForSelect = uniqueMockUsers;
 
-// Full UserData mocks for admin user management, now company-scoped
 export const mockAdminUsers: UserData[] = [
     // Company XYZ
     { id: 'user1', companyId: MOCK_COMPANY_ID, name: 'João Silva (Admin XYZ)', email: 'joao.silva@xyz.com', role: 'Administrador', isActive: true, createdAt: new Date(2023, 0, 1), updatedAt: new Date(2023, 0, 1) },
@@ -82,9 +80,102 @@ export const mockAdminUsers: UserData[] = [
     { id: 'user6-abc', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Bruno Lima (Gerente ABC)', email: 'bruno.lima@abc.com', role: 'Gerente', managerId: 'admin-abc-id', isActive: true, createdAt: new Date(2023, 6, 1), updatedAt: new Date(2023, 6, 1) },
 ];
 
-// For manager selection dropdown in user admin, needs to be filtered by current admin's company
 export const getManagersForCompany = (companyId: string): UserForSelect[] => {
   return mockAdminUsers
     .filter(u => u.companyId === companyId && (u.role === 'Administrador' || u.role === 'Gerente'))
     .map(u => ({ id: u.id, name: `${u.name} (${u.role})`, companyId: u.companyId }));
 };
+
+// --- Mock Data for Company Settings Page ---
+export async function fetchCompanyDetails(companyId: string): Promise<CompanyDetails | null> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    if (companyId === MOCK_COMPANY_ID) {
+        return {
+            id: MOCK_COMPANY_ID,
+            name: 'Minha Empresa Exemplo (XYZ)',
+            logoUrl: 'https://placehold.co/100x100/003049/FFFFFF.png?text=QRIoT', // Placeholder logo
+            ownerId: 'user1',
+            createdAt: new Date(2023, 0, 15),
+            updatedAt: new Date(),
+        };
+    }
+     if (companyId === ANOTHER_MOCK_COMPANY_ID) {
+        return {
+            id: ANOTHER_MOCK_COMPANY_ID,
+            name: 'Empresa ABC Soluções',
+            logoUrl: 'https://placehold.co/100x100/FF6347/FFFFFF.png?text=ABC',
+            ownerId: 'admin-abc-id',
+            createdAt: new Date(2022, 5, 10),
+            updatedAt: new Date(),
+        };
+    }
+    return null;
+}
+
+export async function fetchCompanyLicenseInfo(companyId: string): Promise<LicenseInfo | null> {
+    await new Promise(resolve => setTimeout(resolve, 700));
+    // This can be more dynamic based on companyId if needed
+    if (companyId === MOCK_COMPANY_ID) {
+        return {
+            planName: 'Plano Profissional',
+            assetLimit: 1000,
+            currentAssetCount: allAssetsMockData.filter(a => a.companyId === MOCK_COMPANY_ID).length,
+            userLimit: 50,
+            currentUserCount: mockAdminUsers.filter(u => u.companyId === MOCK_COMPANY_ID).length,
+            expirationDate: new Date(2025, 11, 31),
+            status: 'active',
+            isTrial: false,
+        };
+    }
+    if (companyId === ANOTHER_MOCK_COMPANY_ID) {
+         return {
+            planName: 'Teste Gratuito',
+            assetLimit: 50,
+            currentAssetCount: allAssetsMockData.filter(a => a.companyId === ANOTHER_MOCK_COMPANY_ID).length,
+            userLimit: 5,
+            currentUserCount: mockAdminUsers.filter(u => u.companyId === ANOTHER_MOCK_COMPANY_ID).length,
+            expirationDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), // Expires in 10 days
+            status: 'trial',
+            isTrial: true,
+        };
+    }
+    return null;
+}
+
+export async function fetchBillingDetails(companyId: string): Promise<BillingInfo | null> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+     if (companyId === MOCK_COMPANY_ID) {
+        return {
+            nextPaymentDate: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 15), // Next month's 15th
+            nextPaymentAmount: 49.90,
+            paymentMethod: 'Visa **** 1234',
+        };
+    }
+     if (companyId === ANOTHER_MOCK_COMPANY_ID) {
+        return {
+            nextPaymentDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
+            nextPaymentAmount: 0, // Trial
+            paymentMethod: 'N/A (Trial)',
+        };
+    }
+    return null;
+}
+
+export async function fetchPaymentHistory(companyId: string): Promise<PaymentHistoryEntry[]> {
+    await new Promise(resolve => setTimeout(resolve, 900));
+     if (companyId === MOCK_COMPANY_ID) {
+        return [
+            { id: 'pay1', date: new Date(2024, 3, 15), amount: 49.90, status: 'Paid', description: 'Mensalidade Plano Profissional - Abril/2024', invoiceUrl: '#' },
+            { id: 'pay2', date: new Date(2024, 2, 15), amount: 49.90, status: 'Paid', description: 'Mensalidade Plano Profissional - Março/2024', invoiceUrl: '#' },
+            { id: 'pay3', date: new Date(2024, 1, 15), amount: 29.90, status: 'Paid', description: 'Mensalidade Plano Básico - Fevereiro/2024', invoiceUrl: '#' },
+        ];
+    }
+    return []; // No payment history for other companies in this mock
+}
+
+export async function saveCompanyDetails(companyId: string, data: { name: string, logoUrl?: string }): Promise<boolean> {
+    console.log(`Saving data for company ${companyId}:`, data);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    // In a real app, update Firestore document for the company
+    return true;
+}
