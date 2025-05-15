@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Save, Search, BringToFront, SendToBack } from 'lucide-react';
+import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Save, Search, BringToFront, SendToBack, Settings2 } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -39,17 +39,17 @@ interface AssetForLabel {
 export interface LabelElementConfig {
     id: string;
     type: 'text' | 'qr' | 'logo' | 'custom' | 'characteristic';
-    content: string; // For text/custom: the text itself. For characteristic: the key. For QR: the value to encode.
-    characteristicValue?: string; // Stores the resolved value of the characteristic for display
-    dataUrl?: string; // For logo
+    content: string; 
+    characteristicValue?: string; 
+    dataUrl?: string; 
     fontSizePx: number;
-    widthPx: number; // Width of the element in pixels on the label canvas
-    heightPx: number; // Height of the element in pixels on the label canvas
+    widthPx: number; 
+    heightPx: number; // For text, 0 means auto-height. For QR/Logo, it's specific.
     visible: boolean;
     fontFamily?: string;
     textAlign?: 'left' | 'center' | 'right';
-    x: number; // Position in pixels from left of label
-    y: number; // Position in pixels from top of label
+    x: number; 
+    y: number; 
 }
 
 interface LabelPreviewModalProps {
@@ -60,7 +60,7 @@ interface LabelPreviewModalProps {
   labelConfig: LabelConfig;
   onSave: (elements: LabelElementConfig[]) => void;
   initialLayout?: LabelElementConfig[];
-  qrCodeDataUrls: Record<string, string | null>; // Receive pre-generated QR URLs
+  qrCodeDataUrls: Record<string, string | null>;
 }
 
 const DEFAULT_FONT_SIZE_PX = 12;
@@ -76,8 +76,8 @@ const ZOOM_STEP = 0.2;
 const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): LabelElementConfig[] => {
     const qrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
     const initialLayoutBase = [
-        { id: 'assetName', type: 'text' as const, content: asset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, asset.name.length * 7), heightPx: (DEFAULT_FONT_SIZE_PX + 2) * 1.2, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
-        { id: 'assetTag', type: 'text' as const, content: `TAG: ${asset.tag}`, fontSizePx: DEFAULT_FONT_SIZE_PX -2, visible: true, widthPx: Math.max(50, `TAG: ${asset.tag}`.length * 6), heightPx: (DEFAULT_FONT_SIZE_PX - 2) * 1.2, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
+        { id: 'assetName', type: 'text' as const, content: asset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, asset.name.length * 7), heightPx: 0, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
+        { id: 'assetTag', type: 'text' as const, content: `TAG: ${asset.tag}`, fontSizePx: DEFAULT_FONT_SIZE_PX -2, visible: true, widthPx: Math.max(50, `TAG: ${asset.tag}`.length * 6), heightPx: 0, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
         { id: 'qrCode', type: 'qr' as const, content: qrValue, widthPx: DEFAULT_QR_SIZE_PX, heightPx: DEFAULT_QR_SIZE_PX, visible: true, fontSizePx: 0, textAlign: 'center' as const },
     ];
 
@@ -86,7 +86,7 @@ const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): 
 
     return initialLayoutBase.map((el, index) => {
         const elWidth = el.widthPx;
-        const elHeight = el.type === 'qr' ? el.widthPx : el.heightPx || el.fontSizePx * 1.2;
+        const elHeight = el.type === 'qr' ? el.widthPx : (el.fontSizePx * 1.2) || 20; // Approx height for text if auto
         return {
             ...el,
             x: Math.max(0, (labelWidthPx / 2) - (elWidth / 2)),
@@ -103,7 +103,7 @@ export function LabelPreviewModal({
   labelConfig,
   onSave,
   initialLayout,
-  qrCodeDataUrls, // Receive pre-generated URLs
+  qrCodeDataUrls,
 }: LabelPreviewModalProps) {
   const { toast } = useToast();
   const [elements, setElements] = useState<LabelElementConfig[]>(initialLayout || []);
@@ -116,28 +116,29 @@ export function LabelPreviewModal({
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
 
   const currentAsset = selectedAssetsData[currentPreviewIndex] || initialAsset;
-  // For QR elements in the layout, their `content` field already holds the URL.
-  // We will use the pre-generated qrCodeDataUrls[currentAsset.id] for display if available.
 
     const updateElementContentForAsset = useCallback((element: LabelElementConfig, asset: AssetForLabel): LabelElementConfig => {
-        if (element.id === 'assetName') return { ...element, content: asset.name, widthPx: Math.max(50, asset.name.length * (element.fontSizePx * 0.6)) };
-        if (element.id === 'assetTag') return { ...element, content: `TAG: ${asset.tag}`, widthPx: Math.max(50, `TAG: ${asset.tag}`.length * (element.fontSizePx * 0.6)) };
-        // For QR type elements, their 'content' is the value to encode, which is the asset's public URL.
-        // The actual image data for the QR code (if it's type 'qr') will come from qrCodeDataUrls prop.
-        if (element.type === 'qr') {
-             const assetSpecificQrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
-             return { ...element, content: assetSpecificQrValue };
+        let newContent = element.content;
+        let newWidthPx = element.widthPx;
+        let newCharacteristicValue = element.characteristicValue;
+
+        if (element.id === 'assetName') {
+            newContent = asset.name;
+            newWidthPx = Math.max(50, asset.name.length * (element.fontSizePx * 0.6));
+        } else if (element.id === 'assetTag') {
+            newContent = `TAG: ${asset.tag}`;
+            newWidthPx = Math.max(50, `TAG: ${asset.tag}`.length * (element.fontSizePx * 0.6));
+        } else if (element.type === 'qr') {
+            newContent = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
+        } else if (element.type === 'characteristic') {
+            const char = asset.characteristics?.find(c => c.key === element.content); // content here is the characteristic key
+            newCharacteristicValue = char?.value || '';
+            const fullContentForWidthCalc = `${element.content}: ${newCharacteristicValue}`;
+            newWidthPx = Math.max(50, fullContentForWidthCalc.length * (element.fontSizePx * 0.6));
+        } else if (element.type === 'custom') {
+             newWidthPx = Math.max(50, element.content.length * (element.fontSizePx * 0.6));
         }
-        if (element.type === 'characteristic') {
-            const char = asset.characteristics?.find(c => c.key === element.content);
-            const charDisplayValue = char?.value || '';
-            const fullContentForWidthCalc = `${element.content}: ${charDisplayValue}`;
-            return { ...element, characteristicValue: charDisplayValue, widthPx: Math.max(50, fullContentForWidthCalc.length * (element.fontSizePx * 0.6)) };
-        }
-        if (element.type === 'custom') {
-             return { ...element, widthPx: Math.max(50, element.content.length * (element.fontSizePx * 0.6)) };
-        }
-        return element;
+        return { ...element, content: newContent, widthPx: newWidthPx, characteristicValue: newCharacteristicValue };
     }, []);
 
 
@@ -147,18 +148,16 @@ export function LabelPreviewModal({
                 ? initialLayout
                 : generateDefaultLayout(initialAsset, labelConfig);
             
-            // Initialize elements based on the initialAsset
             const initializedLayout = layoutToUse.map(el => updateElementContentForAsset(el, initialAsset));
             setElements(initializedLayout);
 
             setSelectedElementId(null);
             const initialAssetIndex = selectedAssetsData.findIndex(a => a.id === initialAsset.id);
             setCurrentPreviewIndex(initialAssetIndex >= 0 ? initialAssetIndex : 0);
-            setZoomLevel(1); // Reset zoom on open
+            setZoomLevel(1); 
         }
     }, [isOpen, initialAsset, labelConfig, initialLayout, selectedAssetsData, updateElementContentForAsset]);
 
-    // Update elements when currentAsset changes (e.g., navigating previews)
      useEffect(() => {
          if (isOpen) {
             setElements(prevElements =>
@@ -174,21 +173,20 @@ export function LabelPreviewModal({
 
  const addElement = (type: 'text' | 'custom' | 'logo' | 'qr' | 'characteristic', content?: string, characteristicKey?: string) => {
     const newId = `${type}-${Date.now()}`;
-    let newElementBase: Omit<LabelElementConfig, 'x' | 'y'>;
+    let newElementBase: Omit<LabelElementConfig, 'x' | 'y' | 'heightPx'> & { heightPx?: number }; // heightPx is optional here for text
 
     const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
     const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
     let elWidthPx: number;
-    let elHeightPx: number;
+    let elHeightPx: number | undefined; // For text types, height is auto by default
 
-    // Determine the value for the QR code for the *current* asset being previewed
     const currentAssetQrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${currentAsset.tag}` : currentAsset.tag;
 
     switch (type) {
       case 'logo':
         elWidthPx = DEFAULT_LOGO_WIDTH_PX;
         elHeightPx = DEFAULT_LOGO_HEIGHT_PX;
-        newElementBase = { id: newId, type, content: 'Logo', dataUrl: undefined, widthPx: elWidthPx, heightPx: elHeightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
+        newElementBase = { id: newId, type, content: 'Logo', dataUrl: undefined, widthPx: elWidthPx, heightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
         break;
       case 'qr':
          if (elements.some(el => el.type === 'qr')) {
@@ -196,31 +194,32 @@ export function LabelPreviewModal({
              return;
          }
         elWidthPx = DEFAULT_QR_SIZE_PX;
-        elHeightPx = DEFAULT_QR_SIZE_PX;
-        newElementBase = { id: newId, type, content: currentAssetQrValue, widthPx: elWidthPx, heightPx: elHeightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
+        elHeightPx = DEFAULT_QR_SIZE_PX; // QR has fixed aspect ratio
+        newElementBase = { id: newId, type, content: currentAssetQrValue, widthPx: elWidthPx, heightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
         break;
       case 'characteristic':
         const char = currentAsset.characteristics?.find(c => c.key === characteristicKey);
         const charDisplayValue = char?.value || '';
         const fullContent = `${characteristicKey || 'Característica'}: ${charDisplayValue}`;
         elWidthPx = Math.max(50, fullContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
-        elHeightPx = DEFAULT_FONT_SIZE_PX * 1.2;
-        newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: elHeightPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
+        elHeightPx = 0; // Auto height for text
+        newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
       case 'custom':
       default:
         const initialContent = content || 'Novo Texto';
         elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
-        elHeightPx = DEFAULT_FONT_SIZE_PX * 1.2;
-        newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: elHeightPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
+        elHeightPx = 0; // Auto height for text
+        newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
     }
 
      const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
-     const y_centered = Math.max(0, (labelHeightPx / 2) - (elHeightPx / 2));
+     const y_centered = Math.max(0, (labelHeightPx / 2) - ((elHeightPx === 0 || elHeightPx === undefined ? (newElementBase.fontSizePx * 1.2) : elHeightPx) / 2)); // Use font size for auto height est.
 
     const newElement: LabelElementConfig = {
         ...newElementBase,
+        heightPx: elHeightPx ?? 0, // Ensure heightPx is a number, default to 0 for auto
         x: x_centered,
         y: y_centered,
     };
@@ -261,6 +260,7 @@ export function LabelPreviewModal({
         };
         reader.readAsDataURL(file);
     } else if (file && !elements.find(el => el.type === 'logo')) {
+        // If adding a new logo element directly via upload
         const newId = `logo-${Date.now()}`;
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -414,7 +414,9 @@ export function LabelPreviewModal({
                     textAlign: el.textAlign,
                     width: el.type === 'qr' || el.type === 'logo' ? `${el.widthPx}px` : el.widthPx > 0 ? `${el.widthPx}px` : 'auto', 
                     minWidth: el.type === 'text' || el.type === 'custom' || el.type === 'characteristic' ? '10px' : undefined,
-                    height: el.type === 'qr' ? `${el.widthPx}px` : el.type === 'logo' ? `${el.heightPx}px` : el.heightPx > 0 ? `${el.heightPx}px`: 'auto',
+                    height: (el.type === 'text' || el.type === 'custom' || el.type === 'characteristic') && el.heightPx === 0 ? 'auto' :
+                            (el.type === 'qr' || el.type === 'logo') && el.heightPx > 0 ? `${el.heightPx}px` : 
+                            el.heightPx > 0 ? `${el.heightPx}px` : 'auto',
                     lineHeight: '1.1',
                     zIndex: selectedElementId === el.id ? elements.length + 1 : elIndex + 1, 
                     overflow: 'hidden', 
@@ -425,7 +427,7 @@ export function LabelPreviewModal({
                   {el.type === 'custom' && <span className="block">{el.content}</span>}
                   {el.type === 'characteristic' && <span className="block">{`${el.content}: ${el.characteristicValue}`}</span>}
                   {el.type === 'qr' && (
-                      <div style={{ width: el.widthPx, height: el.widthPx, backgroundColor: 'white' }}>
+                      <div style={{ width: el.widthPx, height: el.heightPx, backgroundColor: 'white' }}>
                            {qrCodeDataUrls[currentAsset.id] ? (
                              <img src={qrCodeDataUrls[currentAsset.id]!} alt={`QR Code for ${currentAsset.tag}`} style={{ width: '100%', height: '100%'}} />
                            ) : (
@@ -548,7 +550,7 @@ export function LabelPreviewModal({
                         <div className="grid grid-cols-2 gap-2">
                             <div>
                                 <Label htmlFor={`fontSize-${selectedElement.id}`} className="text-xs">Fonte (px)</Label>
-                                <Input id={`fontSize-${selectedElement.id}`} type="number" value={selectedElement.fontSizePx} onChange={(e) => updateElement(selectedElement.id, { fontSizePx: parseInt(e.target.value) || DEFAULT_FONT_SIZE_PX, heightPx: (parseInt(e.target.value) || DEFAULT_FONT_SIZE_PX) * 1.2 })} className="text-xs h-8 mt-1" />
+                                <Input id={`fontSize-${selectedElement.id}`} type="number" value={selectedElement.fontSizePx} onChange={(e) => updateElement(selectedElement.id, { fontSizePx: parseInt(e.target.value) || DEFAULT_FONT_SIZE_PX })} className="text-xs h-8 mt-1" />
                             </div>
                             <div>
                                 <Label htmlFor={`textAlign-${selectedElement.id}`} className="text-xs">Alinhar</Label>
@@ -567,7 +569,7 @@ export function LabelPreviewModal({
                              </div>
                              <div>
                                 <Label htmlFor={`height-${selectedElement.id}`} className="text-xs">Altura (px)</Label>
-                                <Input id={`height-${selectedElement.id}`} type="number" value={selectedElement.heightPx} onChange={(e) => updateElement(selectedElement.id, { heightPx: parseInt(e.target.value) || (selectedElement.fontSizePx * 1.2) })} className="text-xs h-8 mt-1" />
+                                <Input id={`height-${selectedElement.id}`} type="number" value={selectedElement.heightPx} onChange={(e) => updateElement(selectedElement.id, { heightPx: parseInt(e.target.value) || 0 })} placeholder="0 para auto" className="text-xs h-8 mt-1" />
                              </div>
                         </div>
                         </>
@@ -619,10 +621,23 @@ export function LabelPreviewModal({
                         </Button>
                          <p className="text-xs text-muted-foreground ml-2">Ordem: {selectedElementIndex + 1} de {elements.length}</p>
                     </div>
+                     <div className="grid grid-cols-2 gap-2 pt-2">
+                         <div>
+                            <Label htmlFor={`posx-${selectedElement.id}`} className="text-xs">Pos. X (px)</Label>
+                            <Input id={`posx-${selectedElement.id}`} type="number" value={Math.round(selectedElement.x)} onChange={(e) => updateElement(selectedElement.id, { x: parseInt(e.target.value) || 0 })} className="text-xs h-8 mt-1" />
+                         </div>
+                         <div>
+                            <Label htmlFor={`posy-${selectedElement.id}`} className="text-xs">Pos. Y (px)</Label>
+                            <Input id={`posy-${selectedElement.id}`} type="number" value={Math.round(selectedElement.y)} onChange={(e) => updateElement(selectedElement.id, { y: parseInt(e.target.value) || 0 })} className="text-xs h-8 mt-1" />
+                         </div>
+                     </div>
                     </div>
                    </Card>
                  ) : (
-                    <p className="text-xs text-muted-foreground text-center py-4">Selecione um elemento na pré-visualização para editar ou adicione novos elementos.</p>
+                    <div className="text-xs text-muted-foreground text-center py-4 flex flex-col items-center gap-2">
+                        <Settings2 className="h-8 w-8 text-muted-foreground/50" />
+                        <span>Selecione um elemento na etiqueta para editar suas propriedades, ou adicione novos elementos.</span>
+                    </div>
                  )}
             </div>
           </div>
@@ -699,5 +714,3 @@ const CommandEmpty = React.forwardRef<
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
-
-
