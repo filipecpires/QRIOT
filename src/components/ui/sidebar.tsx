@@ -224,17 +224,17 @@ const Sidebar = React.forwardRef<
         <div
           className={cn(
             "duration-200 relative h-svh w-[--sidebar-width] bg-transparent transition-[width] ease-linear",
-            "group-data-[collapsible=icon]:w-[--sidebar-width-icon]", // Always apply icon width when collapsible=icon
+            "group-data-[collapsible=icon]:w-[--sidebar-width-icon]", 
             "group-data-[collapsible=offcanvas]:w-0",
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "" // Remove icon width for non-floating/inset if not collapsible=icon
+              : "" 
           )}
         />
         <div
           className={cn(
-            "duration-200 fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex", // Changed z-10 to z-40
+            "duration-200 fixed inset-y-0 z-40 hidden h-svh w-[--sidebar-width] transition-[left,right,width] ease-linear md:flex",
             side === "left"
               ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
               : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -295,7 +295,7 @@ const SidebarTrigger = React.forwardRef<
       {children ? children : (
         <>
           <PanelLeft />
-          <span className="sr-only">Toggle Sidebar</span>
+          <VisuallyHidden.Root>Toggle Sidebar</VisuallyHidden.Root>
         </>
       )}
     </Button>
@@ -333,26 +333,23 @@ const SidebarRail = React.forwardRef<
 SidebarRail.displayName = "SidebarRail"
 
 const SidebarInset = React.forwardRef<
-  HTMLDivElement, // Changed from main to div
-  React.ComponentProps<"div"> // Changed from main to div
+  HTMLDivElement, 
+  React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
   return (
-    <div // Changed from main to div
+    <div 
       ref={ref}
       className={cn(
-        "relative flex min-h-svh flex-1 flex-col bg-background", // Added flex-1
-        // Apply margin based on peer (Sidebar) state for md and up
-        "md:peer-data-[state=expanded]:peer-data-[side=left]:ml-[var(--sidebar-width)]",
-        "md:peer-data-[state=collapsed]:peer-data-[side=left]:ml-[var(--sidebar-width-icon)]",
-        "md:peer-data-[state=expanded]:peer-data-[side=right]:mr-[var(--sidebar-width)]",
-        "md:peer-data-[state=collapsed]:peer-data-[side=right]:mr-[var(--sidebar-width-icon)]",
-        // Handle inset variant margins (these were potentially for a different layout style)
+        "relative flex min-h-svh flex-1 flex-col bg-background", 
+        // Removed explicit peer-based margins:
+        // "md:peer-data-[side=left]:peer-data-[state=expanded]:ml-[var(--sidebar-width)]",
+        // "md:peer-data-[side=left]:peer-data-[state=collapsed]:ml-[var(--sidebar-width-icon)]",
+        // "md:peer-data-[side=right]:peer-data-[state=expanded]:mr-[var(--sidebar-width)]",
+        // "md:peer-data-[side=right]:peer-data-[state=collapsed]:mr-[var(--sidebar-width-icon)]",
         "peer-data-[variant=inset]:min-h-[calc(100svh-theme(spacing.4))]",
         "md:peer-data-[variant=inset]:m-2",
-        "md:peer-data-[state=collapsed]:peer-data-[variant=inset]:ml-2", // Example for left side, adjust for right
-        "md:peer-data-[variant=inset]:ml-0", 
         "md:peer-data-[variant=inset]:rounded-xl md:peer-data-[variant=inset]:shadow",
-        "transition-all duration-200 ease-linear", // Added transition
+        "transition-all duration-200 ease-linear",
         className
       )}
       {...props}
@@ -579,7 +576,7 @@ const SidebarMenuButton = React.forwardRef<
       tooltip,
       className,
       children, 
-      onClick, // Extract onClick from props
+      onClick, 
       ...props
     },
     ref
@@ -588,9 +585,9 @@ const SidebarMenuButton = React.forwardRef<
     const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
 
     const finalOnClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-      onClick?.(event); // Call original onClick if provided
-      if (isMobile && openMobile) { // If mobile and mobile sidebar is open
-        setOpenMobile(false); // Close it
+      onClick?.(event); 
+      if (isMobile && openMobile) { 
+        setOpenMobile(false); 
       }
     };
 
@@ -601,7 +598,7 @@ const SidebarMenuButton = React.forwardRef<
         data-size={size}
         data-active={isActive}
         className={cn(sidebarMenuButtonVariants({ variant, size }), className)}
-        onClick={finalOnClick} // Use the wrapped onClick
+        onClick={finalOnClick} 
         {...props} 
       >
         {children}
@@ -796,3 +793,4 @@ export {
   SidebarTrigger,
   useSidebar,
 }
+
