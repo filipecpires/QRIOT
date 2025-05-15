@@ -256,7 +256,6 @@ export default function PrintLabelsPage() {
          }
         
         const selectedAssetIds = Array.from(selectedAssets);
-         // This check `areQrCodesReady` is now controlled by the useEffect that monitors `qrCodeDataUrls`
         if (!areQrCodesReady) {
             toast({ title: "QR Codes Não Prontos", description: "Aguardando a geração de todos os QR codes selecionados. Tente novamente em alguns segundos.", variant: "destructive" });
             console.warn("[PDF Gen] Attempted to generate PDF before all selected QR codes were ready.");
@@ -284,24 +283,23 @@ export default function PrintLabelsPage() {
         });
 
         const { width: labelW_mm, height: labelH_mm, cols, rows, gapX, gapY, pageFormat } = selectedLabelConfig;
-        const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : gapY); // Use gapY as margin for custom
-        const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : gapX); // Use gapX as margin for custom
+        const marginTop_mm = selectedLabelConfig.marginTop ?? (pageFormat === 'a4' ? 10 : gapY); 
+        const marginLeft_mm = selectedLabelConfig.marginLeft ?? (pageFormat === 'a4' ? 10 : gapX); 
         const pageH_mm = pageFormat === 'a4' ? A4_HEIGHT_MM : labelH_mm + (gapY * 2);
 
         let assetIndex = 0;
 
-        // Ensure standard fonts are available or loaded by jsPDF
         doc.setFont("helvetica", "normal");
 
 
         const addLabelContent = async (asset: AssetForLabel, x_offset_mm: number, y_offset_mm: number) => {
-            console.log(`[PDF Gen] Asset: ${asset.tag} at X:${x_offset_mm.toFixed(1)}, Y:${y_offset_mm.toFixed(1)}`);
+            // console.log(`[PDF Gen] Asset: ${asset.tag} at X:${x_offset_mm.toFixed(1)}, Y:${y_offset_mm.toFixed(1)}`);
             for (const element of layoutToUse.filter(el => el.visible)) {
                 const el_x_mm = Math.max(0, x_offset_mm + (element.x * PX_TO_MM_SCALE));
                 const el_y_mm = Math.max(0, y_offset_mm + (element.y * PX_TO_MM_SCALE));
-                const el_w_mm = Math.max(0.1, element.widthPx * PX_TO_MM_SCALE); // Ensure positive width
-                const el_h_mm = Math.max(0.1, element.heightPx * PX_TO_MM_SCALE); // Ensure positive height
-                const el_font_size_pt = Math.max(1, element.fontSizePx * PX_TO_PT_SCALE); // Ensure positive font size
+                const el_w_mm = Math.max(0.1, element.widthPx * PX_TO_MM_SCALE); 
+                const el_h_mm = Math.max(0.1, element.heightPx * PX_TO_MM_SCALE); 
+                const el_font_size_pt = Math.max(1, element.fontSizePx * PX_TO_PT_SCALE); 
 
                 const contentToRender =
                     element.id === 'assetName' ? asset.name :
@@ -321,19 +319,21 @@ export default function PrintLabelsPage() {
                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
                         
-                        // Adjust Y position for text baseline
-                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_MM_SCALE) * 0.8; // Approximate baseline adjustment
+                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_MM_SCALE) * 0.8; 
                         doc.text(textLines, textXPosMm, textYPosMm, { 
                             align: textAlignJsPdf,
-                            baseline: 'alphabetic' // More reliable baseline
+                            baseline: 'alphabetic' 
                         });
                     }
                 } else if (element.type === 'qr') {
                     const qrDataUrl = qrCodeDataUrls[asset.id];
+                    // console.log(`[PDF QR Processing] Asset ID: ${asset.id}, Tag: ${asset.tag}`);
+                    // console.log(`[PDF QR DataURL Snippet] For ${asset.id}: ${qrDataUrl ? qrDataUrl.substring(0, 70) : 'NULL or UNDEFINED'}`);
+
                     if (qrDataUrl && qrDataUrl.startsWith('data:image/png;base64,') && qrDataUrl.length > 'data:image/png;base64,'.length) {
                         try {
-                            const qrSizeMm = Math.max(5, Math.min(el_w_mm, el_h_mm)); // Use min of element width/height, ensure min size
-                            console.log(`[PDF QR] Adding QR for ${asset.id}. Coords: (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}). Size: ${qrSizeMm.toFixed(1)}mm`);
+                            const qrSizeMm = Math.max(5, Math.min(el_w_mm, el_h_mm)); 
+                            // console.log(`[PDF QR] Adding QR for ${asset.id}. Coords: (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}). Size: ${qrSizeMm.toFixed(1)}mm.`);
                             doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
                         } catch (e) {
                             console.error(`[PDF QR] Error adding QR image for asset ${asset.id}:`, e);
@@ -343,7 +343,7 @@ export default function PrintLabelsPage() {
                             doc.text("QR Erro", el_x_mm + el_w_mm / 2, el_y_mm + el_h_mm / 2, {align: 'center', baseline:'middle'});
                         }
                     } else {
-                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id}.`);
+                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id} at PDF generation time. URL: ${qrDataUrl}`);
                         doc.setFillColor(230, 230, 230);
                         doc.rect(el_x_mm, el_y_mm, Math.max(5, el_w_mm), Math.max(5, el_h_mm), 'F');
                         doc.setTextColor(100,100,100); doc.setFontSize(6);
@@ -430,7 +430,7 @@ export default function PrintLabelsPage() {
                         assetId={asset.id}
                         value={asset.publicUrl}
                         onDataUrlReady={handleQrDataUrlReady}
-                        size={256} // Consistent size for quality
+                        size={256} 
                     />
                 ))}
             </div>
@@ -601,7 +601,7 @@ export default function PrintLabelsPage() {
                     labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
                     onSave={handleSaveLayout}
                     initialLayout={currentLabelLayout}
-                    qrCodeDataUrls={qrCodeDataUrls} // Pass the generated URLs to the modal
+                    qrCodeDataUrls={qrCodeDataUrls} 
                 />
              )}
         </div>
