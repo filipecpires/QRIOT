@@ -1,3 +1,4 @@
+
 // src/types/asset.ts
 
 // For characteristics that are part of an asset
@@ -42,7 +43,7 @@ export interface Asset {
   rentalCost?: number;
 
   description?: string;
-  status: 'active' | 'lost' | 'inactive' | 'maintenance'; // Added 'maintenance' status
+  status: 'active' | 'lost' | 'inactive' | 'maintenance'; 
 
   characteristics: AssetCharacteristic[];
   photos: AssetPhoto[];

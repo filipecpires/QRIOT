@@ -17,7 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign, Link as LinkIcon, Wrench, PackageSearch } from 'lucide-react'; // Added Wrench, PackageSearch
+import { ArrowLeft, Save, Loader2, Plus, Trash2, UploadCloud, X, Building, CalendarDays, DollarSign, Link as LinkIcon, Wrench, PackageSearch, Award } from 'lucide-react'; 
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn, generateAssetTag } from '@/lib/utils'; 
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -59,18 +59,18 @@ const assetSchema = z.object({
   })).optional(),
   attachments: z.array(attachmentSchema).optional(), 
   description: z.string().optional(),
-  status: z.enum(['active', 'lost', 'inactive', 'maintenance']).default('active'), // Added 'maintenance'
+  status: z.enum(['active', 'lost', 'inactive', 'maintenance']).default('active'),
 
   // New fields for Expiration Schedule
-  nextMaintenanceDate: z.date().optional(),
   lastMaintenanceDate: z.date().optional(),
-  maintenanceIntervalDays: z.number().int().min(0).optional(),
+  nextMaintenanceDate: z.date().optional(),
+  maintenanceIntervalDays: z.number().int().min(0).optional().nullable(),
   certificationName: z.string().optional(),
   certificationExpiryDate: z.date().optional(),
   warrantyExpiryDate: z.date().optional(),
-  nextInventoryDate: z.date().optional(),
   lastInventoryDate: z.date().optional(),
-  inventoryIntervalDays: z.number().int().min(0).optional(),
+  nextInventoryDate: z.date().optional(),
+  inventoryIntervalDays: z.number().int().min(0).optional().nullable(),
 
 }).refine(data => {
     if (data.ownershipType === 'rented') {
@@ -153,15 +153,15 @@ export default function NewAssetPage() {
       description: '',
       status: 'active',
       // Defaults for new schedule fields
-      nextMaintenanceDate: undefined,
       lastMaintenanceDate: undefined,
-      maintenanceIntervalDays: undefined,
+      nextMaintenanceDate: undefined,
+      maintenanceIntervalDays: null,
       certificationName: '',
       certificationExpiryDate: undefined,
       warrantyExpiryDate: undefined,
-      nextInventoryDate: undefined,
       lastInventoryDate: undefined,
-      inventoryIntervalDays: undefined,
+      nextInventoryDate: undefined,
+      inventoryIntervalDays: null,
     },
   });
 
@@ -266,6 +266,8 @@ export default function NewAssetPage() {
         ...cleanedData,
         tag: generatedTag, 
         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
+        maintenanceIntervalDays: data.maintenanceIntervalDays === null ? undefined : data.maintenanceIntervalDays,
+        inventoryIntervalDays: data.inventoryIntervalDays === null ? undefined : data.inventoryIntervalDays,
     };
     console.log('Data prepared for saving:', dataToSave);
     await new Promise((resolve) => setTimeout(resolve, 1500));
@@ -348,7 +350,7 @@ export default function NewAssetPage() {
                                 <Label className="font-medium flex items-center gap-1"><Wrench className="h-4 w-4 text-primary"/>Manutenção</Label>
                                 <FormField control={form.control} name="lastMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Última Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhuma</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                                 <FormField control={form.control} name="nextMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próxima Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendada</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
-                                <FormField control={form.control} name="maintenanceIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 90" {...field} onChange={e => field.onChange(parseInt(e.target.value) || undefined)} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                                <FormField control={form.control} name="maintenanceIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 90" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                             </div>
 
                             {/* Warranty Field */}
@@ -359,7 +361,7 @@ export default function NewAssetPage() {
                             
                             {/* Certification Fields */}
                              <div className="space-y-2 p-3 border rounded-md bg-muted/20">
-                                <Label className="font-medium flex items-center gap-1"><Award className="h-4 w-4 text-primary"/>Certificação</Label> {/* Changed Icon */}
+                                <Label className="font-medium flex items-center gap-1"><Award className="h-4 w-4 text-primary"/>Certificação</Label> 
                                 <FormField control={form.control} name="certificationName" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Nome da Certificação</FormLabel> <FormControl><Input placeholder="Ex: ISO 9001, NR-12" {...field} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                                 <FormField control={form.control} name="certificationExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                             </div>
@@ -369,7 +371,7 @@ export default function NewAssetPage() {
                                 <Label className="font-medium flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/>Inventário</Label>
                                 <FormField control={form.control} name="lastInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Último Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhum</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                                 <FormField control={form.control} name="nextInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próximo Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendado</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
-                                <FormField control={form.control} name="inventoryIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 365" {...field} onChange={e => field.onChange(parseInt(e.target.value) || undefined)} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                                <FormField control={form.control} name="inventoryIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 365" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                             </div>
                         </CardContent>
                     </Card>

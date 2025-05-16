@@ -1,6 +1,6 @@
 
 // src/services/assetService.ts
-import type { Asset, NewAssetData, UpdateAssetData, AssetCharacteristic } from '@/types/asset';
+import type { Asset, NewAssetData, UpdateAssetData, AssetCharacteristic, AssetPhoto, AssetAttachment } from '@/types/asset';
 import { generateAssetTag } from '@/lib/utils';
 import { MOCK_COMPANY_ID, allAssetsMockData as initialMockAssetsDB } from '@/lib/mock-data'; // For mock company context
 
@@ -14,6 +14,16 @@ let mockAssetsDB: Asset[] = initialMockAssetsDB.map(asset => ({
   rentalEndDate: asset.rentalEndDate ? new Date(asset.rentalEndDate) : undefined,
   createdAt: asset.createdAt ? new Date(asset.createdAt) : new Date(),
   updatedAt: asset.updatedAt ? new Date(asset.updatedAt) : new Date(),
+  // Schedule fields
+  lastMaintenanceDate: asset.lastMaintenanceDate ? new Date(asset.lastMaintenanceDate) : undefined,
+  nextMaintenanceDate: asset.nextMaintenanceDate ? new Date(asset.nextMaintenanceDate) : undefined,
+  maintenanceIntervalDays: asset.maintenanceIntervalDays,
+  certificationName: asset.certificationName,
+  certificationExpiryDate: asset.certificationExpiryDate ? new Date(asset.certificationExpiryDate) : undefined,
+  warrantyExpiryDate: asset.warrantyExpiryDate ? new Date(asset.warrantyExpiryDate) : undefined,
+  lastInventoryDate: asset.lastInventoryDate ? new Date(asset.lastInventoryDate) : undefined,
+  nextInventoryDate: asset.nextInventoryDate ? new Date(asset.nextInventoryDate) : undefined,
+  inventoryIntervalDays: asset.inventoryIntervalDays,
 }));
 
 
@@ -56,21 +66,43 @@ export async function createAsset(
 
   const newId = `ASSET${Math.floor(Math.random() * 90000) + 10000}`; 
   
-  const photoUrls: Asset['photos'] = photos.map((file, index) => ({
+  const photoUrls: AssetPhoto[] = photos.map((file, index) => ({
     id: `newphoto-${newId}-${index}`,
     url: URL.createObjectURL(file), 
     name: file.name,
   }));
 
   const newAsset: Asset = {
-    ...assetData,
     id: newId,
     tag: newTag,
-    companyId, // Crucial for multi-tenancy
-    photos: photoUrls,
-    characteristics: assetData.characteristics?.map(c => ({...c, id: `char-${Date.now()}-${Math.random().toString(16).slice(2)}`, isActive: true})) || [],
-    attachments: assetData.attachments?.map(att => ({...att, id: `attach-${Date.now()}-${Math.random().toString(16).slice(2)}`})) || [],
+    companyId, 
+    name: assetData.name,
+    category: assetData.category,
+    locationId: assetData.locationId,
+    responsibleUserId: assetData.responsibleUserId,
+    parentId: assetData.parentId,
+    ownershipType: assetData.ownershipType,
+    rentalCompany: assetData.rentalCompany,
+    rentalStartDate: assetData.rentalStartDate,
+    rentalEndDate: assetData.rentalEndDate,
+    rentalCost: assetData.rentalCost,
+    description: assetData.description,
     status: assetData.status || 'active',
+    characteristics: assetData.characteristics?.map(c => ({...c, id: `char-${Date.now()}-${Math.random().toString(16).slice(2)}`, isActive: true})) || [],
+    photos: photoUrls,
+    attachments: assetData.attachments?.map(att => ({...att, id: `attach-${Date.now()}-${Math.random().toString(16).slice(2)}`})) || [],
+    
+    // Schedule fields
+    lastMaintenanceDate: assetData.lastMaintenanceDate,
+    nextMaintenanceDate: assetData.nextMaintenanceDate,
+    maintenanceIntervalDays: assetData.maintenanceIntervalDays,
+    certificationName: assetData.certificationName,
+    certificationExpiryDate: assetData.certificationExpiryDate,
+    warrantyExpiryDate: assetData.warrantyExpiryDate,
+    lastInventoryDate: assetData.lastInventoryDate,
+    nextInventoryDate: assetData.nextInventoryDate,
+    inventoryIntervalDays: assetData.inventoryIntervalDays,
+
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -99,7 +131,7 @@ export async function updateAsset(
   let currentAsset = mockAssetsDB[assetIndex];
 
   let updatedPhotos = currentAsset.photos.filter(p => p.id && !photosToRemove.includes(p.id));
-  const newPhotoUrls: Asset['photos'] = newPhotos.map((file, index) => ({
+  const newPhotoUrls: AssetPhoto[] = newPhotos.map((file, index) => ({
     id: `updatedphoto-${assetId}-${index}-${Date.now()}`,
     url: URL.createObjectURL(file), 
     name: file.name,
@@ -110,12 +142,10 @@ export async function updateAsset(
   const updatedCharacteristics = currentAsset.characteristics.map(existingChar => {
       const formChar = formCharacteristics.find(fc => fc.id === existingChar.id);
       if (formChar) {
-          return { ...existingChar, ...formChar }; // Update existing
+          return { ...existingChar, ...formChar } as AssetCharacteristic; // Ensure isActive is handled
       }
-      // If not in form and was active, it might be an implicit deactivation if not handled explicitly by `isActive` flag
-      // However, the current logic in EditAssetPage sends all characteristics with isActive flag.
       return existingChar;
-  }).filter(char => char.isActive !== false); // Filter out those explicitly marked inactive
+  }).filter(char => char.isActive !== false); 
 
   const newCharacteristicsFromForm = formCharacteristics.filter(fc => !fc.id);
   const finalCharacteristics = [
@@ -131,8 +161,18 @@ export async function updateAsset(
     ...assetData,
     photos: updatedPhotos,
     characteristics: finalCharacteristics,
-    attachments: finalAttachments as AssetAttachment[], // Ensure type
+    attachments: finalAttachments as AssetAttachment[], 
     updatedAt: new Date(),
+    // Ensure schedule fields are updated if present in assetData
+    lastMaintenanceDate: assetData.lastMaintenanceDate !== undefined ? assetData.lastMaintenanceDate : currentAsset.lastMaintenanceDate,
+    nextMaintenanceDate: assetData.nextMaintenanceDate !== undefined ? assetData.nextMaintenanceDate : currentAsset.nextMaintenanceDate,
+    maintenanceIntervalDays: assetData.maintenanceIntervalDays !== undefined ? assetData.maintenanceIntervalDays : currentAsset.maintenanceIntervalDays,
+    certificationName: assetData.certificationName !== undefined ? assetData.certificationName : currentAsset.certificationName,
+    certificationExpiryDate: assetData.certificationExpiryDate !== undefined ? assetData.certificationExpiryDate : currentAsset.certificationExpiryDate,
+    warrantyExpiryDate: assetData.warrantyExpiryDate !== undefined ? assetData.warrantyExpiryDate : currentAsset.warrantyExpiryDate,
+    lastInventoryDate: assetData.lastInventoryDate !== undefined ? assetData.lastInventoryDate : currentAsset.lastInventoryDate,
+    nextInventoryDate: assetData.nextInventoryDate !== undefined ? assetData.nextInventoryDate : currentAsset.nextInventoryDate,
+    inventoryIntervalDays: assetData.inventoryIntervalDays !== undefined ? assetData.inventoryIntervalDays : currentAsset.inventoryIntervalDays,
   };
 }
 
@@ -155,16 +195,12 @@ export async function deleteAsset(assetId: string, companyId: string): Promise<v
 export async function fetchCategoriesForSelect(companyId: string): Promise<string[]> {
     console.log(`[AssetService] Fetching categories for company: ${companyId}`);
     await new Promise(resolve => setTimeout(resolve, 300));
-    // Categories can be global or company-specific. For now, global.
     return ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
 }
 
-// Locations should be company-specific
 export async function fetchLocationsForSelect(companyId: string): Promise<{ id: string; name: string }[]> {
     console.log(`[AssetService] Fetching locations for company: ${companyId}`);
     await new Promise(resolve => setTimeout(resolve, 300));
-    // Mock: filter locations by companyId if they had one, or return generic for now.
-    // This mock assumes locations are generic or we need to add companyId to them too.
     if (companyId === MOCK_COMPANY_ID) {
         return [
           { id: 'loc1-xyz', name: 'Escritório 1 (XYZ)' },
@@ -180,11 +216,9 @@ export async function fetchLocationsForSelect(companyId: string): Promise<{ id: 
     return [];
 }
 
-// Users should be company-specific
 export async function fetchUsersForSelect(companyId: string): Promise<{ id: string; name: string }[]> {
     console.log(`[AssetService] Fetching users for company: ${companyId}`);
     await new Promise(resolve => setTimeout(resolve, 300));
-    // Mock: filter users by companyId
     const companyUsers = {
         [MOCK_COMPANY_ID]: [
           { id: 'user1', name: 'João Silva (XYZ)' },
@@ -199,7 +233,6 @@ export async function fetchUsersForSelect(companyId: string): Promise<{ id: stri
     return companyUsers[companyId as keyof typeof companyUsers] || [];
 }
 
-// Parent assets should be company-specific
 export async function fetchParentAssetsForSelect(companyId: string, excludeAssetId?: string): Promise<{ id: string; name: string; tag: string }[]> {
   console.log(`[AssetService] Fetching parent assets for company: ${companyId}, excluding: ${excludeAssetId}`);
   await new Promise(resolve => setTimeout(resolve, 500));

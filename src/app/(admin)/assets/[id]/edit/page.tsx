@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, ChangeEvent, DragEvent } from 'react';
@@ -20,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle, Link as LinkIcon, UploadCloud, X, Building, CalendarDays, DollarSign } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Plus, Trash2, QrCode, Eye, AlertTriangle, Link as LinkIcon, UploadCloud, X, Building, CalendarDays, DollarSign, Wrench, PackageSearch, Award } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
@@ -53,9 +52,9 @@ const assetSchema = z.object({
   name: z.string().min(3, { message: 'O nome deve ter pelo menos 3 caracteres.' }),
   category: z.string().min(1, { message: 'Selecione uma categoria.' }),
   tag: z.string()
-    .length(5, { message: 'A tag deve ter 5 caracteres.' }) // Keep length validation
-    .regex(/^[A-Z0-9]+$/, { message: 'A tag deve conter apenas letras maiúsculas e números.'}) // Keep regex validation
-    .describe('A tag é única dentro da empresa e não pode ser alterada após a criação.'), // Clarified description for edit page
+    .length(5, { message: 'A tag deve ter 5 caracteres.' }) 
+    .regex(/^[A-Z0-9]+$/, { message: 'A tag deve conter apenas letras maiúsculas e números.'}) 
+    .describe('A tag é única dentro da empresa e não pode ser alterada após a criação.'), 
   locationId: z.string().min(1, { message: 'Selecione um local.' }),
   responsibleUserId: z.string().min(1, { message: 'Selecione um responsável.' }),
   parentId: z.string().optional(),
@@ -69,11 +68,23 @@ const assetSchema = z.object({
       key: z.string().min(1, { message: 'Nome da característica é obrigatório.'}),
       value: z.string().min(1, { message: 'Valor da característica é obrigatório.'}),
       isPublic: z.boolean().default(false),
-      isActive: z.boolean().default(true), // Keep isActive for DB logic
+      isActive: z.boolean().default(true), 
   })).optional(),
   attachments: z.array(attachmentSchema).optional(),
   description: z.string().optional(),
-  status: z.enum(['active', 'lost', 'inactive']).default('active'),
+  status: z.enum(['active', 'lost', 'inactive', 'maintenance']).default('active'),
+
+  // New fields for Expiration Schedule
+  lastMaintenanceDate: z.date().optional(),
+  nextMaintenanceDate: z.date().optional(),
+  maintenanceIntervalDays: z.number().int().min(0).optional().nullable(),
+  certificationName: z.string().optional(),
+  certificationExpiryDate: z.date().optional(),
+  warrantyExpiryDate: z.date().optional(),
+  lastInventoryDate: z.date().optional(),
+  nextInventoryDate: z.date().optional(),
+  inventoryIntervalDays: z.number().int().min(0).optional().nullable(),
+
 }).refine(data => {
     if (data.ownershipType === 'rented') {
         return !!data.rentalCompany && !!data.rentalStartDate && !!data.rentalEndDate;
@@ -125,11 +136,19 @@ async function fetchAssetsForParent(excludeId?: string): Promise<{ id: string; n
 }
 
 // Mock data with existing photos, rental info, and attachments
-interface AssetDataFromAPI extends Omit<AssetFormData, 'rentalStartDate' | 'rentalEndDate' | 'attachments'> {
+interface AssetDataFromAPI extends Omit<AssetFormData, 'rentalStartDate' | 'rentalEndDate' | 'attachments' | 'lastMaintenanceDate' | 'nextMaintenanceDate' | 'certificationExpiryDate' | 'warrantyExpiryDate' | 'lastInventoryDate' | 'nextInventoryDate' | 'maintenanceIntervalDays' | 'inventoryIntervalDays'> {
     photos?: ExistingPhoto[];
     attachments?: Attachment[]; // Use Attachment type
-    rentalStartDate?: string; // Dates as strings for initial fetch
+    rentalStartDate?: string; 
     rentalEndDate?: string;
+    lastMaintenanceDate?: string;
+    nextMaintenanceDate?: string;
+    certificationExpiryDate?: string;
+    warrantyExpiryDate?: string;
+    lastInventoryDate?: string;
+    nextInventoryDate?: string;
+    maintenanceIntervalDays?: number | null; // Allow null from DB
+    inventoryIntervalDays?: number | null; // Allow null from DB
 }
 
 
@@ -141,7 +160,7 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
          return {
             name: 'Notebook Dell Latitude 7400',
             category: 'Eletrônicos',
-            tag: 'AB12C', // Example generated tag
+            tag: 'AB12C', 
             locationId: 'loc1',
             responsibleUserId: 'user1',
             parentId: undefined,
@@ -153,7 +172,7 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
                 { id: 'char4', key: 'Número de Série', value: 'ABC123XYZ', isPublic: false, isActive: true },
                 { id: 'char5', key: 'Voltagem', value: 'Bivolt', isPublic: true, isActive: true },
                 { id: 'char6', key: 'Ano Fabricação', value: '2022', isPublic: true, isActive: true},
-                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false }, // Logically deleted
+                { id: 'char7', key: 'Cor', value: 'Prata', isPublic: false, isActive: false }, 
             ],
             attachments: [
                 { id: 'attach1', name: 'Manual do Usuário', url: 'https://example.com/manual.pdf', isPublic: true },
@@ -162,22 +181,30 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
             description: 'Notebook corporativo para desenvolvimento.',
             status: 'active',
             photos: [
-                { id: 'photo1', url: 'https://picsum.photos/seed/asset001/200/150', name: 'vista_frontal.jpg' },
-                { id: 'photo2', url: 'https://picsum.photos/seed/asset001_side/200/150', name: 'vista_lateral.jpg' },
-            ]
+                { id: 'photo1', url: 'https://placehold.co/200x150.png', name: 'vista_frontal.jpg' },
+                { id: 'photo2', url: 'https://placehold.co/200x150.png', name: 'vista_lateral.jpg' },
+            ],
+            // Schedule fields
+            lastMaintenanceDate: '2024-03-10',
+            nextMaintenanceDate: '2024-09-10',
+            maintenanceIntervalDays: 180,
+            warrantyExpiryDate: '2025-07-15',
+            lastInventoryDate: '2024-01-05',
+            nextInventoryDate: '2025-01-05',
+            inventoryIntervalDays: 365,
          };
     } else if (id === 'ASSET003') {
          return {
             name: 'Cadeira de Escritório',
             category: 'Mobiliário',
-            tag: 'GH56I', // Example generated tag
+            tag: 'GH56I', 
             locationId: 'loc3',
             responsibleUserId: 'user3',
             parentId: 'ASSET001',
-            ownershipType: 'rented', // Example rented asset
+            ownershipType: 'rented', 
             rentalCompany: 'LocaTudo Móveis',
-            rentalStartDate: '2024-01-15', // ISO string format
-            rentalEndDate: '2025-01-14', // ISO string format
+            rentalStartDate: '2024-01-15', 
+            rentalEndDate: '2025-01-14', 
             rentalCost: 50.00,
              characteristics: [
                  { id: 'char8', key: 'Cor', value: 'Preta', isPublic: true, isActive: true },
@@ -186,7 +213,9 @@ async function fetchAssetData(id: string): Promise<AssetDataFromAPI | null> {
             attachments: [],
             description: 'Cadeira ergonômica. Marcada como perdida.',
             status: 'lost',
-            photos: [ { id: 'photo3', url: 'https://picsum.photos/seed/asset003/200/150', name: 'cadeira.jpg' } ]
+            photos: [ { id: 'photo3', url: 'https://placehold.co/200x150.png', name: 'cadeira.jpg' } ],
+            certificationName: 'ABNT Conforto',
+            certificationExpiryDate: '2026-01-01',
          };
     }
      return null;
@@ -231,6 +260,16 @@ export default function EditAssetPage() {
       attachments: [],
       description: '',
       status: 'active',
+      // Schedule fields
+      lastMaintenanceDate: undefined,
+      nextMaintenanceDate: undefined,
+      maintenanceIntervalDays: null,
+      certificationName: '',
+      certificationExpiryDate: undefined,
+      warrantyExpiryDate: undefined,
+      lastInventoryDate: undefined,
+      nextInventoryDate: undefined,
+      inventoryIntervalDays: null,
     },
   });
 
@@ -247,11 +286,7 @@ export default function EditAssetPage() {
                 const data = await fetchAssetData(assetId);
                  if (data) {
                      setAssetData(data);
-
-                      // Convert date strings to Date objects for the form
-                      // Filter characteristics to only include active ones for the state `characteristics`
                      const activeCharacteristics = (data.characteristics || []).filter(c => c.isActive);
-                     // Keep ALL characteristics in the form data for submission logic
                      const allCharacteristicsForForm = data.characteristics || [];
 
                      const formData = {
@@ -259,12 +294,22 @@ export default function EditAssetPage() {
                         parentId: data.parentId || '__none__',
                         rentalStartDate: data.rentalStartDate ? new Date(data.rentalStartDate) : undefined,
                         rentalEndDate: data.rentalEndDate ? new Date(data.rentalEndDate) : undefined,
-                        characteristics: allCharacteristicsForForm, // Form holds all for saving isActive=false
+                        characteristics: allCharacteristicsForForm, 
                         attachments: data.attachments || [],
+                        // Schedule fields
+                        lastMaintenanceDate: data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate) : undefined,
+                        nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate) : undefined,
+                        maintenanceIntervalDays: data.maintenanceIntervalDays === undefined ? null : data.maintenanceIntervalDays,
+                        certificationName: data.certificationName || '',
+                        certificationExpiryDate: data.certificationExpiryDate ? new Date(data.certificationExpiryDate) : undefined,
+                        warrantyExpiryDate: data.warrantyExpiryDate ? new Date(data.warrantyExpiryDate) : undefined,
+                        lastInventoryDate: data.lastInventoryDate ? new Date(data.lastInventoryDate) : undefined,
+                        nextInventoryDate: data.nextInventoryDate ? new Date(data.nextInventoryDate) : undefined,
+                        inventoryIntervalDays: data.inventoryIntervalDays === undefined ? null : data.inventoryIntervalDays,
                      };
 
                      form.reset(formData);
-                     setCharacteristics(activeCharacteristics); // State only holds active for display/editing
+                     setCharacteristics(activeCharacteristics); 
                      setExistingPhotos(data.photos || []);
                      setNewPhotos([]);
                      setPhotosToRemove([]);
@@ -294,38 +339,28 @@ export default function EditAssetPage() {
 
    const addCharacteristic = () => {
        const newChar = { key: '', value: '', isPublic: false, isActive: true };
-       // Add to the local state for immediate display
        setCharacteristics(prev => [...prev, newChar]);
-       // Update the form's characteristics array as well
        form.setValue('characteristics', [...form.getValues('characteristics'), newChar]);
    };
 
-   // This function now logically "deletes" by setting isActive to false in the form state
    const removeCharacteristic = (index: number) => {
-        // Find the actual index in the form's array corresponding to the visible index
         const activeCharacteristics = form.getValues('characteristics').filter(c => c.isActive);
         const characteristicToRemove = activeCharacteristics[index];
-        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToRemove?.id || (c.key === characteristicToRemove?.key && c.value === characteristicToRemove?.value && !c.id)); // Match by ID or content for new ones
+        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToRemove?.id || (c.key === characteristicToRemove?.key && c.value === characteristicToRemove?.value && !c.id)); 
 
         if (formIndex !== -1) {
             const updatedFormCharacteristics = [...form.getValues('characteristics')];
             updatedFormCharacteristics[formIndex].isActive = false;
             form.setValue('characteristics', updatedFormCharacteristics);
-
-            // Update the local state to remove it from the visible list
             setCharacteristics(prev => prev.filter((_, i) => i !== index));
-
             toast({ title: "Característica Desativada", description: "A característica foi marcada como inativa e não será exibida, mas permanecerá no histórico.", variant: "default" });
         } else {
              console.error("Could not find characteristic in form data to deactivate.");
-             // Fallback: remove directly from local state if form sync fails somehow
               setCharacteristics(prev => prev.filter((_, i) => i !== index));
         }
    };
 
-   // Handles changes only for VISIBLE characteristics
    const handleCharacteristicChange = (index: number, field: 'key' | 'value' | 'isPublic', value: string | boolean) => {
-       // Update the local state for immediate UI feedback
         const updatedLocalCharacteristics = [...characteristics];
         if (field === 'isPublic') {
             updatedLocalCharacteristics[index][field] = value as boolean;
@@ -334,9 +369,8 @@ export default function EditAssetPage() {
         }
         setCharacteristics(updatedLocalCharacteristics);
 
-        // Find the corresponding characteristic in the form data and update it
         const characteristicToUpdate = updatedLocalCharacteristics[index];
-        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToUpdate?.id || (c.key === characteristicToUpdate?.key && c.value === characteristicToUpdate?.value && !c.id)); // Match by ID or content
+        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToUpdate?.id || (c.key === characteristicToUpdate?.key && c.value === characteristicToUpdate?.value && !c.id)); 
 
         if (formIndex !== -1) {
             const updatedFormCharacteristics = [...form.getValues('characteristics')];
@@ -354,7 +388,7 @@ export default function EditAssetPage() {
     const handleAddAttachment = () => {
         if (newAttachmentName && newAttachmentUrl) {
             try {
-                new URL(newAttachmentUrl); // Basic validation
+                new URL(newAttachmentUrl); 
                 appendAttachment({ name: newAttachmentName, url: newAttachmentUrl, isPublic: false });
                 setNewAttachmentName('');
                 setNewAttachmentUrl('');
@@ -371,7 +405,6 @@ export default function EditAssetPage() {
     };
 
 
-  // --- File Upload Handlers ---
    const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
      if (event.target.files) {
        const files = Array.from(event.target.files);
@@ -406,39 +439,24 @@ export default function EditAssetPage() {
         setExistingPhotos(prev => prev.filter(p => p.id !== photoId));
         setPhotosToRemove(prev => [...prev, photoId]);
     };
-  // --- End File Upload Handlers ---
 
   async function onSubmit(data: AssetFormData) {
     setIsLoading(true);
-
-    // Note: 'data.characteristics' already contains ALL characteristics, including inactive ones
-    // The server should handle saving based on the 'isActive' flag
-
-     // Clean up rental data if ownership is 'own'
     const cleanedData = data.ownershipType === 'own'
         ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
         : { ...data };
 
-    // Exclude the 'tag' field from the data sent for update, as it should not be changed.
     const { tag, ...dataWithoutTag } = cleanedData;
 
     const dataToSave = {
          ...dataWithoutTag,
          parentId: dataWithoutTag.parentId === '__none__' ? undefined : dataWithoutTag.parentId,
-         // Attachments are already in cleanedData from form state
+         maintenanceIntervalDays: data.maintenanceIntervalDays === null ? undefined : data.maintenanceIntervalDays,
+         inventoryIntervalDays: data.inventoryIntervalDays === null ? undefined : data.inventoryIntervalDays,
      };
      console.log('Data prepared for saving (excluding tag):', dataToSave);
 
-
-    // TODO: Implement file upload and removal logic
-    // 1. Upload `newPhotos` to storage and get URLs.
-    // 2. Delete photos in `photosToRemove` from storage and Firestore.
-    // 3. Update the asset document in Firestore with new photo URLs and remove old ones.
-
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // Replace with actual API call
        toast({
          title: 'Sucesso!',
          description: `Ativo "${data.name}" atualizado com sucesso.`,
@@ -450,7 +468,7 @@ export default function EditAssetPage() {
 
     if (isDataLoading) {
         return (
-            <div className="space-y-6"> {/* Use simple div instead of container */}
+            <div className="space-y-6"> 
                 <Skeleton className="h-8 w-32 mb-4" />
                 <Card>
                     <CardHeader>
@@ -468,12 +486,12 @@ export default function EditAssetPage() {
                              <Skeleton className="h-10 w-full" />
                          </div>
                           <Skeleton className="h-10 w-full" />
-                          <Skeleton className="h-10 w-1/3 mb-4"/> {/* Ownership Type */}
+                          <Skeleton className="h-10 w-1/3 mb-4"/> 
                           <Skeleton className="h-20 w-full" />
-                          <Skeleton className="h-10 w-1/3" /> {/* Status */}
-                         <Skeleton className="h-24 w-full" /> {/* Characteristics */}
+                          <Skeleton className="h-10 w-1/3" /> 
+                          <Skeleton className="h-24 w-full" /> 
+                          <Skeleton className="h-64 w-full" /> 
                           <Skeleton className="h-10 w-1/3" />
-                           {/* Photo skeleton */}
                           <div>
                             <Skeleton className="h-6 w-1/4 mb-2" />
                              <div className="mb-4 grid grid-cols-3 gap-4">
@@ -482,7 +500,6 @@ export default function EditAssetPage() {
                              </div>
                             <Skeleton className="h-32 w-full border-dashed border-2 rounded-md" />
                           </div>
-                          {/* Attachment skeleton */}
                            <div>
                              <Skeleton className="h-6 w-1/4 mb-2" />
                              <Skeleton className="h-10 w-full mb-2 border rounded-md" />
@@ -510,7 +527,7 @@ export default function EditAssetPage() {
 
 
   return (
-    <div className="space-y-6"> {/* Use simple div instead of container */}
+    <div className="space-y-6"> 
       <div className="flex justify-between items-center mb-4">
          <Button variant="outline" size="sm" asChild>
             <Link href="/assets">
@@ -548,6 +565,15 @@ export default function EditAssetPage() {
                 </AlertDescription>
             </Alert>
         )}
+        {assetData?.status === 'maintenance' && (
+            <Alert variant="default" className="mb-6 bg-orange-100 border-orange-300 text-orange-800 dark:bg-orange-900/30 dark:border-orange-700 dark:text-orange-300">
+                <Wrench className="h-4 w-4" />
+                <AlertTitle>Atenção!</AlertTitle>
+                <AlertDescription>
+                    Este ativo está atualmente marcado como <span className="font-semibold">EM MANUTENÇÃO</span>.
+                </AlertDescription>
+            </Alert>
+        )}
 
 
       <Card>
@@ -558,10 +584,8 @@ export default function EditAssetPage() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)}>
             <CardContent className="space-y-6">
-              {/* Basic Info Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Nome do Ativo</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                 {/* Tag field is now read-only */}
                  <FormField control={form.control} name="tag" render={({ field }) => (<FormItem><FormLabel>Tag Única</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl><FormDescription>A tag única é gerada pelo sistema e não pode ser alterada.</FormDescription><FormMessage /></FormItem>)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -570,7 +594,6 @@ export default function EditAssetPage() {
                  <FormField control={form.control} name="responsibleUserId" render={({ field }) => (<FormItem><FormLabel>Responsável</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}<SelectItem value="__new__">-- Criar Novo Usuário --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
 
-              {/* Parent Asset Field */}
               <FormField
                   control={form.control}
                   name="parentId"
@@ -598,7 +621,6 @@ export default function EditAssetPage() {
                   )}
                 />
 
-               {/* Ownership Type */}
                  <FormField
                    control={form.control}
                    name="ownershipType"
@@ -630,7 +652,6 @@ export default function EditAssetPage() {
                    )}
                  />
 
-                 {/* Rental Information (Conditional) */}
                  {ownershipType === 'rented' && (
                     <Card className="p-4 bg-muted/30 border-dashed">
                       <CardDescription className="mb-4">Informações da Locação</CardDescription>
@@ -747,7 +768,7 @@ export default function EditAssetPage() {
                                         placeholder="150.00"
                                         className="pl-8"
                                         {...field}
-                                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} // Handle parsing
+                                        onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} 
                                     />
                                 </FormControl>
                                </div>
@@ -761,21 +782,20 @@ export default function EditAssetPage() {
                     </Card>
                  )}
 
-
               <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
 
-               {/* Status Field */}
                 <FormField
                   control={form.control}
                   name="status"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Status do Ativo</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger className={cn(
                               field.value === 'lost' && 'border-destructive text-destructive focus:ring-destructive',
-                              field.value === 'inactive' && 'border-muted text-muted-foreground focus:ring-gray-500'
+                              field.value === 'inactive' && 'border-muted text-muted-foreground focus:ring-gray-500',
+                              field.value === 'maintenance' && 'border-orange-500 text-orange-600 focus:ring-orange-500'
                           )}>
                             <SelectValue placeholder="Selecione o status" />
                           </SelectTrigger>
@@ -784,6 +804,7 @@ export default function EditAssetPage() {
                           <SelectItem value="active">Ativo</SelectItem>
                           <SelectItem value="lost">Perdido</SelectItem>
                            <SelectItem value="inactive">Inativo</SelectItem>
+                           <SelectItem value="maintenance">Em Manutenção</SelectItem>
                         </SelectContent>
                       </Select>
                        <FormDescription>Define a condição atual do ativo.</FormDescription>
@@ -791,11 +812,44 @@ export default function EditAssetPage() {
                     </FormItem>
                   )}
                 />
+              
+              {/* Dates and Schedules Section */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Datas e Agendamentos</CardTitle>
+                  <CardDescription>Gerencie prazos de manutenção, garantia, certificações e inventário.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="space-y-2 p-3 border rounded-md bg-muted/20">
+                        <Label className="font-medium flex items-center gap-1"><Wrench className="h-4 w-4 text-primary"/>Manutenção</Label>
+                        <FormField control={form.control} name="lastMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Última Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhuma</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="nextMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próxima Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendada</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="maintenanceIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 90" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                    </div>
 
-             {/* Characteristics Section - Only displays active characteristics */}
+                     <div className="space-y-2 p-3 border rounded-md bg-muted/20">
+                        <Label className="font-medium flex items-center gap-1"><CalendarDays className="h-4 w-4 text-primary"/>Garantia</Label>
+                        <FormField control={form.control} name="warrantyExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração da Garantia</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                    </div>
+                    
+                     <div className="space-y-2 p-3 border rounded-md bg-muted/20">
+                        <Label className="font-medium flex items-center gap-1"><Award className="h-4 w-4 text-primary"/>Certificação</Label> 
+                        <FormField control={form.control} name="certificationName" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Nome da Certificação</FormLabel> <FormControl><Input placeholder="Ex: ISO 9001, NR-12" {...field} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="certificationExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                    </div>
+
+                     <div className="space-y-2 p-3 border rounded-md bg-muted/20">
+                        <Label className="font-medium flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/>Inventário</Label>
+                        <FormField control={form.control} name="lastInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Último Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhum</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="nextInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próximo Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendado</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="inventoryIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 365" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                    </div>
+                </CardContent>
+              </Card>
+
+
               <div>
                 <h3 className="text-lg font-semibold mb-2">Características Adicionais (Ativas)</h3>
-                 {/* Map over the local 'characteristics' state which only contains active ones */}
                  {characteristics.map((char, index) => (
                      <div key={char.id || `active-${index}`} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
                         <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
@@ -837,7 +891,7 @@ export default function EditAssetPage() {
                             type="button"
                             variant="ghost"
                             size="icon"
-                            onClick={() => removeCharacteristic(index)} // This now sets isActive=false
+                            onClick={() => removeCharacteristic(index)} 
                             className="text-destructive hover:bg-destructive/10"
                             title="Desativar Característica"
                             >
@@ -852,15 +906,12 @@ export default function EditAssetPage() {
                  <p className="text-xs text-muted-foreground mt-1">Características desativadas não são exibidas aqui, mas não são excluídas permanentemente.</p>
               </div>
 
-              {/* Photo Upload Section */}
                <div>
                 <h3 className="text-lg font-semibold mb-2">Fotos do Ativo</h3>
-                 {/* Display existing and new photos */}
                  <div className="mb-4 grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                     {/* Existing photos */}
                     {existingPhotos.map((photo) => (
                         <div key={photo.id} className="relative group border rounded-md overflow-hidden aspect-square">
-                            <Image src={photo.url} alt={photo.name || `Foto ${photo.id}`} fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw" />
+                            <Image src={photo.url} alt={photo.name || `Foto ${photo.id}`} fill style={{ objectFit: 'cover' }} sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw" data-ai-hint="asset photography" />
                              <Button
                                 type="button"
                                 variant="destructive"
@@ -873,7 +924,6 @@ export default function EditAssetPage() {
                              </Button>
                         </div>
                     ))}
-                     {/* New photo previews */}
                      {newPhotos.map((file, index) => (
                        <div key={`new-${index}`} className="relative group border rounded-md overflow-hidden aspect-square">
                          <Image
@@ -882,7 +932,8 @@ export default function EditAssetPage() {
                            fill
                            style={{ objectFit: 'cover' }}
                            sizes="(max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
-                           onLoad={() => URL.revokeObjectURL(URL.createObjectURL(file))} // Clean up object URL
+                           onLoad={() => URL.revokeObjectURL(URL.createObjectURL(file))} 
+                           data-ai-hint="image preview"
                          />
                          <Button
                            type="button"
@@ -897,7 +948,6 @@ export default function EditAssetPage() {
                        </div>
                      ))}
                  </div>
-                 {/* Dropzone */}
                  <div
                   className={cn(
                     "relative border-2 border-dashed border-border rounded-md p-6 text-center transition-colors duration-200 ease-in-out",
@@ -919,24 +969,22 @@ export default function EditAssetPage() {
                     type="file"
                     multiple
                     accept="image/*"
-                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" // Adjusted class for proper overlay
+                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
                     onChange={handleFileChange}
                   />
                    <p className="text-xs text-muted-foreground mt-2">Adicione mais fotos para o ativo.</p>
                 </div>
               </div>
 
-              {/* Attachments Section */}
                <div>
                  <h3 className="text-lg font-semibold mb-2">Anexos (Links Externos)</h3>
-                 {/* Display existing attachments */}
                  {attachmentFields.map((field, index) => (
                    <div key={field.id} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/50">
                     <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
                         <FormField
                         control={form.control}
                         name={`attachments.${index}.name`}
-                        render={({ field: inputField }) => ( // Renamed to avoid conflict with outer 'field'
+                        render={({ field: inputField }) => ( 
                             <FormItem className="flex-1 min-w-0">
                             <FormLabel>Nome</FormLabel>
                             <FormControl>
@@ -949,7 +997,7 @@ export default function EditAssetPage() {
                         <FormField
                         control={form.control}
                         name={`attachments.${index}.url`}
-                        render={({ field: inputField }) => ( // Renamed
+                        render={({ field: inputField }) => ( 
                             <FormItem className="flex-1 min-w-0">
                             <FormLabel>URL</FormLabel>
                             <FormControl>
@@ -970,7 +1018,7 @@ export default function EditAssetPage() {
                             <FormControl>
                                 <Checkbox
                                 checked={checkboxField.value}
-                                onCheckedChange={checkboxField.onChange} // Directly use onChange from RHF
+                                onCheckedChange={checkboxField.onChange} 
                                 />
                             </FormControl>
                             <FormMessage />
@@ -991,7 +1039,6 @@ export default function EditAssetPage() {
                    </div>
                  ))}
 
-                 {/* Input for new attachment */}
                  <div className="flex flex-col sm:flex-row sm:items-end gap-2 mt-4">
                     <div className="w-full sm:flex-1">
                         <Label htmlFor="new-attachment-name">Nome do Novo Anexo</Label>
@@ -1061,6 +1108,4 @@ export default function EditAssetPage() {
     </div>
   );
 }
-
-
 
