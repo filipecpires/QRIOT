@@ -75,7 +75,7 @@ const MIN_ZOOM = 0.5;
 const ZOOM_STEP = 0.2;
 
 
-export const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): LabelElementConfig[] => {
+export const generateDefaultLabelLayout = (asset: AssetForLabel, labelConfig: LabelConfig): LabelElementConfig[] => {
     const qrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
     const initialLayoutBase = [
         { id: 'assetName', type: 'text' as const, content: asset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, asset.name.length * 7), heightPx: 0, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
@@ -125,7 +125,8 @@ export function LabelPreviewModal({
     const updateElementContentForAsset = useCallback((element: LabelElementConfig, asset: AssetForLabel): LabelElementConfig => {
         let newContent = element.content;
         let newCharacteristicValue = element.characteristicValue;
-        let newWidthPx = element.widthPx; // Width is not recalculated here
+        // Retain existing width, do not recalculate
+        const newWidthPx = element.widthPx;
 
         if (element.id === 'assetName') {
             newContent = asset.name;
@@ -154,7 +155,7 @@ export function LabelPreviewModal({
             const initialAssetIndex = selectedAssetsData.findIndex(a => a.id === initialAsset.id);
             setCurrentPreviewIndex(initialAssetIndex >= 0 ? initialAssetIndex : 0);
             setZoomLevel(1); 
-            setNewTemplateNameInput(''); // Reset template name input
+            setNewTemplateNameInput(''); 
         }
     }, [isOpen, initialAsset, labelConfig, initialLayout, selectedAssetsData, updateElementContentForAsset]);
 
@@ -213,7 +214,8 @@ export function LabelPreviewModal({
     }
 
      const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
-     const y_centered = Math.max(0, (labelHeightPx / 2) - (elHeightPx / 2));
+     const y_centered = Math.max(0, (labelHeightPx / 2) - ((elHeightPx > 0 ? elHeightPx : (DEFAULT_FONT_SIZE_PX * 1.2)) / 2) );
+
 
     const newElement: LabelElementConfig = {
         ...newElementBase,
@@ -361,9 +363,7 @@ export function LabelPreviewModal({
         }
         const tilePreferenceForTemplate = labelConfig.pageFormat === 'custom' ? currentTileOnA4 : false;
         onSaveAsNewTemplate(newTemplateNameInput, elements, labelConfig.id, tilePreferenceForTemplate);
-        setNewTemplateNameInput(''); // Clear input after saving
-        // Optionally, you might want to close the modal after saving a template, or provide feedback
-        // For now, it stays open, allowing further edits or saving another template.
+        setNewTemplateNameInput(''); 
     };
 
 
@@ -653,13 +653,13 @@ export function LabelPreviewModal({
         <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0 items-center">
             <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
                 <Input
-                    placeholder="Nome do Modelo (opcional)"
+                    placeholder="Nome do Modelo"
                     value={newTemplateNameInput}
                     onChange={(e) => setNewTemplateNameInput(e.target.value)}
                     className="h-9 text-sm flex-grow"
                 />
                 <Button onClick={handleSaveCurrentLayoutAsTemplate} variant="outline" size="sm" className="h-9 w-full sm:w-auto" disabled={!newTemplateNameInput.trim() || elements.length === 0}>
-                    <SaveTemplateIcon className="mr-2 h-4 w-4" /> Salvar como Modelo
+                    <SaveTemplateIcon className="mr-2 h-4 w-4" /> Salvar como Novo Modelo
                 </Button>
             </div>
             <div className="flex gap-2 w-full sm:w-auto">
