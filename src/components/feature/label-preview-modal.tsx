@@ -58,7 +58,7 @@ interface LabelPreviewModalProps {
   initialAsset: AssetForLabel;
   selectedAssetsData: AssetForLabel[];
   labelConfig: LabelConfig;
-  onApplyLayoutAndClose: (elements: LabelElementConfig[]) => void; // Renamed from onSave
+  onApplyLayoutAndClose: (elements: LabelElementConfig[]) => void;
   initialLayout?: LabelElementConfig[];
   qrCodeDataUrls: Record<string, string | null>;
 }
@@ -86,7 +86,6 @@ export const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelCo
 
     return initialLayoutBase.map((el, index) => {
         const elWidth = el.widthPx;
-        // For text, height is dynamic, so for initial centering, estimate based on font size
         const elHeight = el.type === 'qr' ? el.widthPx : (el.fontSizePx * 1.2) || 20; 
         return {
             ...el,
@@ -102,7 +101,7 @@ export function LabelPreviewModal({
   initialAsset,
   selectedAssetsData,
   labelConfig,
-  onApplyLayoutAndClose, // Renamed from onSave
+  onApplyLayoutAndClose,
   initialLayout,
   qrCodeDataUrls,
 }: LabelPreviewModalProps) {
@@ -120,25 +119,23 @@ export function LabelPreviewModal({
 
     const updateElementContentForAsset = useCallback((element: LabelElementConfig, asset: AssetForLabel): LabelElementConfig => {
         let newContent = element.content;
-        let newWidthPx = element.widthPx;
         let newCharacteristicValue = element.characteristicValue;
+        // Width is no longer recalculated here based on content changes.
+        // It's set initially or by the user and remains fixed unless explicitly changed.
+        let newWidthPx = element.widthPx;
 
         if (element.id === 'assetName') {
             newContent = asset.name;
-            newWidthPx = Math.max(50, asset.name.length * (element.fontSizePx * 0.6));
         } else if (element.id === 'assetTag') {
             newContent = `TAG: ${asset.tag}`;
-            newWidthPx = Math.max(50, `TAG: ${asset.tag}`.length * (element.fontSizePx * 0.6));
         } else if (element.type === 'qr') {
             newContent = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
         } else if (element.type === 'characteristic') {
             const char = asset.characteristics?.find(c => c.key === element.content); // content here is the characteristic key
             newCharacteristicValue = char?.value || '';
-            const fullContentForWidthCalc = `${element.content}: ${newCharacteristicValue}`;
-            newWidthPx = Math.max(50, fullContentForWidthCalc.length * (element.fontSizePx * 0.6));
-        } else if (element.type === 'custom') {
-             newWidthPx = Math.max(50, element.content.length * (element.fontSizePx * 0.6));
         }
+        // For 'custom' type, newContent would be the user-defined content itself.
+
         return { ...element, content: newContent, widthPx: newWidthPx, characteristicValue: newCharacteristicValue };
     }, []);
 
@@ -179,7 +176,7 @@ export function LabelPreviewModal({
     const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
     const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
     let elWidthPx: number;
-    let elHeightPx: number | undefined = 0; // Default to auto height for text based elements
+    let elHeightPx: number | undefined = 0; 
 
     const currentAssetQrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${currentAsset.tag}` : currentAsset.tag;
 
@@ -201,14 +198,14 @@ export function LabelPreviewModal({
       case 'characteristic':
         const char = currentAsset.characteristics?.find(c => c.key === characteristicKey);
         const charDisplayValue = char?.value || '';
-        const fullContent = `${characteristicKey || 'Característica'}: ${charDisplayValue}`;
-        elWidthPx = Math.max(50, fullContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
+        const fullContentForWidthCalc = `${characteristicKey || 'Característica'}: ${charDisplayValue}`;
+        elWidthPx = Math.max(50, fullContentForWidthCalc.length * (DEFAULT_FONT_SIZE_PX * 0.6)); // Initial width calculation
         newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
       case 'custom':
       default:
         const initialContent = content || 'Novo Texto';
-        elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
+        elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6)); // Initial width calculation
         newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
     }
@@ -364,7 +361,7 @@ export function LabelPreviewModal({
         <DialogHeader>
           <DialogTitle>Editor de Layout da Etiqueta</DialogTitle>
            <DialogDescription>
-             {`Pré-visualizando: ${currentAsset.name} (${currentAsset.tag}) - Etiqueta ${currentPreviewIndex + 1} de ${selectedAssetsData.length}. `}
+             {`Pré-visualizando: ${currentAsset.name} (${currentAsset.tag}) - Etiqueta ${currentPreviewIndex + 1} de ${selectedAssetsData.length > 0 ? selectedAssetsData.length : 1}. `}
              Dimensões base: {labelConfig.width.toFixed(1)}mm x {labelConfig.height.toFixed(1)}mm. Arraste os elementos para posicionar.
            </DialogDescription>
         </DialogHeader>
@@ -510,7 +507,7 @@ export function LabelPreviewModal({
                             selectedElement.type === 'qr' ? 'QR Code' : 'Logo'
                             }
                         </Label>
-                        {['custom', 'logo', 'qr', 'characteristic'].includes(selectedElement.type) && ( 
+                        {['custom', 'logo', 'qr', 'characteristic'].includes(selectedElement.type) && selectedElement.id !== 'qrCode' && ( 
                             <Button variant="ghost" size="icon" onClick={() => removeElement(selectedElement.id)} className="h-6 w-6">
                                 <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
@@ -531,7 +528,7 @@ export function LabelPreviewModal({
                         {selectedElement.type === 'custom' && (
                             <div>
                                 <Label htmlFor={`content-${selectedElement.id}`} className="text-xs">Conteúdo</Label>
-                                <Textarea id={`content-${selectedElement.id}`} value={selectedElement.content} onChange={(e) => updateElement(selectedElement.id, { content: e.target.value, widthPx: Math.max(10, e.target.value.length * (selectedElement.fontSizePx*0.6))  })} className="text-xs h-16 mt-1" />
+                                <Textarea id={`content-${selectedElement.id}`} value={selectedElement.content} onChange={(e) => updateElement(selectedElement.id, { content: e.target.value })} className="text-xs h-16 mt-1" />
                             </div>
                         )}
                         {selectedElement.type === 'characteristic' && (
@@ -558,7 +555,7 @@ export function LabelPreviewModal({
                             </div>
                              <div>
                                 <Label htmlFor={`width-${selectedElement.id}`} className="text-xs">Largura (px)</Label>
-                                <Input id={`width-${selectedElement.id}`} type="number" value={selectedElement.widthPx} onChange={(e) => updateElement(selectedElement.id, { widthPx: parseInt(e.target.value) || 100 })} className="text-xs h-8 mt-1" />
+                                <Input id={`width-${selectedElement.id}`} type="number" value={selectedElement.widthPx} onChange={(e) => updateElement(selectedElement.id, { widthPx: parseInt(e.target.value) || 0 })} placeholder="0 para auto" className="text-xs h-8 mt-1" />
                              </div>
                              <div>
                                 <Label htmlFor={`height-${selectedElement.id}`} className="text-xs">Altura (px)</Label>
