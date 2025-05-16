@@ -229,7 +229,6 @@ export default function EditAssetPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  // Local state for characteristics displayed in the "active" section
   const [activeCharacteristics, setActiveCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
   const [assetData, setAssetData] = useState<AssetDataFromAPI | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
@@ -287,9 +286,7 @@ export default function EditAssetPage() {
                 const data = await fetchAssetData(assetId);
                  if (data) {
                      setAssetData(data);
-                     // All characteristics from API, including inactive ones
                      const allCharacteristicsFromApi = data.characteristics || [];
-                     // Filter only active ones for local display state
                      const activeCharsForDisplay = allCharacteristicsFromApi.filter(c => c.isActive);
 
                      const formData = {
@@ -297,9 +294,8 @@ export default function EditAssetPage() {
                         parentId: data.parentId || '__none__',
                         rentalStartDate: data.rentalStartDate ? new Date(data.rentalStartDate) : undefined,
                         rentalEndDate: data.rentalEndDate ? new Date(data.rentalEndDate) : undefined,
-                        characteristics: allCharacteristicsFromApi, // Form gets ALL characteristics
+                        characteristics: allCharacteristicsFromApi, 
                         attachments: data.attachments || [],
-                        // Schedule fields
                         lastMaintenanceDate: data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate) : undefined,
                         nextMaintenanceDate: data.nextMaintenanceDate ? new Date(data.nextMaintenanceDate) : undefined,
                         maintenanceIntervalDays: data.maintenanceIntervalDays === undefined ? null : data.maintenanceIntervalDays,
@@ -312,7 +308,7 @@ export default function EditAssetPage() {
                      };
 
                      form.reset(formData);
-                     setActiveCharacteristics(activeCharsForDisplay); // Local state for active characteristics display
+                     setActiveCharacteristics(activeCharsForDisplay); 
                      setExistingPhotos(data.photos || []);
                      setNewPhotos([]);
                      setPhotosToRemove([]);
@@ -342,8 +338,7 @@ export default function EditAssetPage() {
 
    const addCharacteristic = () => {
        const newChar = { key: '', value: '', isPublic: false, isActive: true };
-       setActiveCharacteristics(prev => [...prev, newChar]); // Add to local display list
-       // Add to form's main characteristic list
+       setActiveCharacteristics(prev => [...prev, newChar]); 
        const currentFormChars = form.getValues('characteristics') || [];
        form.setValue('characteristics', [...currentFormChars, newChar]);
    };
@@ -354,12 +349,10 @@ export default function EditAssetPage() {
 
         const currentFormChars = form.getValues('characteristics') || [];
         const updatedFormCharacteristics = currentFormChars.map(fc => {
-            // If it has an ID, match by ID. Otherwise, it's a new char, match by key/value (less robust but necessary for unsaved)
             if (charToDeactivate.id && fc.id === charToDeactivate.id) {
                 return { ...fc, isActive: false };
             }
             if (!charToDeactivate.id && !fc.id && fc.key === charToDeactivate.key && fc.value === charToDeactivate.value) {
-                 // This match is for newly added, unsaved characteristics. Be cautious if keys/values can be identical for multiple new.
                 return { ...fc, isActive: false };
             }
             return fc;
@@ -375,6 +368,9 @@ export default function EditAssetPage() {
         const charToUpdateLocally = localCharsCopy[indexToUpdate];
         if (!charToUpdateLocally) return;
 
+        const originalKey = activeCharacteristics[indexToUpdate].key;
+        const originalValue = activeCharacteristics[indexToUpdate].value;
+
         if (field === 'isPublic') {
             charToUpdateLocally[field] = value as boolean;
         } else {
@@ -382,19 +378,14 @@ export default function EditAssetPage() {
         }
         setActiveCharacteristics(localCharsCopy);
 
-        // Now update the corresponding characteristic in the main form data
         const currentFormChars = form.getValues('characteristics') || [];
         const updatedFormCharacteristics = currentFormChars.map(fc => {
              if (charToUpdateLocally.id && fc.id === charToUpdateLocally.id) {
                 return { ...fc, [field]: value };
             }
-            // For newly added, unsaved characteristics that don't have an ID yet
-            // We need to rely on the key/value before this change (or a temporary client-side ID if we had one)
-            // This part can be tricky if keys/values are not unique before saving.
-            // Assuming for now the original key/value of the charToUpdateLocally can identify it.
-            // This is imperfect for new items if keys/values can be duplicated before an ID is assigned.
-            // A more robust way for new items would be to assign a temporary client-side unique ID on creation.
-            if (!charToUpdateLocally.id && !fc.id && fc.key === activeCharacteristics[indexToUpdate].key && fc.value === activeCharacteristics[indexToUpdate].value) {
+            if (!charToUpdateLocally.id && !fc.id && fc.key === originalKey && fc.value === originalValue) {
+                 // This handles newly added, unsaved characteristics based on their pre-change state.
+                 // The key/value used for matching here should be before this current change.
                  return { ...fc, [field]: value };
             }
             return fc;
@@ -464,11 +455,8 @@ export default function EditAssetPage() {
         ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
         : { ...data };
 
-    // The tag is read-only and comes from assetData, not the form's 'tag' field directly for submission
-    // const { tag, ...dataWithoutTag } = cleanedData; // 'tag' should already be correct from initial load
-
     const dataToSave = {
-         ...cleanedData, // Includes the original tag
+         ...cleanedData, 
          parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
          maintenanceIntervalDays: data.maintenanceIntervalDays === null ? undefined : data.maintenanceIntervalDays,
          inventoryIntervalDays: data.inventoryIntervalDays === null ? undefined : data.inventoryIntervalDays,
@@ -704,14 +692,14 @@ export default function EditAssetPage() {
                                            "w-full pl-3 text-left font-normal",
                                            !field.value && "text-muted-foreground"
                                          )}
-                                       >
+                                       ><>
                                          {field.value ? (
                                            format(field.value, "PPP", { locale: ptBR })
                                          ) : (
                                            <span>Selecione a data</span>
                                          )}
                                          <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                                       </Button>
+                                        </></Button>
                                      </FormControl>
                                    </PopoverTrigger>
                                    <PopoverContent className="w-auto p-0" align="start">
@@ -744,14 +732,14 @@ export default function EditAssetPage() {
                                            "w-full pl-3 text-left font-normal",
                                            !field.value && "text-muted-foreground"
                                          )}
-                                       >
+                                       ><>
                                          {field.value ? (
                                            format(field.value, "PPP", { locale: ptBR })
                                          ) : (
                                            <span>Selecione a data</span>
                                          )}
                                          <CalendarDays className="ml-auto h-4 w-4 opacity-50" />
-                                       </Button>
+                                        </></Button>
                                      </FormControl>
                                    </PopoverTrigger>
                                    <PopoverContent className="w-auto p-0" align="start">
@@ -842,26 +830,26 @@ export default function EditAssetPage() {
                 <CardContent className="space-y-4">
                     <div className="space-y-2 p-3 border rounded-md bg-muted/20">
                         <Label className="font-medium flex items-center gap-1"><Wrench className="h-4 w-4 text-primary"/>Manutenção</Label>
-                        <FormField control={form.control} name="lastMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Última Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhuma</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="nextMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próxima Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendada</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="lastMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Última Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhuma</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="nextMaintenanceDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próxima Manutenção</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendada</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                         <FormField control={form.control} name="maintenanceIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 90" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                     </div>
 
                      <div className="space-y-2 p-3 border rounded-md bg-muted/20">
                         <Label className="font-medium flex items-center gap-1"><CalendarDays className="h-4 w-4 text-primary"/>Garantia</Label>
-                        <FormField control={form.control} name="warrantyExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração da Garantia</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="warrantyExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração da Garantia</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                     </div>
                     
                      <div className="space-y-2 p-3 border rounded-md bg-muted/20">
                         <Label className="font-medium flex items-center gap-1"><Award className="h-4 w-4 text-primary"/>Certificação</Label> 
                         <FormField control={form.control} name="certificationName" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Nome da Certificação</FormLabel> <FormControl><Input placeholder="Ex: ISO 9001, NR-12" {...field} value={field.value || ''} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="certificationExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="certificationExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                     </div>
 
                      <div className="space-y-2 p-3 border rounded-md bg-muted/20">
                         <Label className="font-medium flex items-center gap-1"><PackageSearch className="h-4 w-4 text-primary"/>Inventário</Label>
-                        <FormField control={form.control} name="lastInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Último Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhum</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
-                        <FormField control={form.control} name="nextInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próximo Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendado</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="lastInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Último Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Nenhum</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="nextInventoryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Próximo Inventário</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <><CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não agendado</span>}</> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                         <FormField control={form.control} name="inventoryIntervalDays" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Intervalo (dias)</FormLabel> <FormControl><Input type="number" placeholder="Ex: 365" {...field} onChange={e => field.onChange(parseInt(e.target.value) || null)} value={field.value ?? ""} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                     </div>
                 </CardContent>
