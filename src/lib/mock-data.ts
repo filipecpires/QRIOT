@@ -1,5 +1,5 @@
 // src/lib/mock-data.ts
-import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest, CompanyDetails, LicenseInfo, BillingInfo, PaymentHistoryEntry } from '@/types';
+import type { AssetForMyDashboard, UserForSelect, UserData, TransferRequest, CompanyDetails, LicenseInfo, BillingInfo, PaymentHistoryEntry, Asset } from '@/types'; // Added Asset
 import type { UserRole } from '@/types/user'; // Import UserRole
 
 // --- Mock Company ID ---
@@ -21,24 +21,96 @@ export const DEMO_USER_PROFILES: Record<string, { id: string; name: string; role
 };
 
 
-export let allAssetsMockData: (AssetForMyDashboard & { companyId: string })[] = [
+export let allAssetsMockData: Asset[] = [ // Changed type to Asset
   // Assets for COMPANY_XYZ
-  { id: 'ASSET001', companyId: MOCK_COMPANY_ID, name: 'Notebook Dell Latitude 7400 (XYZ)', category: 'Eletrônicos', tag: 'AB12C', locationName: 'Escritório 1 (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'active', ownership: 'own' },
-  { id: 'ASSET003', companyId: MOCK_COMPANY_ID, name: 'Cadeira de Escritório (XYZ)', category: 'Mobiliário', tag: 'GH56I', locationName: 'Sala de Reuniões (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'lost', ownership: 'rented' },
-  { id: 'ASSET004', companyId: MOCK_COMPANY_ID, name: 'Projetor Epson PowerLite (XYZ)', category: 'Eletrônicos', tag: 'JK78L', locationName: 'Sala de Treinamento (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'maintenance', ownership: 'own' },
-  { id: 'ASSET101', companyId: MOCK_COMPANY_ID, name: 'Tablet Samsung Galaxy Tab S9 (Gerente XYZ)', category: 'Eletrônicos', tag: 'MG10A', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
-  { id: 'ASSET102', companyId: MOCK_COMPANY_ID, name: 'Dockstation USB-C (Gerente XYZ)', category: 'Acessórios', tag: 'MG10B', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownership: 'own' },
-  { id: 'ASSET201', companyId: MOCK_COMPANY_ID, name: 'Servidor PowerEdge R750 (Admin XYZ)', category: 'Infraestrutura', tag: 'AD20X', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'active', ownership: 'own' },
-  { id: 'ASSET202', companyId: MOCK_COMPANY_ID, name: 'Switch Cisco Catalyst (Admin XYZ)', category: 'Redes', tag: 'AD20Y', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'maintenance', ownership: 'own' },
-  { id: 'ASSET301', companyId: MOCK_COMPANY_ID, name: 'Kit Ferramentas Manutenção (Técnico XYZ)', category: 'Ferramentas', tag: 'TC30K', locationName: 'Bancada Técnica (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Técnico.id, status: 'active', ownership: 'own'},
-  { id: 'ASSET401', companyId: MOCK_COMPANY_ID, name: 'Coletor de Dados Zebra (Invent. XYZ)', category: 'Equipamentos', tag: 'IN40C', locationName: 'Em Trânsito (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Inventariante.id, status: 'active', ownership: 'rented'},
-  { id: 'ASSET002', companyId: MOCK_COMPANY_ID, name: 'Monitor LG 27" (Maria XYZ)', category: 'Eletrônicos', tag: 'DE34F', locationName: 'Escritório 2 (XYZ)', responsibleUserId: 'user2-xyz', status: 'active', ownership: 'own' }, // Assuming user2-xyz is a user in MOCK_COMPANY_ID
-  { id: 'ASSET005', companyId: MOCK_COMPANY_ID, name: 'Teclado Gamer RGB (Maria XYZ)', category: 'Eletrônicos', tag: 'MN90P', locationName: 'Escritório 1 (XYZ)', responsibleUserId: 'user2-xyz', status: 'inactive', ownership: 'own' },
-  { id: 'ASSET006', companyId: MOCK_COMPANY_ID, name: 'Impressora HP (Carlos XYZ)', category: 'Eletrônicos', tag: 'QR12S', locationName: 'Recepção (XYZ)', responsibleUserId: 'user3-xyz', status: 'active', ownership: 'own' },
+  { 
+    id: 'ASSET001', companyId: MOCK_COMPANY_ID, name: 'Notebook Dell Latitude 7400 (XYZ)', category: 'Eletrônicos', tag: 'AB12C', 
+    locationId: 'loc1-xyz', locationName: 'Escritório 1 (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'active', ownershipType: 'own', 
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 1, 1), updatedAt: new Date(),
+    nextMaintenanceDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // Next maintenance in 30 days
+    warrantyExpiryDate: new Date(2025, 5, 15),
+    nextInventoryDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000), // Next inventory in 15 days
+  },
+  { 
+    id: 'ASSET003', companyId: MOCK_COMPANY_ID, name: 'Cadeira de Escritório (XYZ)', category: 'Mobiliário', tag: 'GH56I', 
+    locationId: 'loc3-xyz', locationName: 'Sala de Reuniões (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'lost', ownershipType: 'rented',
+    rentalCompany: 'LocaMais', rentalStartDate: new Date(2024, 0, 10), rentalEndDate: new Date(2025, 0, 9),
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 2, 10), updatedAt: new Date(),
+  },
+  { 
+    id: 'ASSET004', companyId: MOCK_COMPANY_ID, name: 'Projetor Epson PowerLite (XYZ)', category: 'Eletrônicos', tag: 'JK78L', 
+    locationId: 'loc1-xyz', locationName: 'Sala de Treinamento (XYZ)', responsibleUserId: MOCK_LOGGED_IN_USER_ID, status: 'maintenance', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 3, 5), updatedAt: new Date(),
+    certificationName: "Segurança Elétrica",
+    certificationExpiryDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), // Expired 10 days ago
+  },
+  { 
+    id: 'ASSET101', companyId: MOCK_COMPANY_ID, name: 'Tablet Samsung Galaxy Tab S9 (Gerente XYZ)', category: 'Eletrônicos', tag: 'MG10A', 
+    locationId: 'loc2-xyz', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 4, 1), updatedAt: new Date(),
+    warrantyExpiryDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000), // Warranty expires in 5 days
+  },
+  { 
+    id: 'ASSET102', companyId: MOCK_COMPANY_ID, name: 'Dockstation USB-C (Gerente XYZ)', category: 'Acessórios', tag: 'MG10B', 
+    locationId: 'loc2-xyz', locationName: 'Escritório Gerência (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Gerente.id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 5, 12), updatedAt: new Date(),
+    nextMaintenanceDate: new Date(Date.now() + 80 * 24 * 60 * 60 * 1000), 
+  },
+  { 
+    id: 'ASSET201', companyId: MOCK_COMPANY_ID, name: 'Servidor PowerEdge R750 (Admin XYZ)', category: 'Infraestrutura', tag: 'AD20X', 
+    locationId: 'loc1-xyz', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2022, 6, 20), updatedAt: new Date(),
+    nextMaintenanceDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000), // Due in 2 days
+    certificationName: "ISO 27001",
+    certificationExpiryDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // Cert expires in 60 days
+  },
+  { 
+    id: 'ASSET202', companyId: MOCK_COMPANY_ID, name: 'Switch Cisco Catalyst (Admin XYZ)', category: 'Redes', tag: 'AD20Y', 
+    locationId: 'loc1-xyz', locationName: 'Data Center Principal (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Administrador.id, status: 'maintenance', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2022, 7, 1), updatedAt: new Date(),
+    lastInventoryDate: new Date(Date.now() - 300 * 24 * 60 * 60 * 1000),
+  },
+  { 
+    id: 'ASSET301', companyId: MOCK_COMPANY_ID, name: 'Kit Ferramentas Manutenção (Técnico XYZ)', category: 'Ferramentas', tag: 'TC30K', 
+    locationId: 'loc3-xyz', locationName: 'Bancada Técnica (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Técnico.id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 8, 15), updatedAt: new Date(),
+  },
+  { 
+    id: 'ASSET401', companyId: MOCK_COMPANY_ID, name: 'Coletor de Dados Zebra (Invent. XYZ)', category: 'Equipamentos', tag: 'IN40C', 
+    locationId: 'loc1-xyz', locationName: 'Em Trânsito (XYZ)', responsibleUserId: DEMO_USER_PROFILES.Inventariante.id, status: 'active', ownershipType: 'rented',
+    rentalCompany: 'ScanSolutions', rentalStartDate: new Date(2024, 2, 1), rentalEndDate: new Date(2024, 8, 30),
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 9, 2), updatedAt: new Date(),
+    nextInventoryDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), // Inventory overdue by 5 days
+  },
+  { 
+    id: 'ASSET002', companyId: MOCK_COMPANY_ID, name: 'Monitor LG 27" (Maria XYZ)', category: 'Eletrônicos', tag: 'DE34F', 
+    locationId: 'loc2-xyz', locationName: 'Escritório 2 (XYZ)', responsibleUserId: 'user2-xyz', status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 10, 3), updatedAt: new Date(),
+  },
+  { 
+    id: 'ASSET005', companyId: MOCK_COMPANY_ID, name: 'Teclado Gamer RGB (Maria XYZ)', category: 'Eletrônicos', tag: 'MN90P', 
+    locationId: 'loc1-xyz', locationName: 'Escritório 1 (XYZ)', responsibleUserId: 'user2-xyz', status: 'inactive', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2022, 11, 7), updatedAt: new Date(),
+  },
+  { 
+    id: 'ASSET006', companyId: MOCK_COMPANY_ID, name: 'Impressora HP (Carlos XYZ)', category: 'Eletrônicos', tag: 'QR12S', 
+    locationId: 'loc3-xyz', locationName: 'Recepção (XYZ)', responsibleUserId: 'user3-xyz', status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 0, 15), updatedAt: new Date(),
+  },
 
   // Assets for ANOTHER_MOCK_COMPANY_ID
-  { id: 'ASSET501', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'MacBook Pro 16" (Empresa ABC)', category: 'Eletrônicos', tag: 'ABC01', locationName: 'Escritório ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownership: 'own' },
-  { id: 'ASSET502', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Câmera DSLR Canon (Empresa ABC)', category: 'Equipamentos', tag: 'ABC02', locationName: 'Estúdio ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownership: 'own' },
+  { 
+    id: 'ASSET501', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'MacBook Pro 16" (Empresa ABC)', category: 'Eletrônicos', tag: 'ABC01', 
+    locationId: 'locA-abc', locationName: 'Escritório ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 1, 1), updatedAt: new Date(),
+    nextMaintenanceDate: new Date(Date.now() + 45 * 24 * 60 * 60 * 1000),
+  },
+  { 
+    id: 'ASSET502', companyId: ANOTHER_MOCK_COMPANY_ID, name: 'Câmera DSLR Canon (Empresa ABC)', category: 'Equipamentos', tag: 'ABC02', 
+    locationId: 'locB-abc', locationName: 'Estúdio ABC', responsibleUserId: DEMO_USER_PROFILES["Admin Empresa ABC"].id, status: 'active', ownershipType: 'own',
+    characteristics: [], photos: [], attachments: [], createdAt: new Date(2023, 2, 10), updatedAt: new Date(),
+    warrantyExpiryDate: new Date(Date.now() + 120 * 24 * 60 * 60 * 1000),
+  },
 ];
 
 

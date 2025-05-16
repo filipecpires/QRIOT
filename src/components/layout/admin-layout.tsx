@@ -1,11 +1,10 @@
-
 'use client'; 
 
 import type { ReactNode} from 'react';
 import React, { useEffect, useState } from 'react'; 
 import { usePathname, useSearchParams } from 'next/navigation'; 
 import { SidebarProvider, Sidebar, SidebarTrigger, SidebarInset, SidebarHeader, SidebarContent, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, useSidebar } from '@/components/ui/sidebar';
-import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users, PackageSearch } from 'lucide-react';
+import { QrCode, LayoutDashboard, MapPin, Settings, LogOut, GitMerge, History, FileText, ScanLine, Printer, Tag, PanelLeft, UserCircle, ChevronDown, Briefcase, Wrench as MaintenanceIcon, ShieldCheck, BarChart, CheckSquare, UserSquare, Users, PackageSearch, CalendarCheck2 } from 'lucide-react'; // Added CalendarCheck2
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -148,10 +147,20 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                         )}
                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && (
                             <SidebarMenuItem>
-                                <SidebarMenuButton asChild tooltip="Manutenção" style={sidebarCollapsibleStyle}>
+                                <SidebarMenuButton asChild tooltip="Ordens de Serviço" style={sidebarCollapsibleStyle}>
                                     <Link href={getDynamicLink("/maintenance/work-orders")}>
                                         <MaintenanceIcon />
-                                        <span className="group-data-[state=collapsed]:hidden">Manutenção</span>
+                                        <span className="group-data-[state=collapsed]:hidden">Ordens de Serviço</span>
+                                    </Link>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
+                        )}
+                         {canAccess([ROLES.ADMIN, ROLES.MANAGER, ROLES.TECHNICIAN]) && ( // Added new menu item
+                            <SidebarMenuItem>
+                                <SidebarMenuButton asChild tooltip="Plano de Vencimentos" style={sidebarCollapsibleStyle}>
+                                    <Link href={getDynamicLink("/maintenance/schedule")}>
+                                        <CalendarCheck2 />
+                                        <span className="group-data-[state=collapsed]:hidden">Plano de Vencimentos</span>
                                     </Link>
                                 </SidebarMenuButton>
                             </SidebarMenuItem>
@@ -182,7 +191,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
             </Sidebar>
 
             <SidebarInset>
-                <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-40"> {/* Changed z-index to 40 */}
+                <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6 sticky top-0 z-40"> 
                     <SidebarTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8">
                             <PanelLeft />
@@ -252,7 +261,7 @@ function AdminLayoutContentInternal({ children }: { children: ReactNode }) {
                         </DropdownMenu>
                     </div>
                 </header>
-                 <main className="flex-1 p-2 xs:p-3 sm:p-4 md:px-6 md:py-4 lg:px-8 lg:py-6 xl:px-10 xl:py-8 overflow-auto bg-muted/30 dark:bg-background/30"> 
+                <main className="flex-1 p-2 xs:p-3 sm:pl-0 md:pl-0 lg:pl-0 sm:p-4 md:px-6 md:py-4 lg:px-8 lg:py-6 xl:px-10 xl:py-8 overflow-auto bg-muted/30 dark:bg-background/30">
                     {children}
                 </main>
             </SidebarInset>
@@ -270,4 +279,3 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     </AdminLayoutProvider>
   );
 }
-

@@ -1,4 +1,3 @@
-
 // src/types/asset.ts
 
 // For characteristics that are part of an asset
@@ -43,11 +42,25 @@ export interface Asset {
   rentalCost?: number;
 
   description?: string;
-  status: 'active' | 'lost' | 'inactive'; // 'maintenance' could be another status
+  status: 'active' | 'lost' | 'inactive' | 'maintenance'; // Added 'maintenance' status
 
   characteristics: AssetCharacteristic[];
   photos: AssetPhoto[];
   attachments: AssetAttachment[];
+
+  // New fields for Expiration Schedule
+  nextMaintenanceDate?: Date;
+  lastMaintenanceDate?: Date;
+  maintenanceIntervalDays?: number;
+  
+  certificationName?: string; // e.g., "NR-10", "ISO 9001"
+  certificationExpiryDate?: Date;
+  
+  warrantyExpiryDate?: Date;
+  
+  lastInventoryDate?: Date;
+  nextInventoryDate?: Date;
+  inventoryIntervalDays?: number;
 
   createdAt: Date; // Store as Timestamp in DB, convert to Date in app
   updatedAt: Date; // Store as Timestamp in DB, convert to Date in app
