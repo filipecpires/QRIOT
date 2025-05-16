@@ -229,7 +229,8 @@ export default function EditAssetPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(true);
-  const [characteristics, setCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
+  // Local state for characteristics displayed in the "active" section
+  const [activeCharacteristics, setActiveCharacteristics] = useState<{ id?: string, key: string; value: string; isPublic: boolean, isActive: boolean }[]>([]);
   const [assetData, setAssetData] = useState<AssetDataFromAPI | null>(null);
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
   const [existingPhotos, setExistingPhotos] = useState<ExistingPhoto[]>([]);
@@ -286,15 +287,17 @@ export default function EditAssetPage() {
                 const data = await fetchAssetData(assetId);
                  if (data) {
                      setAssetData(data);
-                     const activeCharacteristics = (data.characteristics || []).filter(c => c.isActive);
-                     const allCharacteristicsForForm = data.characteristics || [];
+                     // All characteristics from API, including inactive ones
+                     const allCharacteristicsFromApi = data.characteristics || [];
+                     // Filter only active ones for local display state
+                     const activeCharsForDisplay = allCharacteristicsFromApi.filter(c => c.isActive);
 
                      const formData = {
                         ...data,
                         parentId: data.parentId || '__none__',
                         rentalStartDate: data.rentalStartDate ? new Date(data.rentalStartDate) : undefined,
                         rentalEndDate: data.rentalEndDate ? new Date(data.rentalEndDate) : undefined,
-                        characteristics: allCharacteristicsForForm, 
+                        characteristics: allCharacteristicsFromApi, // Form gets ALL characteristics
                         attachments: data.attachments || [],
                         // Schedule fields
                         lastMaintenanceDate: data.lastMaintenanceDate ? new Date(data.lastMaintenanceDate) : undefined,
@@ -309,7 +312,7 @@ export default function EditAssetPage() {
                      };
 
                      form.reset(formData);
-                     setCharacteristics(activeCharacteristics); 
+                     setActiveCharacteristics(activeCharsForDisplay); // Local state for active characteristics display
                      setExistingPhotos(data.photos || []);
                      setNewPhotos([]);
                      setPhotosToRemove([]);
@@ -339,51 +342,66 @@ export default function EditAssetPage() {
 
    const addCharacteristic = () => {
        const newChar = { key: '', value: '', isPublic: false, isActive: true };
-       setCharacteristics(prev => [...prev, newChar]);
-       form.setValue('characteristics', [...form.getValues('characteristics'), newChar]);
+       setActiveCharacteristics(prev => [...prev, newChar]); // Add to local display list
+       // Add to form's main characteristic list
+       const currentFormChars = form.getValues('characteristics') || [];
+       form.setValue('characteristics', [...currentFormChars, newChar]);
    };
 
-   const removeCharacteristic = (index: number) => {
-        const activeCharacteristics = form.getValues('characteristics').filter(c => c.isActive);
-        const characteristicToRemove = activeCharacteristics[index];
-        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToRemove?.id || (c.key === characteristicToRemove?.key && c.value === characteristicToRemove?.value && !c.id)); 
+   const removeCharacteristic = (indexToRemove: number) => {
+        const charToDeactivate = activeCharacteristics[indexToRemove];
+        if (!charToDeactivate) return;
 
-        if (formIndex !== -1) {
-            const updatedFormCharacteristics = [...form.getValues('characteristics')];
-            updatedFormCharacteristics[formIndex].isActive = false;
-            form.setValue('characteristics', updatedFormCharacteristics);
-            setCharacteristics(prev => prev.filter((_, i) => i !== index));
-            toast({ title: "Característica Desativada", description: "A característica foi marcada como inativa e não será exibida, mas permanecerá no histórico.", variant: "default" });
-        } else {
-             console.error("Could not find characteristic in form data to deactivate.");
-              setCharacteristics(prev => prev.filter((_, i) => i !== index));
-        }
-   };
-
-   const handleCharacteristicChange = (index: number, field: 'key' | 'value' | 'isPublic', value: string | boolean) => {
-        const updatedLocalCharacteristics = [...characteristics];
-        if (field === 'isPublic') {
-            updatedLocalCharacteristics[index][field] = value as boolean;
-        } else {
-            updatedLocalCharacteristics[index][field] = value as string;
-        }
-        setCharacteristics(updatedLocalCharacteristics);
-
-        const characteristicToUpdate = updatedLocalCharacteristics[index];
-        const formIndex = form.getValues('characteristics').findIndex(c => c.id === characteristicToUpdate?.id || (c.key === characteristicToUpdate?.key && c.value === characteristicToUpdate?.value && !c.id)); 
-
-        if (formIndex !== -1) {
-            const updatedFormCharacteristics = [...form.getValues('characteristics')];
-            if (field === 'isPublic') {
-                updatedFormCharacteristics[formIndex][field] = value as boolean;
-            } else {
-                 updatedFormCharacteristics[formIndex][field] = value as string;
+        const currentFormChars = form.getValues('characteristics') || [];
+        const updatedFormCharacteristics = currentFormChars.map(fc => {
+            // If it has an ID, match by ID. Otherwise, it's a new char, match by key/value (less robust but necessary for unsaved)
+            if (charToDeactivate.id && fc.id === charToDeactivate.id) {
+                return { ...fc, isActive: false };
             }
-            form.setValue('characteristics', updatedFormCharacteristics);
-        } else {
-            console.error("Could not find characteristic in form data to update.");
-        }
+            if (!charToDeactivate.id && !fc.id && fc.key === charToDeactivate.key && fc.value === charToDeactivate.value) {
+                 // This match is for newly added, unsaved characteristics. Be cautious if keys/values can be identical for multiple new.
+                return { ...fc, isActive: false };
+            }
+            return fc;
+        });
+
+        form.setValue('characteristics', updatedFormCharacteristics);
+        setActiveCharacteristics(prev => prev.filter((_, i) => i !== indexToRemove));
+        toast({ title: "Característica Desativada", description: "A característica foi marcada como inativa e não será exibida, mas permanecerá no histórico.", variant: "default" });
    };
+
+   const handleCharacteristicChange = (indexToUpdate: number, field: 'key' | 'value' | 'isPublic', value: string | boolean) => {
+        const localCharsCopy = [...activeCharacteristics];
+        const charToUpdateLocally = localCharsCopy[indexToUpdate];
+        if (!charToUpdateLocally) return;
+
+        if (field === 'isPublic') {
+            charToUpdateLocally[field] = value as boolean;
+        } else {
+            charToUpdateLocally[field] = value as string;
+        }
+        setActiveCharacteristics(localCharsCopy);
+
+        // Now update the corresponding characteristic in the main form data
+        const currentFormChars = form.getValues('characteristics') || [];
+        const updatedFormCharacteristics = currentFormChars.map(fc => {
+             if (charToUpdateLocally.id && fc.id === charToUpdateLocally.id) {
+                return { ...fc, [field]: value };
+            }
+            // For newly added, unsaved characteristics that don't have an ID yet
+            // We need to rely on the key/value before this change (or a temporary client-side ID if we had one)
+            // This part can be tricky if keys/values are not unique before saving.
+            // Assuming for now the original key/value of the charToUpdateLocally can identify it.
+            // This is imperfect for new items if keys/values can be duplicated before an ID is assigned.
+            // A more robust way for new items would be to assign a temporary client-side unique ID on creation.
+            if (!charToUpdateLocally.id && !fc.id && fc.key === activeCharacteristics[indexToUpdate].key && fc.value === activeCharacteristics[indexToUpdate].value) {
+                 return { ...fc, [field]: value };
+            }
+            return fc;
+        });
+        form.setValue('characteristics', updatedFormCharacteristics);
+   };
+
 
     const handleAddAttachment = () => {
         if (newAttachmentName && newAttachmentUrl) {
@@ -446,15 +464,16 @@ export default function EditAssetPage() {
         ? { ...data, rentalCompany: undefined, rentalStartDate: undefined, rentalEndDate: undefined, rentalCost: undefined }
         : { ...data };
 
-    const { tag, ...dataWithoutTag } = cleanedData;
+    // The tag is read-only and comes from assetData, not the form's 'tag' field directly for submission
+    // const { tag, ...dataWithoutTag } = cleanedData; // 'tag' should already be correct from initial load
 
     const dataToSave = {
-         ...dataWithoutTag,
-         parentId: dataWithoutTag.parentId === '__none__' ? undefined : dataWithoutTag.parentId,
+         ...cleanedData, // Includes the original tag
+         parentId: cleanedData.parentId === '__none__' ? undefined : cleanedData.parentId,
          maintenanceIntervalDays: data.maintenanceIntervalDays === null ? undefined : data.maintenanceIntervalDays,
          inventoryIntervalDays: data.inventoryIntervalDays === null ? undefined : data.inventoryIntervalDays,
      };
-     console.log('Data prepared for saving (excluding tag):', dataToSave);
+     console.log('Data prepared for saving (tag is part of cleanedData):', dataToSave);
 
     await new Promise((resolve) => setTimeout(resolve, 1500));
        toast({
@@ -589,9 +608,9 @@ export default function EditAssetPage() {
                  <FormField control={form.control} name="tag" render={({ field }) => (<FormItem><FormLabel>Tag Única</FormLabel><FormControl><Input {...field} readOnly className="bg-muted cursor-not-allowed" /></FormControl><FormDescription>A tag única é gerada pelo sistema e não pode ser alterada.</FormDescription><FormMessage /></FormItem>)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoria</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="locationId" render={({ field }) => (<FormItem><FormLabel>Local</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}<SelectItem value="__new__">-- Criar Novo Local --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
-                 <FormField control={form.control} name="responsibleUserId" render={({ field }) => (<FormItem><FormLabel>Responsável</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}<SelectItem value="__new__">-- Criar Novo Usuário --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="category" render={({ field }) => (<FormItem><FormLabel>Categoria</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{categories.map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent></Select><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="locationId" render={({ field }) => (<FormItem><FormLabel>Local</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{locations.map(loc => <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>)}<SelectItem value="__new__">-- Criar Novo Local --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
+                 <FormField control={form.control} name="responsibleUserId" render={({ field }) => (<FormItem><FormLabel>Responsável</FormLabel><Select onValueChange={field.onChange} value={field.value}><FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl><SelectContent>{users.map(user => <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>)}<SelectItem value="__new__">-- Criar Novo Usuário --</SelectItem></SelectContent></Select><FormMessage /></FormItem>)} />
               </div>
 
               <FormField
@@ -630,7 +649,7 @@ export default function EditAssetPage() {
                        <FormControl>
                          <RadioGroup
                            onValueChange={field.onChange}
-                           defaultValue={field.value}
+                           value={field.value}
                            className="flex flex-col sm:flex-row sm:space-x-4 space-y-2 sm:space-y-0"
                          >
                            <FormItem className="flex items-center space-x-2">
@@ -663,7 +682,7 @@ export default function EditAssetPage() {
                             <FormItem>
                               <FormLabel>Empresa Locadora</FormLabel>
                               <FormControl>
-                                <Input placeholder="Nome da empresa" {...field} />
+                                <Input placeholder="Nome da empresa" {...field} value={field.value || ''}/>
                               </FormControl>
                               <FormMessage />
                             </FormItem>
@@ -768,6 +787,7 @@ export default function EditAssetPage() {
                                         placeholder="150.00"
                                         className="pl-8"
                                         {...field}
+                                        value={field.value ?? ''}
                                         onChange={e => field.onChange(parseFloat(e.target.value) || undefined)} 
                                     />
                                 </FormControl>
@@ -782,7 +802,7 @@ export default function EditAssetPage() {
                     </Card>
                  )}
 
-              <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="description" render={({ field }) => (<FormItem><FormLabel>Descrição</FormLabel><FormControl><Textarea {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
 
                 <FormField
                   control={form.control}
@@ -834,7 +854,7 @@ export default function EditAssetPage() {
                     
                      <div className="space-y-2 p-3 border rounded-md bg-muted/20">
                         <Label className="font-medium flex items-center gap-1"><Award className="h-4 w-4 text-primary"/>Certificação</Label> 
-                        <FormField control={form.control} name="certificationName" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Nome da Certificação</FormLabel> <FormControl><Input placeholder="Ex: ISO 9001, NR-12" {...field} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
+                        <FormField control={form.control} name="certificationName" render={({ field }) => ( <FormItem> <FormLabel className="text-xs">Nome da Certificação</FormLabel> <FormControl><Input placeholder="Ex: ISO 9001, NR-12" {...field} value={field.value || ''} className="h-8 text-xs" /></FormControl> <FormMessage /> </FormItem> )}/>
                         <FormField control={form.control} name="certificationExpiryDate" render={({ field }) => ( <FormItem className="flex flex-col"> <FormLabel className="text-xs">Data de Expiração</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant="outline" size="sm" className={cn("w-full justify-start text-left font-normal text-xs", !field.value && "text-muted-foreground")}> <CalendarDays className="mr-1 h-3 w-3" /> {field.value ? format(field.value, "dd/MM/yy") : <span>Não definida</span>} </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0"><Calendar mode="single" selected={field.value} onSelect={field.onChange} locale={ptBR} /></PopoverContent> </Popover> <FormMessage /> </FormItem> )}/>
                     </div>
 
@@ -850,7 +870,7 @@ export default function EditAssetPage() {
 
               <div>
                 <h3 className="text-lg font-semibold mb-2">Características Adicionais (Ativas)</h3>
-                 {characteristics.map((char, index) => (
+                 {activeCharacteristics.map((char, index) => (
                      <div key={char.id || `active-${index}`} className="flex flex-col sm:flex-row sm:items-end gap-2 mb-3 p-3 border rounded-md bg-muted/30">
                         <div className="flex-grow space-y-2 sm:space-y-0 sm:flex sm:gap-2 w-full">
                             <FormItem className="flex-1 min-w-0">
