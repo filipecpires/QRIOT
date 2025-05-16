@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, AlertTriangle, XCircle, User as UserIcon, Calendar as CalendarIcon, Clock as ClockIcon } from 'lucide-react';
+import { PlusCircle, Search, Edit, Trash2, MoreHorizontal, Filter, Wrench, CalendarClock, Check, Hourglass, AlertCircle, XCircle, User as UserIcon, Calendar as CalendarIcon, Clock as ClockIcon } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
@@ -81,18 +81,12 @@ async function fetchWorkOrders(filters: any): Promise<{ workOrders: WorkOrder[],
         const statusMatch = !filters.status || filters.status === '__all__' || wo.status === filters.status;
         const typeMatch = !filters.type || filters.type === '__all__' || wo.type === filters.type;
         const priorityMatch = !filters.priority || filters.priority === '__all__' || wo.priority === filters.priority;
-        const assignedUserMatch = !filters.assignedUser || filters.assignedUser === '__all__' || wo.assignedUserName === filters.assignedUser; // Simple match for demo
+        const assignedUserMatch = !filters.assignedUser || filters.assignedUser === '__all__' || wo.assignedUserName === filters.assignedUser; 
 
         return searchMatch && statusMatch && typeMatch && priorityMatch && assignedUserMatch;
     });
 
     // TODO: Add sorting logic if needed
-
-    // Simulate pagination (optional, good for large datasets)
-    // const page = filters.page || 1;
-    // const limit = filters.limit || 10;
-    // const startIndex = (page - 1) * limit;
-    // const paginatedData = filteredData.slice(startIndex, startIndex + limit);
 
     return { workOrders: filteredData, total: filteredData.length };
 }
@@ -118,14 +112,14 @@ const getStatusBadgeVariant = (status: WorkOrderStatus): { variant: "default" | 
 // Priority Badge Helper
 const getPriorityBadgeVariant = (priority: WorkOrderPriority): { variant: "default" | "secondary" | "destructive" | "outline", color?: string } => {
     switch (priority) {
-        case 'High': return { variant: 'destructive' };
+        case 'High': return { variant: 'destructive' }; // Uses standard destructive red
         case 'Medium': return { variant: 'default', color: 'bg-orange-500 hover:bg-orange-600 text-white' };
-        case 'Low': return { variant: 'secondary' };
+        case 'Low': return { variant: 'secondary' }; // Uses standard secondary
         default: return { variant: 'outline' };
     }
 };
 
-// Mock User Data for Filter
+// Mock User Data for Filter - In a real app, this would come from a user service
 const mockUsers = [
      { id: 'user1', name: 'João Silva' },
      { id: 'user2', name: 'Maria Oliveira' },
@@ -145,8 +139,6 @@ export default function WorkOrdersPage() {
         type: '',
         priority: '',
         assignedUser: '',
-        // page: 1,
-        // limit: 10,
     });
     const [totalWorkOrders, setTotalWorkOrders] = useState(0);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -175,7 +167,7 @@ export default function WorkOrdersPage() {
     }, [filters]);
 
     const handleFilterChange = (key: keyof typeof filters, value: string) => {
-        setFilters(prev => ({ ...prev, [key]: value === '__all__' ? '' : value })); // Reset page if paginating
+        setFilters(prev => ({ ...prev, [key]: value === '__all__' ? '' : value }));
     };
 
     const handleDeleteRequest = (wo: WorkOrder) => {
@@ -187,8 +179,8 @@ export default function WorkOrdersPage() {
         if (!woToDelete) return;
         const result = await deleteWorkOrderAction(woToDelete.id);
         if (result.success) {
-            setWorkOrders(prev => prev.filter(wo => wo.id !== woToDelete.id)); // Remove from state
-            setTotalWorkOrders(prev => prev - 1); // Decrement total count
+            setWorkOrders(prev => prev.filter(wo => wo.id !== woToDelete.id)); 
+            setTotalWorkOrders(prev => prev - 1); 
             toast({ title: "Sucesso", description: `Ordem de Serviço ${woToDelete.workOrderNumber} excluída.` });
         } else {
             toast({ title: "Erro", description: "Falha ao excluir a ordem de serviço.", variant: "destructive" });
@@ -213,12 +205,12 @@ export default function WorkOrdersPage() {
                     <CardTitle>Lista de Ordens de Serviço</CardTitle>
                     <CardDescription>Visualize e gerencie todas as ordens de manutenção.</CardDescription>
                     {/* Filter Section */}
-                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <div className="pt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 items-end flex-wrap">
                         <Input
                             placeholder="Buscar por nº, ativo, tag..."
                             value={filters.search}
                             onChange={(e) => handleFilterChange('search', e.target.value)}
-                            className="lg:col-span-2 w-full"
+                            className="w-full lg:col-span-2 xl:col-span-1"
                         />
                         <Select value={filters.status} onValueChange={(v) => handleFilterChange('status', v)}>
                             <SelectTrigger className="w-full"><SelectValue placeholder="Status" /></SelectTrigger>
@@ -247,6 +239,16 @@ export default function WorkOrdersPage() {
                                 <SelectItem value="High">Alta</SelectItem>
                             </SelectContent>
                         </Select>
+                        <Select value={filters.assignedUser} onValueChange={(v) => handleFilterChange('assignedUser', v)}>
+                            <SelectTrigger className="w-full"><SelectValue placeholder="Responsável" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__all__">Todos Responsáveis</SelectItem>
+                                {mockUsers.map(user => (
+                                    <SelectItem key={user.id} value={user.name}>{user.name}</SelectItem>
+                                ))}
+                                 <SelectItem value="">Não Atribuído</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </CardHeader>
                 <CardContent>
@@ -259,8 +261,8 @@ export default function WorkOrdersPage() {
                                 <TableHead className="hidden md:table-cell">Tipo</TableHead>
                                 <TableHead>Prioridade</TableHead>
                                 <TableHead className="hidden sm:table-cell">Responsável</TableHead>
-                                <TableHead className="hidden md:table-cell">Data Reporte</TableHead>
-                                <TableHead className="hidden md:table-cell">Prazo</TableHead>
+                                <TableHead className="hidden lg:table-cell">Reportada</TableHead>
+                                <TableHead className="hidden lg:table-cell">Prazo</TableHead>
                                 <TableHead className="text-right w-[50px]">Ações</TableHead>
                             </TableRow>
                         </TableHeader>
@@ -273,8 +275,8 @@ export default function WorkOrdersPage() {
                                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                                      <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
                                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-4 w-24" /></TableCell>
-                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
-                                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
+                                    <TableCell className="hidden lg:table-cell"><Skeleton className="h-4 w-20" /></TableCell>
                                     <TableCell className="text-right"><Skeleton className="h-8 w-8 rounded" /></TableCell>
                                 </TableRow>
                              ))}
@@ -290,8 +292,8 @@ export default function WorkOrdersPage() {
                                              <div className="text-xs text-muted-foreground sm:hidden">OS: {wo.workOrderNumber}</div>
                                              <div className="text-xs text-muted-foreground md:hidden">Tipo: {wo.type === 'Planned' ? 'Planejada' : 'Corretiva'}</div>
                                              <div className="text-xs text-muted-foreground sm:hidden">Resp: {wo.assignedUserName ?? '-'}</div>
-                                             <div className="text-xs text-muted-foreground md:hidden">Reporte: {format(wo.reportedDate, "dd/MM/yy")}</div>
-                                             <div className="text-xs text-muted-foreground md:hidden">Prazo: {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}</div>
+                                             <div className="text-xs text-muted-foreground lg:hidden">Reporte: {format(wo.reportedDate, "dd/MM/yy")}</div>
+                                             <div className="text-xs text-muted-foreground lg:hidden">Prazo: {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}</div>
                                         </TableCell>
                                         <TableCell>
                                              <Badge variant={statusVariant} className={cn("flex items-center gap-1 text-xs w-fit", statusColor)}>
@@ -306,10 +308,10 @@ export default function WorkOrdersPage() {
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="hidden sm:table-cell">{wo.assignedUserName ?? '-'}</TableCell>
-                                        <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
+                                        <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
                                             {format(wo.reportedDate, "dd/MM/yy")}
                                         </TableCell>
-                                        <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
+                                        <TableCell className="text-xs text-muted-foreground hidden lg:table-cell">
                                              {wo.dueDate ? format(wo.dueDate, "dd/MM/yy") : '-'}
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -335,7 +337,7 @@ export default function WorkOrdersPage() {
                                                         e.preventDefault();
                                                         handleDeleteRequest(wo);
                                                     }}
-                                                     disabled={wo.status === 'Completed' || wo.status === 'Cancelled'} // Prevent deleting completed/cancelled
+                                                     disabled={wo.status === 'Completed' || wo.status === 'Cancelled'} 
                                                 >
                                                 <Trash2 className="mr-2 h-4 w-4" /> Excluir
                                                 </DropdownMenuItem>
@@ -385,5 +387,4 @@ export default function WorkOrdersPage() {
         </div>
     );
 }
-
 
