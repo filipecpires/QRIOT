@@ -15,7 +15,7 @@ import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit, Save a
 import { Skeleton } from '@/components/ui/skeleton';
 import { jsPDF } from "jspdf";
 // import autoTable from 'jspdf-autotable'; // Currently unused
-import { LabelPreviewModal, type LabelElementConfig, generateDefaultLayout as generateDefaultLabelLayout } from '@/components/feature/label-preview-modal';
+import { LabelPreviewModal, type LabelElementConfig, generateDefaultLabelLayout } from '@/components/feature/label-preview-modal';
 import { HiddenQrCanvasWithDataUrl } from '@/components/feature/hidden-qr-canvas';
 import { useAdminLayoutContext } from '@/components/layout/admin-layout-context';
 import {
@@ -142,7 +142,7 @@ export default function PrintLabelsPage() {
 
     const [savedUserTemplates, setSavedUserTemplates] = useState<SavedUserLabelTemplate[]>([]);
     const [selectedUserTemplateId, setSelectedUserTemplateId] = useState<string | null>(null);
-    const [newTemplateName, setNewTemplateName] = useState('');
+    // const [newTemplateName, setNewTemplateName] = useState(''); // Moved to modal
     const [templateToDelete, setTemplateToDelete] = useState<SavedUserLabelTemplate | null>(null);
 
 
@@ -194,7 +194,7 @@ export default function PrintLabelsPage() {
       } else {
           setCurrentLabelLayout(selectedLabelConfig ? generateDefaultLabelLayout(firstAsset, selectedLabelConfig) : []);
       }
-   }, [labelSizeId, currentCompanyId, assets, selectedUserTemplateId]); // Added selectedUserTemplateId
+   }, [labelSizeId, currentCompanyId, assets, selectedUserTemplateId]); 
 
     // Effect to check if all selected QR codes are ready
     useEffect(() => {
@@ -273,7 +273,6 @@ export default function PrintLabelsPage() {
         }
          if (selectedAssets.size === 0 && assets.length > 0) {
              toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para editar o layout da etiqueta, ou o primeiro ativo da lista será usado como exemplo.", variant: "default" });
-             // Proceed with the first asset as example if none are selected.
         }
         setIsPreviewOpen(true);
     };
@@ -289,44 +288,35 @@ export default function PrintLabelsPage() {
                  toast({ title: "Erro ao Salvar Layout", description: "Não foi possível salvar o layout localmente.", variant: "destructive" });
             }
          }
-        setIsPreviewOpen(false); // Close modal after applying
+        setIsPreviewOpen(false);
     };
 
-    const handleSaveNewTemplate = () => {
-        if (!newTemplateName.trim()) {
-            toast({ title: "Nome Inválido", description: "Por favor, insira um nome para o modelo.", variant: "destructive" });
-            return;
-        }
+    const handleSaveNewTemplate = (templateName: string, layout: LabelElementConfig[], baseLabelConfigId: string, tileOnA4ForTemplate: boolean) => {
         if (!currentCompanyId) {
             toast({ title: "Erro", description: "ID da empresa não encontrado.", variant: "destructive" });
             return;
         }
-        if (currentLabelLayout.length === 0) {
-            toast({ title: "Layout Vazio", description: "Não é possível salvar um modelo com layout vazio. Edite o layout primeiro.", variant: "destructive" });
-            return;
-        }
-
+        // templateName and layout validation is handled inside the modal before calling this
         const newTemplate: SavedUserLabelTemplate = {
             id: `tpl-${Date.now()}`,
-            name: newTemplateName,
+            name: templateName,
             companyId: currentCompanyId,
-            labelConfigId: labelSizeId,
-            layout: currentLabelLayout,
-            tileOnA4: selectedLabelConfig?.pageFormat === 'custom' ? tileOnA4 : false, // Only save tileOnA4 if base is custom
+            labelConfigId: baseLabelConfigId,
+            layout: layout,
+            tileOnA4: tileOnA4ForTemplate,
         };
 
         const updatedTemplates = [...savedUserTemplates, newTemplate];
         localStorage.setItem(`qriot_user_label_templates_${currentCompanyId}`, JSON.stringify(updatedTemplates));
         setSavedUserTemplates(updatedTemplates);
-        setNewTemplateName('');
-        setSelectedUserTemplateId(newTemplate.id); // Auto-select the newly saved template
+        setSelectedUserTemplateId(newTemplate.id); 
         toast({ title: "Modelo Salvo", description: `Modelo "${newTemplate.name}" salvo com sucesso!` });
     };
+
 
     const handleLoadUserTemplate = (templateId: string) => {
         if (templateId === '__none__') {
             setSelectedUserTemplateId(null);
-            // When deselecting a user template, revert to the default/last-edited for the current labelSizeId
             const currentLabelConfig = labelSizes.find(s => s.id === labelSizeId);
             const firstAsset = assets.length > 0 ? assets[0] : { id: 'preview', name: 'Nome Ativo', tag: 'PREVW', category: 'Categoria', location: 'Local' };
             const lastEditedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}_${currentCompanyId}`);
@@ -339,14 +329,14 @@ export default function PrintLabelsPage() {
             } else {
                 setCurrentLabelLayout(currentLabelConfig ? generateDefaultLabelLayout(firstAsset, currentLabelConfig) : []);
             }
-            setTileOnA4(false); // Reset tileOnA4 when deselecting template
+            setTileOnA4(false);
             return;
         }
 
         const template = savedUserTemplates.find(t => t.id === templateId);
         if (template && currentCompanyId) {
-            setLabelSizeId(template.labelConfigId); // This will trigger the useEffect for labelSizeId to load its base/last-edited layout first
-            setCurrentLabelLayout(template.layout);    // Then, this immediately overrides it with the template's layout
+            setLabelSizeId(template.labelConfigId); 
+            setCurrentLabelLayout(template.layout);
             setTileOnA4(template.tileOnA4);
             setSelectedUserTemplateId(template.id);
             toast({ title: "Modelo Carregado", description: `Modelo "${template.name}" carregado.` });
@@ -359,8 +349,7 @@ export default function PrintLabelsPage() {
         localStorage.setItem(`qriot_user_label_templates_${currentCompanyId}`, JSON.stringify(updatedTemplates));
         setSavedUserTemplates(updatedTemplates);
         if (selectedUserTemplateId === templateToDelete.id) {
-            setSelectedUserTemplateId(null); // Deselect if the deleted one was selected
-             // Re-load default/last-edited for current labelSizeId
+            setSelectedUserTemplateId(null); 
              const currentLabelConfig = labelSizes.find(s => s.id === labelSizeId);
              const firstAsset = assets.length > 0 ? assets[0] : { id: 'preview', name: 'Nome Ativo', tag: 'PREVW', category: 'Categoria', location: 'Local' };
              const lastEditedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}_${currentCompanyId}`);
@@ -425,7 +414,7 @@ export default function PrintLabelsPage() {
             unit: 'mm',
             format: isA4Layout ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX * 2) , selectedLabelConfig.height + (selectedLabelConfig.gapY * 2)]
         });
-        doc.addFont("Helvetica", "Helvetica", "normal"); // Ensure standard fonts are available if not by default
+        doc.addFont("Helvetica", "Helvetica", "normal"); 
         doc.addFont("Times-Roman", "Times-Roman", "normal");
         doc.addFont("Courier", "Courier", "normal");
 
@@ -434,7 +423,6 @@ export default function PrintLabelsPage() {
         let { cols, rows, gapX, gapY, marginTop: marginTop_mm_cfg, marginLeft: marginLeft_mm_cfg } = selectedLabelConfig;
 
         if (isA4Layout && tileOnA4 && selectedLabelConfig.pageFormat === 'custom') {
-            // Calculate cols/rows for custom labels on A4
             const pageMargin = 10; 
             marginLeft_mm_cfg = pageMargin;
             marginTop_mm_cfg = pageMargin;
@@ -472,11 +460,10 @@ export default function PrintLabelsPage() {
 
                 if (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') {
                     if (contentToRender) {
-                        let pdfFont = "helvetica"; // Default
+                        let pdfFont = "helvetica"; 
                         if (element.fontFamily) {
                             const lowerFontFamily = element.fontFamily.toLowerCase();
-                            if (lowerFontFamily.includes("arial")) pdfFont = "helvetica";
-                            else if (lowerFontFamily.includes("verdana")) pdfFont = "helvetica"; // Fallback for Verdana
+                            if (lowerFontFamily.includes("arial") || lowerFontFamily.includes("verdana") || lowerFontFamily.includes("sans-serif")) pdfFont = "helvetica";
                             else if (lowerFontFamily.includes("times")) pdfFont = "times";
                             else if (lowerFontFamily.includes("courier")) pdfFont = "courier";
                         }
@@ -489,8 +476,7 @@ export default function PrintLabelsPage() {
                         if (textAlignJsPdf === 'center') textXPosMm += el_w_mm / 2;
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
                         
-                        // Approximate y for top alignment of text block
-                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_PT_SCALE * 0.352778); // Adjusted for baseline
+                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_PT_SCALE * 0.352778); 
                         doc.text(textLines, textXPosMm, textYPosMm, { 
                             align: textAlignJsPdf,
                             baseline: 'top'
@@ -498,12 +484,12 @@ export default function PrintLabelsPage() {
                     }
                 } else if (element.type === 'qr') {
                     const qrDataUrl = qrCodeDataUrls[asset.id];
-                     console.log(`[PDF QR] Asset ID: ${asset.id}, Tag: ${asset.tag}. Data URL available: ${!!qrDataUrl}`);
+                     console.log(`[PDF QR] Asset ID: ${asset.id}, Tag: ${asset.tag}. Data URL available: ${!!qrDataUrl}, Length: ${qrDataUrl?.length || 0}`);
                     if (qrDataUrl && qrDataUrl.startsWith('data:image/png;base64,') && qrDataUrl.length > 'data:image/png;base64,'.length) {
                         try {
                             const qrSizeMm = Math.max(5, Math.min(el_w_mm, el_h_mm)); 
                             console.log(`[PDF QR] Adding QR for ${asset.id}. Coords: (${el_x_mm.toFixed(1)}, ${el_y_mm.toFixed(1)}). Size: ${qrSizeMm.toFixed(1)}mm.`);
-                            doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm);
+                            doc.addImage(qrDataUrl, 'PNG', el_x_mm, el_y_mm, qrSizeMm, qrSizeMm, undefined, 'FAST'); // Added FAST compression
                         } catch (e) {
                             console.error(`[PDF QR] Error adding QR image for asset ${asset.id}:`, e);
                             doc.setFillColor(230, 230, 230);
@@ -512,7 +498,7 @@ export default function PrintLabelsPage() {
                             doc.text("QR Erro", el_x_mm + el_w_mm / 2, el_y_mm + el_h_mm / 2, {align: 'center', baseline:'middle'});
                         }
                     } else {
-                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id} at PDF generation time. URL available: ${!!qrDataUrl}, Length: ${qrDataUrl?.length}`);
+                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id}. URL: "${qrDataUrl ? qrDataUrl.substring(0,30) + "..." : "null"}"`);
                         doc.setFillColor(230, 230, 230);
                         doc.rect(el_x_mm, el_y_mm, Math.max(5, el_w_mm), Math.max(5, el_h_mm), 'F');
                         doc.setTextColor(100,100,100); doc.setFontSize(6);
@@ -522,7 +508,7 @@ export default function PrintLabelsPage() {
                     try {
                         const logoW_mm = Math.max(1, el_w_mm);
                         const logoH_mm = Math.max(1, el_h_mm);
-                        doc.addImage(element.dataUrl, 'PNG', el_x_mm, el_y_mm, logoW_mm, logoH_mm);
+                        doc.addImage(element.dataUrl, 'PNG', el_x_mm, el_y_mm, logoW_mm, logoH_mm, undefined, 'FAST'); // Added FAST
                     } catch (e) { console.error("[PDF Gen] Error adding logo image:", e); }
                 }
             }
@@ -730,7 +716,7 @@ export default function PrintLabelsPage() {
                                 value={labelSizeId} 
                                 onValueChange={(value) => {
                                     setLabelSizeId(value);
-                                    setSelectedUserTemplateId(null); // Deselect user template when base changes
+                                    setSelectedUserTemplateId(null);
                                 }}
                             >
                                 <SelectTrigger id="label-size"><SelectValue placeholder="Selecione o tamanho" /></SelectTrigger>
@@ -777,7 +763,7 @@ export default function PrintLabelsPage() {
                                                     const template = savedUserTemplates.find(t=>t.id === selectedUserTemplateId);
                                                     if (template) {
                                                         setTemplateToDelete(template);
-                                                        handleDeleteTemplate(); // Call directly since state update is tricky in handler
+                                                        handleDeleteTemplate(); 
                                                     }
                                                 }} className="bg-destructive hover:bg-destructive/90">
                                                     Confirmar Exclusão
@@ -791,21 +777,7 @@ export default function PrintLabelsPage() {
                         </div>
                     </div>
                     
-                    <div className="border-t pt-4 space-y-2">
-                        <Label htmlFor="new-template-name">Salvar Layout Atual como Novo Modelo</Label>
-                        <div className="flex gap-2">
-                            <Input 
-                                id="new-template-name" 
-                                placeholder="Nome do Modelo (ex: Etiqueta Padrão Almoxarifado)" 
-                                value={newTemplateName}
-                                onChange={(e) => setNewTemplateName(e.target.value)}
-                                className="flex-grow"
-                            />
-                            <Button onClick={handleSaveNewTemplate} disabled={!newTemplateName.trim() || currentLabelLayout.length === 0} className="flex-shrink-0">
-                                <SaveIcon className="mr-2 h-4 w-4" /> Salvar Novo Modelo
-                            </Button>
-                        </div>
-                    </div>
+                    {/* Moved Save Template UI to Modal */}
 
                     {selectedLabelConfig.pageFormat === 'custom' && (
                         <div className="flex items-center space-x-2 pt-2">
@@ -848,11 +820,13 @@ export default function PrintLabelsPage() {
                     isOpen={isPreviewOpen}
                     onClose={() => setIsPreviewOpen(false)}
                     initialAsset={selectedAssetsData.length > 0 ? selectedAssetsData[0] : assets[0]}
-                    selectedAssetsData={selectedAssetsData.length > 0 ? selectedAssetsData : assets.slice(0,1)} // Pass first asset if none selected for preview
+                    selectedAssetsData={selectedAssetsData.length > 0 ? selectedAssetsData : assets.slice(0,1)}
                     labelConfig={selectedLabelConfig}
                     onApplyLayoutAndClose={handleApplyLayoutAndCloseModal}
                     initialLayout={currentLabelLayout}
-                    qrCodeDataUrls={qrCodeDataUrls} 
+                    qrCodeDataUrls={qrCodeDataUrls}
+                    onSaveAsNewTemplate={handleSaveNewTemplate}
+                    currentTileOnA4={tileOnA4}
                 />
              )}
         </div>

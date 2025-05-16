@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Save, Search, BringToFront, SendToBack, Settings2 } from 'lucide-react';
+import { ImageIcon, Trash2, PlusCircle, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Save, Search, BringToFront, SendToBack, Settings2, SaveIcon as SaveTemplateIcon } from 'lucide-react';
 import { Separator } from '../ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -61,6 +61,8 @@ interface LabelPreviewModalProps {
   onApplyLayoutAndClose: (elements: LabelElementConfig[]) => void;
   initialLayout?: LabelElementConfig[];
   qrCodeDataUrls: Record<string, string | null>;
+  onSaveAsNewTemplate: (templateName: string, layout: LabelElementConfig[], baseLabelConfigId: string, tileOnA4ForTemplate: boolean) => void;
+  currentTileOnA4: boolean;
 }
 
 const DEFAULT_FONT_SIZE_PX = 12;
@@ -104,6 +106,8 @@ export function LabelPreviewModal({
   onApplyLayoutAndClose,
   initialLayout,
   qrCodeDataUrls,
+  onSaveAsNewTemplate,
+  currentTileOnA4,
 }: LabelPreviewModalProps) {
   const { toast } = useToast();
   const [elements, setElements] = useState<LabelElementConfig[]>(initialLayout || []);
@@ -114,15 +118,14 @@ export function LabelPreviewModal({
   const dragStartPos = useRef<{ x: number; y: number, elX: number, elY: number, scale: number } | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [currentPreviewIndex, setCurrentPreviewIndex] = useState(0);
+  const [newTemplateNameInput, setNewTemplateNameInput] = useState('');
 
   const currentAsset = selectedAssetsData[currentPreviewIndex] || initialAsset;
 
     const updateElementContentForAsset = useCallback((element: LabelElementConfig, asset: AssetForLabel): LabelElementConfig => {
         let newContent = element.content;
         let newCharacteristicValue = element.characteristicValue;
-        // Width is no longer recalculated here based on content changes.
-        // It's set initially or by the user and remains fixed unless explicitly changed.
-        let newWidthPx = element.widthPx;
+        let newWidthPx = element.widthPx; // Width is not recalculated here
 
         if (element.id === 'assetName') {
             newContent = asset.name;
@@ -131,11 +134,9 @@ export function LabelPreviewModal({
         } else if (element.type === 'qr') {
             newContent = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
         } else if (element.type === 'characteristic') {
-            const char = asset.characteristics?.find(c => c.key === element.content); // content here is the characteristic key
+            const char = asset.characteristics?.find(c => c.key === element.content);
             newCharacteristicValue = char?.value || '';
         }
-        // For 'custom' type, newContent would be the user-defined content itself.
-
         return { ...element, content: newContent, widthPx: newWidthPx, characteristicValue: newCharacteristicValue };
     }, []);
 
@@ -153,6 +154,7 @@ export function LabelPreviewModal({
             const initialAssetIndex = selectedAssetsData.findIndex(a => a.id === initialAsset.id);
             setCurrentPreviewIndex(initialAssetIndex >= 0 ? initialAssetIndex : 0);
             setZoomLevel(1); 
+            setNewTemplateNameInput(''); // Reset template name input
         }
     }, [isOpen, initialAsset, labelConfig, initialLayout, selectedAssetsData, updateElementContentForAsset]);
 
@@ -171,12 +173,12 @@ export function LabelPreviewModal({
 
  const addElement = (type: 'text' | 'custom' | 'logo' | 'qr' | 'characteristic', content?: string, characteristicKey?: string) => {
     const newId = `${type}-${Date.now()}`;
-    let newElementBase: Omit<LabelElementConfig, 'x' | 'y' | 'heightPx'> & { heightPx?: number }; 
+    let newElementBase: Omit<LabelElementConfig, 'x' | 'y'>; 
 
     const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
     const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
     let elWidthPx: number;
-    let elHeightPx: number | undefined = 0; 
+    let elHeightPx: number = 0; 
 
     const currentAssetQrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${currentAsset.tag}` : currentAsset.tag;
 
@@ -199,23 +201,22 @@ export function LabelPreviewModal({
         const char = currentAsset.characteristics?.find(c => c.key === characteristicKey);
         const charDisplayValue = char?.value || '';
         const fullContentForWidthCalc = `${characteristicKey || 'Característica'}: ${charDisplayValue}`;
-        elWidthPx = Math.max(50, fullContentForWidthCalc.length * (DEFAULT_FONT_SIZE_PX * 0.6)); // Initial width calculation
-        newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
+        elWidthPx = Math.max(50, fullContentForWidthCalc.length * (DEFAULT_FONT_SIZE_PX * 0.6));
+        newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: 0, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
       case 'custom':
       default:
         const initialContent = content || 'Novo Texto';
-        elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6)); // Initial width calculation
-        newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
+        elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
+        newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, heightPx: 0, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
     }
 
      const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
-     const y_centered = Math.max(0, (labelHeightPx / 2) - ((elHeightPx === 0 || elHeightPx === undefined ? (newElementBase.fontSizePx * 1.2) : elHeightPx) / 2));
+     const y_centered = Math.max(0, (labelHeightPx / 2) - (elHeightPx / 2));
 
     const newElement: LabelElementConfig = {
         ...newElementBase,
-        heightPx: elHeightPx ?? 0, 
         x: x_centered,
         y: y_centered,
     };
@@ -347,6 +348,22 @@ export function LabelPreviewModal({
     const handleApplyAndClose = () => {
         onApplyLayoutAndClose(elements);
         onClose();
+    };
+
+    const handleSaveCurrentLayoutAsTemplate = () => {
+        if (!newTemplateNameInput.trim()) {
+            toast({ title: "Nome Inválido", description: "Por favor, insira um nome para o modelo.", variant: "destructive" });
+            return;
+        }
+        if (elements.length === 0) {
+             toast({ title: "Layout Vazio", description: "Não é possível salvar um modelo com layout vazio.", variant: "destructive" });
+            return;
+        }
+        const tilePreferenceForTemplate = labelConfig.pageFormat === 'custom' ? currentTileOnA4 : false;
+        onSaveAsNewTemplate(newTemplateNameInput, elements, labelConfig.id, tilePreferenceForTemplate);
+        setNewTemplateNameInput(''); // Clear input after saving
+        // Optionally, you might want to close the modal after saving a template, or provide feedback
+        // For now, it stays open, allowing further edits or saving another template.
     };
 
 
@@ -633,11 +650,24 @@ export function LabelPreviewModal({
           </div>
         </div>
 
-        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0">
-            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto order-last sm:order-first"> Cancelar </Button>
-            <Button onClick={handleApplyAndClose} className="w-full sm:w-auto">
-                 <Save className="mr-2 h-4 w-4" /> Aplicar Layout e Fechar
-            </Button>
+        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0 items-center">
+            <div className="flex gap-2 w-full sm:w-auto flex-col sm:flex-row">
+                <Input
+                    placeholder="Nome do Modelo (opcional)"
+                    value={newTemplateNameInput}
+                    onChange={(e) => setNewTemplateNameInput(e.target.value)}
+                    className="h-9 text-sm flex-grow"
+                />
+                <Button onClick={handleSaveCurrentLayoutAsTemplate} variant="outline" size="sm" className="h-9 w-full sm:w-auto" disabled={!newTemplateNameInput.trim() || elements.length === 0}>
+                    <SaveTemplateIcon className="mr-2 h-4 w-4" /> Salvar como Modelo
+                </Button>
+            </div>
+            <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={onClose} className="w-full sm:w-auto flex-1 sm:flex-none"> Cancelar </Button>
+                <Button onClick={handleApplyAndClose} className="w-full sm:w-auto flex-1 sm:flex-none">
+                     <Save className="mr-2 h-4 w-4" /> Aplicar e Fechar
+                </Button>
+            </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
