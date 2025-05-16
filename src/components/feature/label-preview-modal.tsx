@@ -44,7 +44,7 @@ export interface LabelElementConfig {
     dataUrl?: string; 
     fontSizePx: number;
     widthPx: number; 
-    heightPx: number; // For text, 0 means auto-height. For QR/Logo, it's specific.
+    heightPx: number; 
     visible: boolean;
     fontFamily?: string;
     textAlign?: 'left' | 'center' | 'right';
@@ -58,7 +58,7 @@ interface LabelPreviewModalProps {
   initialAsset: AssetForLabel;
   selectedAssetsData: AssetForLabel[];
   labelConfig: LabelConfig;
-  onSave: (elements: LabelElementConfig[]) => void;
+  onApplyLayoutAndClose: (elements: LabelElementConfig[]) => void; // Renamed from onSave
   initialLayout?: LabelElementConfig[];
   qrCodeDataUrls: Record<string, string | null>;
 }
@@ -73,7 +73,7 @@ const MIN_ZOOM = 0.5;
 const ZOOM_STEP = 0.2;
 
 
-const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): LabelElementConfig[] => {
+export const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): LabelElementConfig[] => {
     const qrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${asset.tag}` : asset.tag;
     const initialLayoutBase = [
         { id: 'assetName', type: 'text' as const, content: asset.name, fontSizePx: DEFAULT_FONT_SIZE_PX + 2, visible: true, widthPx: Math.max(50, asset.name.length * 7), heightPx: 0, textAlign: 'center' as const, fontFamily: 'Arial, sans-serif' },
@@ -86,7 +86,8 @@ const generateDefaultLayout = (asset: AssetForLabel, labelConfig: LabelConfig): 
 
     return initialLayoutBase.map((el, index) => {
         const elWidth = el.widthPx;
-        const elHeight = el.type === 'qr' ? el.widthPx : (el.fontSizePx * 1.2) || 20; // Approx height for text if auto
+        // For text, height is dynamic, so for initial centering, estimate based on font size
+        const elHeight = el.type === 'qr' ? el.widthPx : (el.fontSizePx * 1.2) || 20; 
         return {
             ...el,
             x: Math.max(0, (labelWidthPx / 2) - (elWidth / 2)),
@@ -101,7 +102,7 @@ export function LabelPreviewModal({
   initialAsset,
   selectedAssetsData,
   labelConfig,
-  onSave,
+  onApplyLayoutAndClose, // Renamed from onSave
   initialLayout,
   qrCodeDataUrls,
 }: LabelPreviewModalProps) {
@@ -173,12 +174,12 @@ export function LabelPreviewModal({
 
  const addElement = (type: 'text' | 'custom' | 'logo' | 'qr' | 'characteristic', content?: string, characteristicKey?: string) => {
     const newId = `${type}-${Date.now()}`;
-    let newElementBase: Omit<LabelElementConfig, 'x' | 'y' | 'heightPx'> & { heightPx?: number }; // heightPx is optional here for text
+    let newElementBase: Omit<LabelElementConfig, 'x' | 'y' | 'heightPx'> & { heightPx?: number }; 
 
     const labelWidthPx = labelConfig.width * MM_TO_PX_SCALE;
     const labelHeightPx = labelConfig.height * MM_TO_PX_SCALE;
     let elWidthPx: number;
-    let elHeightPx: number | undefined; // For text types, height is auto by default
+    let elHeightPx: number | undefined = 0; // Default to auto height for text based elements
 
     const currentAssetQrValue = typeof window !== 'undefined' ? `${window.location.origin}/public/asset/${currentAsset.tag}` : currentAsset.tag;
 
@@ -194,7 +195,7 @@ export function LabelPreviewModal({
              return;
          }
         elWidthPx = DEFAULT_QR_SIZE_PX;
-        elHeightPx = DEFAULT_QR_SIZE_PX; // QR has fixed aspect ratio
+        elHeightPx = DEFAULT_QR_SIZE_PX;
         newElementBase = { id: newId, type, content: currentAssetQrValue, widthPx: elWidthPx, heightPx, visible: true, fontSizePx: 0, textAlign: 'center' };
         break;
       case 'characteristic':
@@ -202,24 +203,22 @@ export function LabelPreviewModal({
         const charDisplayValue = char?.value || '';
         const fullContent = `${characteristicKey || 'Característica'}: ${charDisplayValue}`;
         elWidthPx = Math.max(50, fullContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
-        elHeightPx = 0; // Auto height for text
         newElementBase = { id: newId, type, content: characteristicKey || 'Característica', characteristicValue: charDisplayValue, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
       case 'custom':
       default:
         const initialContent = content || 'Novo Texto';
         elWidthPx = Math.max(50, initialContent.length * (DEFAULT_FONT_SIZE_PX * 0.6));
-        elHeightPx = 0; // Auto height for text
         newElementBase = { id: newId, type: type === 'text' ? 'text': 'custom' , content: initialContent, fontSizePx: DEFAULT_FONT_SIZE_PX, visible: true, widthPx: elWidthPx, textAlign: 'left', fontFamily: 'Arial, sans-serif' };
         break;
     }
 
      const x_centered = Math.max(0, (labelWidthPx / 2) - (elWidthPx / 2));
-     const y_centered = Math.max(0, (labelHeightPx / 2) - ((elHeightPx === 0 || elHeightPx === undefined ? (newElementBase.fontSizePx * 1.2) : elHeightPx) / 2)); // Use font size for auto height est.
+     const y_centered = Math.max(0, (labelHeightPx / 2) - ((elHeightPx === 0 || elHeightPx === undefined ? (newElementBase.fontSizePx * 1.2) : elHeightPx) / 2));
 
     const newElement: LabelElementConfig = {
         ...newElementBase,
-        heightPx: elHeightPx ?? 0, // Ensure heightPx is a number, default to 0 for auto
+        heightPx: elHeightPx ?? 0, 
         x: x_centered,
         y: y_centered,
     };
@@ -260,7 +259,6 @@ export function LabelPreviewModal({
         };
         reader.readAsDataURL(file);
     } else if (file && !elements.find(el => el.type === 'logo')) {
-        // If adding a new logo element directly via upload
         const newId = `logo-${Date.now()}`;
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -349,14 +347,9 @@ export function LabelPreviewModal({
          setCurrentPreviewIndex(prev => (prev - 1 + selectedAssetsData.length) % selectedAssetsData.length);
     };
 
-    const handleSaveAndClose = () => {
-        onSave(elements);
+    const handleApplyAndClose = () => {
+        onApplyLayoutAndClose(elements);
         onClose();
-    };
-
-    const handleSaveChanges = () => {
-        onSave(elements);
-         toast({ title: "Layout Salvo", description: "O layout atual foi salvo localmente." });
     };
 
 
@@ -643,16 +636,11 @@ export function LabelPreviewModal({
           </div>
         </div>
 
-        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-end gap-2 flex-shrink-0">
-            <div className="flex-grow sm:flex-grow-0">
-                <Button variant="outline" onClick={onClose} className="w-full sm:w-auto"> Cancelar </Button>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-                 <Button variant="outline" onClick={handleSaveChanges} className="w-full sm:w-auto">
-                     <Save className="mr-2 h-4 w-4" /> Salvar Layout
-                 </Button>
-                <Button onClick={handleSaveAndClose} className="w-full sm:w-auto">Salvar e Fechar</Button>
-            </div>
+        <DialogFooter className="mt-auto pt-4 border-t flex flex-col sm:flex-row sm:justify-between gap-2 flex-shrink-0">
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto order-last sm:order-first"> Cancelar </Button>
+            <Button onClick={handleApplyAndClose} className="w-full sm:w-auto">
+                 <Save className="mr-2 h-4 w-4" /> Aplicar Layout e Fechar
+            </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -714,3 +702,4 @@ const CommandEmpty = React.forwardRef<
     <CommandPrimitive.Empty ref={ref} className="py-6 text-center text-sm" {...props} />
 ));
 CommandEmpty.displayName = CommandPrimitive.Empty.displayName;
+

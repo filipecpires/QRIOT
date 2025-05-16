@@ -8,15 +8,28 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit } from 'lucide-react';
+import { Printer, Search, Settings, Check, QrCode, Tag, X, Loader2, Edit, Save as SaveIcon, FolderOpen, Trash2 as DeleteIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { jsPDF } from "jspdf";
 // import autoTable from 'jspdf-autotable'; // Currently unused
-import { LabelPreviewModal, type LabelElementConfig } from '@/components/feature/label-preview-modal';
+import { LabelPreviewModal, type LabelElementConfig, generateDefaultLayout as generateDefaultLabelLayout } from '@/components/feature/label-preview-modal';
 import { HiddenQrCanvasWithDataUrl } from '@/components/feature/hidden-qr-canvas';
+import { useAdminLayoutContext } from '@/components/layout/admin-layout-context';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+
 
 // Mock data - replace with actual data fetching
 interface AssetForLabel {
@@ -78,6 +91,17 @@ export interface LabelConfig {
     marginBottom?: number; // mm
 }
 
+// Define a type for saved user templates
+export interface SavedUserLabelTemplate {
+    id: string; // Unique ID for the template (e.g., timestamp or UUID)
+    name: string; // User-defined name for the template
+    companyId: string; // Company this template belongs to
+    labelConfigId: string; // ID of the base LabelConfig used (e.g., 'size1', 'size2')
+    layout: LabelElementConfig[]; // The actual layout configuration
+    tileOnA4: boolean; // Whether this template (if custom format) should be tiled on A4
+}
+
+
 const labelSizes: LabelConfig[] = [
     { id: 'size1', name: 'Pimaco 6080 (38.1 x 21.2 mm)', width: 38.1, height: 21.2, cols: 5, rows: 13, gapX: 2.5, gapY: 0, pageFormat: 'a4', marginTop: 15.7, marginLeft: 4.7, marginRight: 4.7, marginBottom: 15.7 },
     { id: 'size2', name: 'Pimaco 6082 (63.5 x 38.1 mm)', width: 63.5, height: 38.1, cols: 3, rows: 7, gapX: 2.5, gapY: 0, pageFormat: 'a4', marginTop: 10.7, marginLeft: 4.7, marginRight: 4.7, marginBottom: 10.7 },
@@ -87,12 +111,13 @@ const labelSizes: LabelConfig[] = [
 
 const A4_WIDTH_MM = 210;
 const A4_HEIGHT_MM = 297;
-const PX_TO_MM_SCALE = 0.264583; 
-const PX_TO_PT_SCALE = 0.75; 
+const PX_TO_MM_SCALE = 0.264583;
+const PX_TO_PT_SCALE = 0.75;
 
 
 export default function PrintLabelsPage() {
     const { toast } = useToast();
+    const { currentCompanyId } = useAdminLayoutContext();
     const [assets, setAssets] = useState<AssetForLabel[]>([]);
     const [selectedAssets, setSelectedAssets] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
@@ -108,40 +133,73 @@ export default function PrintLabelsPage() {
     const [labelSizeId, setLabelSizeId] = useState<string>(labelSizes[0].id);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+    
     const [currentLabelLayout, setCurrentLabelLayout] = useState<LabelElementConfig[]>([]);
     const [tileOnA4, setTileOnA4] = useState(false);
     
     const [qrCodeDataUrls, setQrCodeDataUrls] = useState<Record<string, string | null>>({});
     const [areQrCodesReady, setAreQrCodesReady] = useState(false);
 
+    const [savedUserTemplates, setSavedUserTemplates] = useState<SavedUserLabelTemplate[]>([]);
+    const [selectedUserTemplateId, setSelectedUserTemplateId] = useState<string | null>(null);
+    const [newTemplateName, setNewTemplateName] = useState('');
+    const [templateToDelete, setTemplateToDelete] = useState<SavedUserLabelTemplate | null>(null);
+
 
     const categories = ['Eletrônicos', 'Mobiliário', 'Ferramentas', 'Veículos', 'Outros'];
     const locations = ['Escritório 1', 'Escritório 2', 'Sala de Reuniões', 'Sala de Treinamento', 'Almoxarifado'];
 
+    // Load saved templates and last layout for the selected base size on mount and when companyId changes
     useEffect(() => {
-         if (typeof window !== 'undefined') {
-             const savedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}`);
-             if (savedLayoutJson) {
-                 try {
-                     const savedLayout = JSON.parse(savedLayoutJson);
-                     if (Array.isArray(savedLayout)) {
-                         setCurrentLabelLayout(savedLayout);
-                     } else {
-                         setCurrentLabelLayout([]);
-                     }
-                 } catch (e) {
-                     setCurrentLabelLayout([]);
-                 }
-             } else {
-                 setCurrentLabelLayout([]); 
-             }
-         }
-     }, [labelSizeId]);
+        if (!currentCompanyId) return;
+
+        // Load user-defined templates
+        const storedUserTemplatesJson = localStorage.getItem(`qriot_user_label_templates_${currentCompanyId}`);
+        if (storedUserTemplatesJson) {
+            try {
+                const parsedTemplates = JSON.parse(storedUserTemplatesJson) as SavedUserLabelTemplate[];
+                setSavedUserTemplates(parsedTemplates);
+            } catch (e) {
+                console.error("Error parsing saved user templates from localStorage:", e);
+                setSavedUserTemplates([]);
+            }
+        } else {
+            setSavedUserTemplates([]);
+        }
+    }, [currentCompanyId]);
+    
+    // Effect to load default/last-edited layout when labelSizeId changes OR when a user template is NOT selected
+    useEffect(() => {
+      if (!currentCompanyId || !labelSizeId) return;
+  
+      // If a user template is currently selected, don't override its layout
+      if (selectedUserTemplateId) return;
+  
+      const lastEditedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}_${currentCompanyId}`);
+      const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
+      const firstAsset = assets.length > 0 ? assets[0] : { id: 'preview', name: 'Nome Ativo', tag: 'PREVW', category: 'Categoria', location: 'Local' };
+      
+      if (lastEditedLayoutJson) {
+          try {
+              const parsedLayout = JSON.parse(lastEditedLayoutJson);
+              if (Array.isArray(parsedLayout) && parsedLayout.length > 0) {
+                  setCurrentLabelLayout(parsedLayout);
+              } else {
+                  setCurrentLabelLayout(selectedLabelConfig ? generateDefaultLabelLayout(firstAsset, selectedLabelConfig) : []);
+              }
+          } catch (e) {
+              console.error(`Error parsing last edited layout for ${labelSizeId}:`, e);
+              setCurrentLabelLayout(selectedLabelConfig ? generateDefaultLabelLayout(firstAsset, selectedLabelConfig) : []);
+          }
+      } else {
+          setCurrentLabelLayout(selectedLabelConfig ? generateDefaultLabelLayout(firstAsset, selectedLabelConfig) : []);
+      }
+   }, [labelSizeId, currentCompanyId, assets, selectedUserTemplateId]); // Added selectedUserTemplateId
 
     // Effect to check if all selected QR codes are ready
     useEffect(() => {
         if (selectedAssets.size === 0) {
-            setAreQrCodesReady(true); // No assets selected, so QRs are "ready"
+            setAreQrCodesReady(true); 
             return;
         }
         const selectedAssetIds = Array.from(selectedAssets);
@@ -150,8 +208,6 @@ export default function PrintLabelsPage() {
             return typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length > 'data:image/png;base64,'.length;
         });
         setAreQrCodesReady(allSelectedQrsGenerated);
-        // console.log(`[PrintLabelsPage] Selected IDs: ${selectedAssetIds.length}, QRs Ready: ${allSelectedQrsGenerated}`);
-
     }, [selectedAssets, qrCodeDataUrls]);
 
 
@@ -210,28 +266,114 @@ export default function PrintLabelsPage() {
     const isAllSelected = assets.length > 0 && selectedAssets.size === assets.length;
     const isIndeterminate = selectedAssets.size > 0 && selectedAssets.size < assets.length;
 
-    const handleOpenPreview = () => {
-        if (selectedAssets.size === 0) {
-             toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para visualizar a etiqueta.", variant: "destructive" });
+    const handleOpenPreviewModal = () => {
+        if (selectedAssets.size === 0 && assets.length === 0) {
+             toast({ title: "Nenhum ativo disponível", description: "Não há ativos para visualizar ou selecionar.", variant: "destructive" });
              return;
+        }
+         if (selectedAssets.size === 0 && assets.length > 0) {
+             toast({ title: "Nenhum ativo selecionado", description: "Selecione pelo menos um ativo para editar o layout da etiqueta, ou o primeiro ativo da lista será usado como exemplo.", variant: "default" });
+             // Proceed with the first asset as example if none are selected.
         }
         setIsPreviewOpen(true);
     };
-
-    const handleSaveLayout = (elements: LabelElementConfig[]) => {
+    
+    const handleApplyLayoutAndCloseModal = (elements: LabelElementConfig[]) => {
         setCurrentLabelLayout(elements);
-        if (typeof window !== 'undefined') {
+        if (typeof window !== 'undefined' && currentCompanyId && labelSizeId) {
             try {
-                 const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId);
-                 if (!selectedLabelConfig) return;
-                 localStorage.setItem(`labelLayout_${selectedLabelConfig.id}`, JSON.stringify(elements));
-                 toast({ title: "Layout Salvo", description: "O layout foi salvo localmente para este tamanho de etiqueta." });
+                 localStorage.setItem(`labelLayout_${labelSizeId}_${currentCompanyId}`, JSON.stringify(elements));
+                 toast({ title: "Layout Aplicado", description: "O layout foi aplicado para a impressão atual." });
             } catch (error) {
                  console.error("Error saving layout to localStorage:", error);
                  toast({ title: "Erro ao Salvar Layout", description: "Não foi possível salvar o layout localmente.", variant: "destructive" });
             }
          }
+        setIsPreviewOpen(false); // Close modal after applying
     };
+
+    const handleSaveNewTemplate = () => {
+        if (!newTemplateName.trim()) {
+            toast({ title: "Nome Inválido", description: "Por favor, insira um nome para o modelo.", variant: "destructive" });
+            return;
+        }
+        if (!currentCompanyId) {
+            toast({ title: "Erro", description: "ID da empresa não encontrado.", variant: "destructive" });
+            return;
+        }
+        if (currentLabelLayout.length === 0) {
+            toast({ title: "Layout Vazio", description: "Não é possível salvar um modelo com layout vazio. Edite o layout primeiro.", variant: "destructive" });
+            return;
+        }
+
+        const newTemplate: SavedUserLabelTemplate = {
+            id: `tpl-${Date.now()}`,
+            name: newTemplateName,
+            companyId: currentCompanyId,
+            labelConfigId: labelSizeId,
+            layout: currentLabelLayout,
+            tileOnA4: selectedLabelConfig?.pageFormat === 'custom' ? tileOnA4 : false, // Only save tileOnA4 if base is custom
+        };
+
+        const updatedTemplates = [...savedUserTemplates, newTemplate];
+        localStorage.setItem(`qriot_user_label_templates_${currentCompanyId}`, JSON.stringify(updatedTemplates));
+        setSavedUserTemplates(updatedTemplates);
+        setNewTemplateName('');
+        setSelectedUserTemplateId(newTemplate.id); // Auto-select the newly saved template
+        toast({ title: "Modelo Salvo", description: `Modelo "${newTemplate.name}" salvo com sucesso!` });
+    };
+
+    const handleLoadUserTemplate = (templateId: string) => {
+        if (templateId === '__none__') {
+            setSelectedUserTemplateId(null);
+            // When deselecting a user template, revert to the default/last-edited for the current labelSizeId
+            const currentLabelConfig = labelSizes.find(s => s.id === labelSizeId);
+            const firstAsset = assets.length > 0 ? assets[0] : { id: 'preview', name: 'Nome Ativo', tag: 'PREVW', category: 'Categoria', location: 'Local' };
+            const lastEditedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}_${currentCompanyId}`);
+            if (lastEditedLayoutJson) {
+                try {
+                    setCurrentLabelLayout(JSON.parse(lastEditedLayoutJson));
+                } catch {
+                     setCurrentLabelLayout(currentLabelConfig ? generateDefaultLabelLayout(firstAsset, currentLabelConfig) : []);
+                }
+            } else {
+                setCurrentLabelLayout(currentLabelConfig ? generateDefaultLabelLayout(firstAsset, currentLabelConfig) : []);
+            }
+            setTileOnA4(false); // Reset tileOnA4 when deselecting template
+            return;
+        }
+
+        const template = savedUserTemplates.find(t => t.id === templateId);
+        if (template && currentCompanyId) {
+            setLabelSizeId(template.labelConfigId); // This will trigger the useEffect for labelSizeId to load its base/last-edited layout first
+            setCurrentLabelLayout(template.layout);    // Then, this immediately overrides it with the template's layout
+            setTileOnA4(template.tileOnA4);
+            setSelectedUserTemplateId(template.id);
+            toast({ title: "Modelo Carregado", description: `Modelo "${template.name}" carregado.` });
+        }
+    };
+    
+    const handleDeleteTemplate = () => {
+        if (!templateToDelete || !currentCompanyId) return;
+        const updatedTemplates = savedUserTemplates.filter(t => t.id !== templateToDelete.id);
+        localStorage.setItem(`qriot_user_label_templates_${currentCompanyId}`, JSON.stringify(updatedTemplates));
+        setSavedUserTemplates(updatedTemplates);
+        if (selectedUserTemplateId === templateToDelete.id) {
+            setSelectedUserTemplateId(null); // Deselect if the deleted one was selected
+             // Re-load default/last-edited for current labelSizeId
+             const currentLabelConfig = labelSizes.find(s => s.id === labelSizeId);
+             const firstAsset = assets.length > 0 ? assets[0] : { id: 'preview', name: 'Nome Ativo', tag: 'PREVW', category: 'Categoria', location: 'Local' };
+             const lastEditedLayoutJson = localStorage.getItem(`labelLayout_${labelSizeId}_${currentCompanyId}`);
+             if (lastEditedLayoutJson) {
+                try { setCurrentLabelLayout(JSON.parse(lastEditedLayoutJson)); } catch { setCurrentLabelLayout(currentLabelConfig ? generateDefaultLabelLayout(firstAsset, currentLabelConfig) : []);}
+             } else {
+                 setCurrentLabelLayout(currentLabelConfig ? generateDefaultLabelLayout(firstAsset, currentLabelConfig) : []);
+             }
+        }
+        setTemplateToDelete(null);
+        toast({ title: "Modelo Excluído", description: `Modelo "${templateToDelete.name}" foi excluído.` });
+    };
+
 
     const escapeCsvField = (field: string | number | undefined | null): string => {
         if (field === null || field === undefined) {
@@ -283,19 +425,22 @@ export default function PrintLabelsPage() {
             unit: 'mm',
             format: isA4Layout ? 'a4' : [selectedLabelConfig.width + (selectedLabelConfig.gapX * 2) , selectedLabelConfig.height + (selectedLabelConfig.gapY * 2)]
         });
+        doc.addFont("Helvetica", "Helvetica", "normal"); // Ensure standard fonts are available if not by default
+        doc.addFont("Times-Roman", "Times-Roman", "normal");
+        doc.addFont("Courier", "Courier", "normal");
+
 
         const { width: labelW_mm, height: labelH_mm } = selectedLabelConfig;
         let { cols, rows, gapX, gapY, marginTop: marginTop_mm_cfg, marginLeft: marginLeft_mm_cfg } = selectedLabelConfig;
 
         if (isA4Layout && tileOnA4 && selectedLabelConfig.pageFormat === 'custom') {
             // Calculate cols/rows for custom labels on A4
-            // Using default A4 margins if not specified in a theoretical 'A4 tiling config'
-            const pageMargin = 10; // Default A4 margin in mm
+            const pageMargin = 10; 
             marginLeft_mm_cfg = pageMargin;
             marginTop_mm_cfg = pageMargin;
             const effectivePrintableWidth = A4_WIDTH_MM - (2 * pageMargin);
             const effectivePrintableHeight = A4_HEIGHT_MM - (2 * pageMargin);
-            gapX = gapX || 2; // default gap if not defined for tiling
+            gapX = gapX || 2; 
             gapY = gapY || 2;
 
             cols = Math.floor((effectivePrintableWidth + gapX) / (labelW_mm + gapX));
@@ -314,7 +459,7 @@ export default function PrintLabelsPage() {
                 const el_x_mm = Math.max(0, x_offset_mm + (element.x * PX_TO_MM_SCALE));
                 const el_y_mm = Math.max(0, y_offset_mm + (element.y * PX_TO_MM_SCALE));
                 const el_w_mm = Math.max(0.1, element.widthPx * PX_TO_MM_SCALE); 
-                const el_h_mm = Math.max(0.1, element.heightPx * PX_TO_MM_SCALE); 
+                const el_h_mm = (element.type === 'text' || element.type === 'custom' || element.type === 'characteristic') && element.heightPx === 0 ? 0 : Math.max(0.1, element.heightPx * PX_TO_MM_SCALE);
                 const el_font_size_pt = Math.max(1, element.fontSizePx * PX_TO_PT_SCALE); 
 
                 const contentToRender =
@@ -345,17 +490,15 @@ export default function PrintLabelsPage() {
                         else if (textAlignJsPdf === 'right') textXPosMm += el_w_mm;
                         
                         // Approximate y for top alignment of text block
-                        const textYPosMm = el_y_mm + (el_font_size_pt * 0.352778); // Convert pt to mm for baseline offset
+                        const textYPosMm = el_y_mm + (el_font_size_pt * PX_TO_PT_SCALE * 0.352778); // Adjusted for baseline
                         doc.text(textLines, textXPosMm, textYPosMm, { 
                             align: textAlignJsPdf,
-                            baseline: 'top' // Changed baseline to top for more predictable multi-line positioning
+                            baseline: 'top'
                         });
                     }
                 } else if (element.type === 'qr') {
                     const qrDataUrl = qrCodeDataUrls[asset.id];
-                     console.log(`[PDF QR Processing] Asset ID: ${asset.id}, Tag: ${asset.tag}`);
-                     console.log(`[PDF QR DataURL Snippet] For ${asset.id}: ${qrDataUrl ? qrDataUrl.substring(0, 70) : 'NULL or UNDEFINED'}`);
-
+                     console.log(`[PDF QR] Asset ID: ${asset.id}, Tag: ${asset.tag}. Data URL available: ${!!qrDataUrl}`);
                     if (qrDataUrl && qrDataUrl.startsWith('data:image/png;base64,') && qrDataUrl.length > 'data:image/png;base64,'.length) {
                         try {
                             const qrSizeMm = Math.max(5, Math.min(el_w_mm, el_h_mm)); 
@@ -369,7 +512,7 @@ export default function PrintLabelsPage() {
                             doc.text("QR Erro", el_x_mm + el_w_mm / 2, el_y_mm + el_h_mm / 2, {align: 'center', baseline:'middle'});
                         }
                     } else {
-                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id} at PDF generation time. URL: ${qrDataUrl}`);
+                        console.warn(`[PDF QR] Invalid or missing QR data URL for asset ${asset.id} at PDF generation time. URL available: ${!!qrDataUrl}, Length: ${qrDataUrl?.length}`);
                         doc.setFillColor(230, 230, 230);
                         doc.rect(el_x_mm, el_y_mm, Math.max(5, el_w_mm), Math.max(5, el_h_mm), 'F');
                         doc.setTextColor(100,100,100); doc.setFontSize(6);
@@ -443,7 +586,7 @@ export default function PrintLabelsPage() {
 
 
     const selectedAssetsData = assets.filter(a => selectedAssets.has(a.id));
-    const currentSelectedLabelConfig = labelSizes.find(s => s.id === labelSizeId) || labelSizes[0];
+    const selectedLabelConfig = labelSizes.find(s => s.id === labelSizeId) || labelSizes[0];
 
 
     return (
@@ -576,26 +719,96 @@ export default function PrintLabelsPage() {
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Configurações de Impressão</CardTitle>
-                    <CardDescription>Ajuste o modelo da etiqueta e edite o layout.</CardDescription>
+                    <CardTitle>Configurações de Impressão e Layout</CardTitle>
+                    <CardDescription>Ajuste o modelo base da etiqueta, carregue ou salve layouts personalizados e configure a impressão.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="label-size">Tamanho da Etiqueta (Modelo)</Label>
-                        <Select value={labelSizeId} onValueChange={setLabelSizeId}>
-                            <SelectTrigger id="label-size">
-                                <SelectValue placeholder="Selecione o tamanho" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {labelSizes.map(size => (
-                                    <SelectItem key={size.id} value={size.id}>{size.name}</SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-muted-foreground">Define o layout e dimensões das etiquetas no PDF.</p>
+                <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="label-size">Modelo Base de Etiqueta</Label>
+                            <Select 
+                                value={labelSizeId} 
+                                onValueChange={(value) => {
+                                    setLabelSizeId(value);
+                                    setSelectedUserTemplateId(null); // Deselect user template when base changes
+                                }}
+                            >
+                                <SelectTrigger id="label-size"><SelectValue placeholder="Selecione o tamanho" /></SelectTrigger>
+                                <SelectContent>
+                                    {labelSizes.map(size => (
+                                        <SelectItem key={size.id} value={size.id}>{size.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">Define as dimensões e formato da página base.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="load-template">Carregar Modelo de Layout Salvo</Label>
+                            <div className="flex gap-2">
+                                <Select value={selectedUserTemplateId || '__none__'} onValueChange={handleLoadUserTemplate} disabled={savedUserTemplates.length === 0}>
+                                    <SelectTrigger id="load-template" className="flex-grow">
+                                        <SelectValue placeholder={savedUserTemplates.length === 0 ? "Nenhum modelo salvo" : "Selecione um modelo"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="__none__">-- Usar Layout Padrão/Editado --</SelectItem>
+                                        {savedUserTemplates.map(template => (
+                                            <SelectItem key={template.id} value={template.id}>{template.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                {selectedUserTemplateId && savedUserTemplates.find(t=>t.id === selectedUserTemplateId) && (
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="ghost" size="icon" title="Excluir Modelo Salvo" className="text-destructive hover:bg-destructive/10 flex-shrink-0">
+                                                <DeleteIcon className="h-4 w-4" />
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Tem certeza que deseja excluir o modelo de etiqueta "{savedUserTemplates.find(t=>t.id === selectedUserTemplateId)?.name}"? Esta ação não pode ser desfeita.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel onClick={() => setTemplateToDelete(null)}>Cancelar</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => {
+                                                    const template = savedUserTemplates.find(t=>t.id === selectedUserTemplateId);
+                                                    if (template) {
+                                                        setTemplateToDelete(template);
+                                                        handleDeleteTemplate(); // Call directly since state update is tricky in handler
+                                                    }
+                                                }} className="bg-destructive hover:bg-destructive/90">
+                                                    Confirmar Exclusão
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Carregue um layout previamente salvo para esta empresa.</p>
+                        </div>
                     </div>
-                     {currentSelectedLabelConfig.pageFormat === 'custom' && (
-                        <div className="flex items-center space-x-2 pt-2 md:pt-6">
+                    
+                    <div className="border-t pt-4 space-y-2">
+                        <Label htmlFor="new-template-name">Salvar Layout Atual como Novo Modelo</Label>
+                        <div className="flex gap-2">
+                            <Input 
+                                id="new-template-name" 
+                                placeholder="Nome do Modelo (ex: Etiqueta Padrão Almoxarifado)" 
+                                value={newTemplateName}
+                                onChange={(e) => setNewTemplateName(e.target.value)}
+                                className="flex-grow"
+                            />
+                            <Button onClick={handleSaveNewTemplate} disabled={!newTemplateName.trim() || currentLabelLayout.length === 0} className="flex-shrink-0">
+                                <SaveIcon className="mr-2 h-4 w-4" /> Salvar Novo Modelo
+                            </Button>
+                        </div>
+                    </div>
+
+                    {selectedLabelConfig.pageFormat === 'custom' && (
+                        <div className="flex items-center space-x-2 pt-2">
                              <Checkbox
                                 id="tile-on-a4"
                                 checked={tileOnA4}
@@ -604,11 +817,12 @@ export default function PrintLabelsPage() {
                             <Label htmlFor="tile-on-a4" className="text-sm font-normal">
                                 Organizar em grade em folha A4?
                             </Label>
+                            <p className="text-xs text-muted-foreground">(Para modelos de etiqueta individual)</p>
                         </div>
                     )}
                 </CardContent>
                 <CardFooter className="flex flex-col sm:flex-row justify-between gap-2">
-                    <Button variant="outline" onClick={handleOpenPreview} disabled={selectedAssets.size === 0} className="w-full sm:w-auto">
+                    <Button variant="outline" onClick={handleOpenPreviewModal} className="w-full sm:w-auto">
                          <Edit className="mr-2 h-4 w-4" /> Editar Layout da Etiqueta
                     </Button>
                      <Button 
@@ -629,14 +843,14 @@ export default function PrintLabelsPage() {
                 </CardFooter>
             </Card>
 
-             {isPreviewOpen && selectedAssetsData.length > 0 && (
+             {isPreviewOpen && (selectedAssetsData.length > 0 || assets.length > 0) && (
                 <LabelPreviewModal
                     isOpen={isPreviewOpen}
                     onClose={() => setIsPreviewOpen(false)}
-                    initialAsset={selectedAssetsData[0]}
-                    selectedAssetsData={selectedAssetsData}
-                    labelConfig={labelSizes.find(s => s.id === labelSizeId) || labelSizes[0]}
-                    onSave={handleSaveLayout}
+                    initialAsset={selectedAssetsData.length > 0 ? selectedAssetsData[0] : assets[0]}
+                    selectedAssetsData={selectedAssetsData.length > 0 ? selectedAssetsData : assets.slice(0,1)} // Pass first asset if none selected for preview
+                    labelConfig={selectedLabelConfig}
+                    onApplyLayoutAndClose={handleApplyLayoutAndCloseModal}
                     initialLayout={currentLabelLayout}
                     qrCodeDataUrls={qrCodeDataUrls} 
                 />
@@ -644,5 +858,4 @@ export default function PrintLabelsPage() {
         </div>
     );
 }
-
 
